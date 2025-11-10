@@ -1,0 +1,26 @@
+{
+  "name": "rbph-website-frontend",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@nuxt/eslint": "1.10.0",
+    "@nuxt/image": "2.0.0",
+    "@nuxt/ui": "4.1.0",
+    "@types/node": "^24.10.0",
+    "eslint": "^9.39.1",
+    "nuxt": "^4.2.1",
+    "typescript": "^5.9.3",
+    "undici": "^7.16.0",
+    "vue": "^3.5.22",
+    "vue-router": "^4.6.3"
+  }
+}
