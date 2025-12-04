@@ -1,0 +1,6 @@
+@import 'tailwindcss';
+@import '@nuxt/ui';
+
+.lang-zh {
+  font-family: 'Noto Sans SC', sans-serif;
+}
