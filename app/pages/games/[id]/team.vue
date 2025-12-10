@@ -11,9 +11,9 @@ const toast = useToast();
 
 const user = await useUser();
 const game = useState<RbGame>('game');
-const team = useState<RbTeam>('team');
+const team = useState<RbTeam | undefined>('team');
 
-const member = computed(() => team.value.members.find(it => it.id === user.value.id));
+const member = computed(() => team.value?.members.find(it => it.id === user.value?.id));
 const isCaptain = computed(() => member.value?.is_captain ?? false);
 
 async function reloadTeamInfo() {
@@ -21,7 +21,7 @@ async function reloadTeamInfo() {
     const { data } = await api.get<RbTeam>(`/games/${game.value.id}/teams/self`);
     team.value = data;
 
-    updateEditState();
+    updateAllState();
   } catch (error) {
     if (getRbErrorCode(error) != -104) {
       handleError(error, '队伍信息获取失败！');
@@ -38,6 +38,7 @@ const Icon = resolveComponent('icon');
 const UButton = resolveComponent('u-button');
 const UTooltip = resolveComponent('u-tooltip');
 const UUser = resolveComponent('u-user');
+const UBadge = resolveComponent('u-badge');
 
 const memberSorted = computed(() => {
   if (!team.value) return [];
@@ -52,7 +53,7 @@ const memberSorted = computed(() => {
 const memberColumns: TableColumn<RbTeamMember>[] = [
   {
     accessorKey: 'is_captain',
-    header: '#',
+    header: '',
     cell: ({ row }) => (row.getValue('is_captain') ? h(UTooltip, { text: '队长' }, h(Icon, { name: 'material-symbols:flag-outline-rounded', size: 20, class: 'align-sub' })) : ''),
     meta: {
       class: {
@@ -69,13 +70,15 @@ const memberColumns: TableColumn<RbTeamMember>[] = [
   {
     accessorKey: 'id',
     header: '',
-    cell: ({ row }) =>
+    cell: ({ row }) => [
       member.value?.is_captain && row.getValue('id') !== member.value?.id
         ? [
             h(UTooltip, { text: '设为队长' }, h(UButton, { icon: 'material-symbols:award-star-outline-rounded', color: 'neutral', variant: 'link', class: 'cursor-pointer', onClick: () => alert('123') })),
             h(UTooltip, { text: '移除成员' }, h(UButton, { icon: 'material-symbols:person-remove-outline-rounded', color: 'error', variant: 'link', class: 'cursor-pointer', onClick: () => alert('123') })),
           ]
         : '',
+      row.getValue('id') === member.value?.id ? h(UBadge, {}, '你') : '',
+    ],
     meta: {
       class: {
         td: 'w-0 text-center',
@@ -100,17 +103,6 @@ const editState = reactive({
   bio: '',
 });
 
-function updateEditState() {
-  if (team.value) {
-    editState.id = team.value.id;
-    editState.name = team.value.tname;
-    editState.pass = team.value.pass;
-    editState.bio = team.value.bio;
-  }
-}
-
-updateEditState();
-
 async function editSubmit(event: FormSubmitEvent<EditSchema>) {
   submitLoading.value = true;
 }
@@ -125,29 +117,36 @@ function editRandomPass() {
 async function leaveTeamSubmit() {
   submitLoading.value = true;
 
-  try {
-    const { code } = await api.post(
-      `/games/${game.value.id}/teams/self/leave`,
-      {},
-      {
-        errorHints: {
-          [-1]: '你不在队伍中，或作为队长不能离开队伍。',
-        },
-      }
-    );
-
-    if (code == 0) {
-      toast.add({
-        title: '成功离开队伍！',
-        icon: 'material-symbols:check-rounded',
-        color: 'success',
-      });
-      reloadTeamInfo();
-    }
-  } catch (error) {
-    handleError(error, '离开队伍失败！', true);
-  } finally {
+  if (member.value?.is_captain) {
+    toast.add({
+      title: 'todo',
+    });
     submitLoading.value = false;
+  } else {
+    try {
+      const { code } = await api.post(
+        `/games/${game.value.id}/teams/self/leave`,
+        {},
+        {
+          errorHints: {
+            [-1]: '只有队伍中的队员可以离开队伍。',
+          },
+        }
+      );
+
+      if (code == 0) {
+        toast.add({
+          title: '成功离开队伍！',
+          icon: 'material-symbols:check-rounded',
+          color: 'success',
+        });
+        reloadTeamInfo();
+      }
+    } catch (error) {
+      handleError(error, '离开队伍失败！', true);
+    } finally {
+      submitLoading.value = false;
+    }
   }
 }
 
@@ -247,6 +246,21 @@ function createRandomPass() {
     return chars.charAt(Math.floor(Math.random() * chars.length));
   }).join('');
 }
+
+function updateAllState() {
+  if (team.value) {
+    editState.id = team.value.id;
+    editState.name = team.value.tname;
+    editState.pass = team.value.pass;
+    editState.bio = team.value.bio;
+  }
+  joinState.pass = '';
+  createState.name = '';
+  createState.bio = '';
+  createRandomPass();
+}
+
+updateAllState();
 </script>
 
 <template>
@@ -282,7 +296,18 @@ function createRandomPass() {
               </u-button>
             </div>
             <div class="w-full flex justify-center mb-4 mt-4">
-              <u-button :loading="submitLoading" class="w-full justify-center cursor-pointer" variant="outline" color="error" size="md" @click="leaveTeamSubmit">退出队伍</u-button>
+              <u-popover arrow>
+                <u-button :loading="submitLoading" class="w-full justify-center cursor-pointer" variant="outline" color="error" size="md">
+                  {{ member?.is_captain ? '解散队伍' : '退出队伍' }}
+                </u-button>
+                <template #content>
+                  <div class="py-2 px-4 text-xs">
+                    <icon name="material-symbols:warning-outline-rounded" class="align-middle" />
+                    <span class="text-xs"> 这个操作不可撤销。 </span>
+                    <u-button :loading="submitLoading" class="cursor-pointer" color="error" variant="soft" size="xs" @click="leaveTeamSubmit"> 确定 </u-button>
+                  </div>
+                </template>
+              </u-popover>
             </div>
           </u-form>
         </u-card>

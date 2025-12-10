@@ -5,31 +5,25 @@ const toast = useToast();
 
 const success = ref('load');
 
-const token = typeof route.query.token === 'string' ? route.query.token : undefined;
-
-if (!token) {
-  throw createError({
-    statusCode: 400,
-    statusMessage: 'Justice is dead.',
-  });
-}
-
 onMounted(async () => {
   try {
-    const { code } = await api.get('/auth/verify', { query: { token } });
+    const { code } = await api.post('/auth/logout');
     if (code == 0) {
       toast.add({
-        title: '邮箱验证成功！',
-        description: '即将跳转到登录页面…',
+        title: '已退出登录！',
+        description: '将在三秒内进行跳转…',
         icon: 'material-symbols:check-rounded',
         color: 'success',
       });
 
+      resetStates();
+
       success.value = 'ok';
 
       setTimeout(() => {
-        navigateTo('/login');
-      }, 3000);
+        const target = typeof route.query.url === 'string' ? route.query.url : '/';
+        navigateTo(target);
+      }, 1000);
     }
   } catch {
     success.value = 'err';

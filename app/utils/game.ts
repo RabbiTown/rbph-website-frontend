@@ -36,3 +36,17 @@ export interface RbTeam {
   ctime_at: OffsetDateTimeTuple;
   members: RbTeamMember[];
 }
+
+export enum RbPuzzleType {
+  Normal = 0,
+  Story = 1,
+}
+
+export interface RbPuzzle {
+  id: number;
+  title: string;
+  prelogue?: string;
+  content: string;
+  ptype: RbPuzzleType;
+  round_id: number;
+}
