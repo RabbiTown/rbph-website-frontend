@@ -1,14 +1,14 @@
 export interface RbGame {
-  id: number;
-  title: string;
-  is_shown: boolean;
-  is_online: boolean;
+  id?: number;
+  title?: string;
+  is_shown?: boolean;
+  is_online?: boolean;
 
-  reg_open_at?: OffsetDateTimeTuple;
-  pre_open_at?: OffsetDateTimeTuple;
-  start_at: OffsetDateTimeTuple;
-  end_at: OffsetDateTimeTuple;
-  ctime_at: OffsetDateTimeTuple;
+  reg_open_at?: string;
+  pre_open_at?: string;
+  start_at?: string;
+  end_at?: string;
+  ctime_at?: string;
 
   cover?: string;
 }
@@ -21,20 +21,20 @@ export enum RbTeamState {
 }
 
 export interface RbTeamMember {
-  id: number;
-  is_captain: boolean;
-  nickname: string;
-  ctime_at: OffsetDateTimeTuple;
+  id?: number;
+  is_captain?: boolean;
+  nickname?: string;
+  ctime_at?: string;
 }
 
 export interface RbTeam {
-  id: number;
-  tname: string;
-  tstate: RbTeamState;
-  pass: string;
-  bio: string;
-  ctime_at: OffsetDateTimeTuple;
-  members: RbTeamMember[];
+  id?: number;
+  tname?: string;
+  tstate?: RbTeamState;
+  pass?: string;
+  bio?: string;
+  ctime_at?: string;
+  members?: RbTeamMember[];
 }
 
 export enum RbPuzzleType {
@@ -43,10 +43,10 @@ export enum RbPuzzleType {
 }
 
 export interface RbPuzzle {
-  id: number;
-  title: string;
+  id?: number;
+  title?: string;
   prelogue?: string;
-  content: string;
-  ptype: RbPuzzleType;
-  round_id: number;
+  content?: string;
+  ptype?: RbPuzzleType;
+  round_id?: number;
 }
