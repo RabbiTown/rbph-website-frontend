@@ -12,11 +12,13 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@iconify-json/material-symbols": "^1.2.50",
     "@nuxt/eslint": "1.10.0",
     "@nuxt/image": "2.0.0",
     "@nuxt/ui": "4.1.0",
     "@types/node": "^24.10.0",
     "eslint": "^9.39.1",
+    "marked": "^17.0.1",
     "nuxt": "^4.2.1",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3",

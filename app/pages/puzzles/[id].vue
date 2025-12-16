@@ -1,0 +1,21 @@
+<script setup lang="ts">
+definePageMeta({
+  layout: 'game',
+});
+
+const route = useRoute();
+
+const puzzle = await usePuzzle();
+
+const puzzle_id = computed(() => route.params.id as string);
+
+watch(puzzle_id, async new_id => {
+  updatePuzzleState(new_id);
+});
+</script>
+
+<template>
+  <div>
+    <rbph-puzzle-page :data="puzzle" />
+  </div>
+</template>

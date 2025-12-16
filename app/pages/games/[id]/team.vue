@@ -14,7 +14,7 @@ const game = useState<RbGame>('game');
 const team = useState<RbTeam | undefined>('team');
 
 const member = computed(() => team.value?.members.find(it => it.id === user.value?.id));
-const isCaptain = computed(() => member.value?.is_captain ?? false);
+const isCaptain = computed(() => member.value?.is_captain);
 
 async function reloadTeamInfo() {
   try {
@@ -24,7 +24,7 @@ async function reloadTeamInfo() {
     updateAllState();
   } catch (error) {
     if (getRbErrorCode(error) != -104) {
-      handleError(error, '队伍信息获取失败！');
+      handleError(error, '队伍信息获取失败');
     } else {
       team.value = undefined;
     }
@@ -41,12 +41,12 @@ const UUser = resolveComponent('u-user');
 const UBadge = resolveComponent('u-badge');
 
 const memberSorted = computed(() => {
-  if (!team.value) return [];
+  if (!team.value || !team.value.members) return [];
   return [...team.value.members].sort((a, b) => {
     if (a.is_captain !== b.is_captain) {
       return a.is_captain ? -1 : 1;
     }
-    return a.ctime_at < b.ctime_at ? -1 : 1;
+    return new Date(a.ctime_at) < new Date(b.ctime_at) ? -1 : 1;
   });
 });
 
@@ -54,7 +54,7 @@ const memberColumns: TableColumn<RbTeamMember>[] = [
   {
     accessorKey: 'is_captain',
     header: '',
-    cell: ({ row }) => (row.getValue('is_captain') ? h(UTooltip, { text: '队长' }, h(Icon, { name: 'material-symbols:flag-outline-rounded', size: 20, class: 'align-sub' })) : ''),
+    cell: ({ getValue }) => (getValue() ? h(UTooltip, { text: '队长' }, h(Icon, { name: 'material-symbols:flag-outline-rounded', size: 20, class: 'align-sub' })) : ''),
     meta: {
       class: {
         td: 'w-0 text-center',
@@ -65,20 +65,23 @@ const memberColumns: TableColumn<RbTeamMember>[] = [
   {
     accessorKey: 'nickname',
     header: '用户',
-    cell: ({ row }) => h(UUser, { name: row.getValue('nickname'), avatar: { icon: 'material-symbols:person-2-rounded' } }),
+    cell: ({ getValue }) => h(UUser, { name: getValue(), avatar: { icon: 'material-symbols:person-2-rounded' } }),
   },
   {
     accessorKey: 'id',
     header: '',
-    cell: ({ row }) => [
-      member.value?.is_captain && row.getValue('id') !== member.value?.id
-        ? [
-            h(UTooltip, { text: '设为队长' }, h(UButton, { icon: 'material-symbols:award-star-outline-rounded', color: 'neutral', variant: 'link', class: 'cursor-pointer', onClick: () => alert('123') })),
-            h(UTooltip, { text: '移除成员' }, h(UButton, { icon: 'material-symbols:person-remove-outline-rounded', color: 'error', variant: 'link', class: 'cursor-pointer', onClick: () => alert('123') })),
-          ]
-        : '',
-      row.getValue('id') === member.value?.id ? h(UBadge, {}, '你') : '',
-    ],
+    cell: ({ getValue }) => {
+      const id = getValue();
+      return [
+        member.value?.is_captain && id !== member.value?.id
+          ? [
+              h(UTooltip, { text: '设为队长' }, h(UButton, { icon: 'material-symbols:award-star-outline-rounded', color: 'neutral', variant: 'link', class: 'cursor-pointer', onClick: () => alert('123') })),
+              h(UTooltip, { text: '移除成员' }, h(UButton, { icon: 'material-symbols:person-remove-outline-rounded', color: 'error', variant: 'link', class: 'cursor-pointer', onClick: () => alert('123') })),
+            ]
+          : '',
+        id === member.value?.id ? h(UBadge, {}, '你') : '',
+      ];
+    },
     meta: {
       class: {
         td: 'w-0 text-center',
@@ -143,7 +146,7 @@ async function leaveTeamSubmit() {
         reloadTeamInfo();
       }
     } catch (error) {
-      handleError(error, '离开队伍失败！', true);
+      handleError(error, '离开队伍失败', true);
     } finally {
       submitLoading.value = false;
     }
@@ -189,7 +192,7 @@ async function joinSubmit(event: FormSubmitEvent<JoinSchema>) {
       reloadTeamInfo();
     }
   } catch (error) {
-    handleError(error, '加入队伍失败！', true);
+    handleError(error, '加入队伍失败', true);
   } finally {
     submitLoading.value = false;
   }
@@ -234,7 +237,7 @@ async function createSubmit(event: FormSubmitEvent<CreateSchema>) {
       reloadTeamInfo();
     }
   } catch (error) {
-    handleError(error, '创建队伍失败！', true);
+    handleError(error, '创建队伍失败', true);
   } finally {
     submitLoading.value = false;
   }
@@ -249,10 +252,10 @@ function createRandomPass() {
 
 function updateAllState() {
   if (team.value) {
-    editState.id = team.value.id;
-    editState.name = team.value.tname;
-    editState.pass = team.value.pass;
-    editState.bio = team.value.bio;
+    editState.id = team.value.id || 0;
+    editState.name = team.value.tname || '';
+    editState.pass = team.value.pass || '';
+    editState.bio = team.value.bio || '';
   }
   joinState.pass = '';
   createState.name = '';
@@ -267,7 +270,7 @@ updateAllState();
   <div>
     <template v-if="team">
       <u-main class="py-8 flex gap-8 md:flex-nowrap flex-wrap">
-        <u-card variant="subtle" class="md:w-6/12 w-full">
+        <u-card variant="subtle" class="md:flex-1 w-full">
           <div class="font-bold text-xl mb-8">队伍信息</div>
           <u-form :schema="editSchema" :state="editState" class="space-y-4" @submit="editSubmit">
             <u-form-field label="队伍 ID" name="id">
@@ -311,7 +314,7 @@ updateAllState();
             </div>
           </u-form>
         </u-card>
-        <u-card variant="subtle" class="md:w-6/12 w-full">
+        <u-card variant="subtle" class="md:flex-1 w-full">
           <div class="font-bold text-xl mb-8">队伍成员</div>
           <u-table :data="memberSorted" :columns="memberColumns" class="flex-1" />
         </u-card>

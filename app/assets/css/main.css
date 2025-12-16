@@ -1,6 +1,18 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
 
+@theme {
+  --breakpoint-xs: 420px;
+}
 .lang-zh {
   font-family: 'Noto Sans SC', sans-serif;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

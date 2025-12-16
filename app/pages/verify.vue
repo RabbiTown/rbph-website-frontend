@@ -43,7 +43,7 @@ onMounted(async () => {
       <div class="">
         <icon v-if="success == 'ok'" name="material-symbols:check-rounded" class="text-green-500" size="60px" />
         <icon v-else-if="success == 'err'" name="material-symbols:close-rounded" class="text-red-400" size="60px" />
-        <icon v-else name="i-lucide:loader-circle" class="animate-spin" size="60px" />
+        <icon v-else name="material-symbols:progress-activity" class="animate-spin" size="60px" />
       </div>
     </u-main>
   </div>

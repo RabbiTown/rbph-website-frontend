@@ -5,6 +5,8 @@ const props = defineProps<{
   error: NuxtError;
 }>();
 
+const router = useRouter();
+
 useHead({
   titleTemplate: ` // ERROR ${props.error.statusCode} / RBPH //`,
 });
@@ -36,7 +38,8 @@ function getErrorMessage(error: NuxtError) {
         </div>
         <div class="mt-8">
           <div class="text-gray-500 mb-2 text-sm"><span class="text-red-400">$</span> rbph-website</div>
-          <UButton variant="soft" @click="reloadPage">Reload</UButton>
+          <UButton variant="soft" color="error" class="cursor-pointer" @click="reloadPage">重试</UButton>
+          <UButton variant="soft" class="ms-2 cursor-pointer" @click="() => router.back()">回到上一页</UButton>
         </div>
       </div>
       <div class="error-band">

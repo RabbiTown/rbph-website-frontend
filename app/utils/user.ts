@@ -11,5 +11,5 @@ export interface RbUser {
   urole: RbUserRole;
   nickname: string;
   bio?: string;
-  ctime_at: OffsetDateTimeTuple;
+  ctime_at: string;
 }

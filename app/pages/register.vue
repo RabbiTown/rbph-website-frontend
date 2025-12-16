@@ -52,7 +52,7 @@ async function submit(event: FormSubmitEvent<Schema>) {
       });
     }
   } catch (error) {
-    handleError(error, '注册失败！', true);
+    handleError(error, '注册失败', true);
   } finally {
     loginLoading.value = false;
   }
@@ -78,8 +78,8 @@ async function submit(event: FormSubmitEvent<Schema>) {
                   color="neutral"
                   variant="link"
                   size="sm"
-                  :icon="showPwd ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-                  :aria-label="showPwd ? 'Hide password' : 'Show password'"
+                  :icon="showPwd ? 'material-symbols:visibility-off-outline-rounded' : 'material-symbols:visibility-outline-rounded'"
+                  :aria-label="showPwd ? '隐藏密码' : '显示密码'"
                   :aria-pressed="showPwd"
                   aria-controls="password"
                   @click="showPwd = !showPwd"
