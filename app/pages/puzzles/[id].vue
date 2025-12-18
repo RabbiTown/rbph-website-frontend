@@ -9,9 +9,13 @@ const puzzle = await usePuzzle();
 
 const puzzle_id = computed(() => route.params.id as string);
 
-watch(puzzle_id, async new_id => {
-  updatePuzzleState(new_id);
-});
+watch(
+  puzzle_id,
+  async new_id => {
+    updatePuzzleState(new_id);
+  },
+  { immediate: true }
+);
 </script>
 
 <template>

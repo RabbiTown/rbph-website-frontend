@@ -17,7 +17,7 @@ const props = withDefaults(
 const api = useApi();
 
 const curPage = ref(props.initPage);
-const pageData = ref<RbSubmissionPage | undefined>();
+const pageData = ref<RbSubmissionPage>();
 
 const Icon = resolveComponent('icon');
 const UTooltip = resolveComponent('u-tooltip');

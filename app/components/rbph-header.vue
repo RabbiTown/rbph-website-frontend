@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { DropdownMenuItem } from '@nuxt/ui';
-
 const user = await useUser(false);
 
 const game = useState<RbGame>('game');
@@ -47,7 +45,7 @@ const userMenuItems = computed(() => {
 </script>
 
 <template>
-  <u-header :toggle="false">
+  <u-header :toggle="false" :to="game ? `/games/${game.id}` : '/'">
     <template #title>
       {{ game?.title }}
     </template>

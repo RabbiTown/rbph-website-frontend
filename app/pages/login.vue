@@ -37,7 +37,7 @@ async function submit(event: FormSubmitEvent<Schema>) {
 
     if (code == 0) {
       toast.add({
-        title: '登录成功！',
+        title: '登录成功',
         description: '将在三秒内进行跳转…',
         icon: 'material-symbols:check-rounded',
         color: 'success',

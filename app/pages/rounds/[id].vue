@@ -8,19 +8,23 @@ const route = useRoute();
 
 const round_id = computed(() => route.params.id as string);
 
-const round = ref<RbRoundUserData | undefined>();
+const round = ref<RbRoundUserData>();
 
 const okSubmissionsComp = useTemplateRef('ok-submissions');
 const submitResultComp = useTemplateRef('submit-result');
 
+let fetchToken = 0;
 watch(
   round_id,
   async new_id => {
+    const token = ++fetchToken;
+
     round.value = undefined;
     try {
       const { data } = await api.get<RbRoundUserData>(`/rounds/${new_id}`);
-      round.value = data;
+      if (token !== fetchToken) return;
 
+      round.value = data;
       if (data.data.game_id) {
         updateGameState(data.data.game_id.toString());
       }
@@ -47,14 +51,14 @@ function onSubmitSuccess(result: RbJudgeResult, answer: string) {
       </span>
     </div>
 
-    <u-card variant="soft">
+    <u-card variant="soft" :ui="{ body: 'sm:py-2 py-2' }">
       <rbph-content :content="round?.data" />
 
       <template v-if="round.puzzles.length > 0">
         <u-separator icon="material-symbols:extension-outline-rounded" class="mt-6 mb-2" />
         <div class="text-3xl font-bold text-center">谜题</div>
-        <div class="flex justify-center gap-2 mt-4">
-          <rbph-puzzle-card v-for="puzzle in round.puzzles" :key="puzzle.id" class="max-w-7/12 w-full" :puzzle="puzzle" />
+        <div class="flex justify-center gap-2 my-4 flex-wrap">
+          <rbph-puzzle-card v-for="puzzle in round.puzzles" :key="puzzle.id" class="md:max-w-7/12 w-full" :puzzle="puzzle" />
         </div>
       </template>
     </u-card>

@@ -148,3 +148,37 @@ export interface RbRoundUserData {
   data: RbRound;
   puzzles: RbRoundInnerPuzzleData[];
 }
+
+export interface RbTeamCurrency {
+  id: number;
+  name: string;
+  growth: number;
+  prec: number;
+  amount: number;
+  max_amount: number;
+  utime_at: string;
+}
+
+export interface RbTeamCurrencyWrapper {
+  server_time: string;
+  data: RbTeamCurrency[];
+}
+
+export interface RbHint {
+  id: number;
+  title: string;
+  cooldown: number;
+  cost_id: number;
+  cost_amount: number;
+}
+
+export interface RbHintTeamState {
+  id: number;
+  content: string;
+  content_type: number;
+}
+
+export interface RbPuzzleHintTeamData {
+  data: RbHint[];
+  state: RbHintTeamState[];
+}

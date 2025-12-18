@@ -40,18 +40,12 @@ export async function useTeam() {
   return team;
 }
 
+export async function useGame() {
+  return useState<RbGame | undefined>('game');
+}
+
 export async function usePuzzle() {
-  const puzzle = useState<RbPuzzleShowData | undefined>('puzzle');
-  if (puzzle.value) {
-    return puzzle;
-  }
-
-  const puzzleId = useRoute().params.id as string | undefined;
-  if (puzzleId) {
-    updatePuzzleState(puzzleId);
-  }
-
-  return puzzle;
+  return useState<RbPuzzleShowData | undefined>('puzzle');
 }
 
 export async function updateGameState(new_id: string) {
@@ -90,8 +84,9 @@ export async function updateGameState(new_id: string) {
   }
 }
 
-export async function clearTeamState() {
+export async function resetTeamState() {
   useState('team').value = undefined;
+  useState('currency').value = undefined;
 }
 
 export async function updatePuzzleState(new_id: string | undefined = undefined) {
@@ -117,5 +112,5 @@ export async function updatePuzzleState(new_id: string | undefined = undefined) 
 
 export async function resetStates() {
   useState('user').value = undefined;
-  useState('team').value = undefined;
+  resetTeamState();
 }

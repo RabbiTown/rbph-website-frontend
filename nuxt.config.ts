@@ -20,9 +20,18 @@ const devProxyConfig = isDev
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/ui'],
+  modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/ui', '@nuxtjs/mdc'],
   css: ['~/assets/css/main.css'],
   ssr: false,
+  mdc: {
+    components: {
+      prose: true,
+    },
+  },
+  components: {
+    global: true,
+    dirs: ['./components', './components/prose'],
+  },
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE ?? '/api',

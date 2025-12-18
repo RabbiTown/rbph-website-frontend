@@ -82,7 +82,7 @@ async function submitAnswer(answer: string) {
 }
 
 function submit() {
-  if (!submitLoading.value) {
+  if (!submitLoading.value && state.answer.trim()) {
     const answer = state.answer;
     submitAnswer(answer)
       .then(result => {
@@ -105,6 +105,6 @@ function submit() {
       :ui="{ trailing: 'pe-0', base: 'rounded-none rounded-l-lg' }"
       @keyup.enter="submit"
     />
-    <u-button :loading="submitLoading" :disabled="state.answer.trim().length < 1" :color="color" class="justify-center cursor-pointer h-full rounded-none rounded-r-lg px-3" variant="subtle" @click="submit">提交</u-button>
+    <u-button :loading="submitLoading" :disabled="state.answer.trim().length < 1" :color="color" class="-ms-px justify-center cursor-pointer h-full rounded-none rounded-r-lg px-3" variant="subtle" @click="submit">提交</u-button>
   </div>
 </template>
