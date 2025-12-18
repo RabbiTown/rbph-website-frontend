@@ -42,17 +42,23 @@ export function formatTime(ms: number) {
   return `${hh}:${mm}:${ss}`;
 }
 
-export function intPrecString(num: number, prec: number): string {
-  const str = num.toString();
-  if (prec === 0) return str; // 精度为 0
+export function intPrecString(num: number, prec: number, keepPlus: boolean = false, pad: string = ''): string {
+  const isNeg = num < 0;
+  const absStr = Math.abs(num).toString();
 
-  const len = str.length;
+  if (prec === 0) return num.toString();
+
+  const len = absStr.length;
+  let result: string;
+
   if (len > prec) {
-    const intPart = str.slice(0, len - prec);
-    const decPart = str.slice(len - prec);
-    return `${intPart}.${decPart}`;
+    const intPart = absStr.slice(0, len - prec);
+    const decPart = absStr.slice(len - prec);
+    result = `${intPart}.${decPart}`;
   } else {
     const zeros = '0'.repeat(prec - len);
-    return `0.${zeros}${str}`;
+    result = `0.${zeros}${absStr}`;
   }
+
+  return isNeg ? `-${pad}${result}` : keepPlus ? `+${pad}${result}` : result;
 }

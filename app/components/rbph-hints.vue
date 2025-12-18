@@ -129,13 +129,14 @@ defineExpose({
       <u-collapsible :unmount-on-hide="false">
         <div :class="['px-5 py-3 flex items-center group dark:bg-slate-800 bg-slate-100', hint.state ? 'cursor-pointer' : '']">
           <icon :class="['align-middle me-2', hint.state ? 'text-success' : 'text-error']" :name="hint.state ? 'material-symbols:lock-open-right-outline-rounded' : 'material-symbols:lock-outline'" />
-          <div class="text-sm flex-1">
+          <div :class="['text-sm flex-1', !hint.state ? 'text-secondary' : '']">
             {{ hint.title }}
           </div>
           <template v-if="!hint.state">
             <u-tooltip v-if="!calcCooldown(hint)" :disabled="checkEnough(hint)" arrow :text="`还需 ${intPrecString(hint.cost_amount - (currency[hint.cost_id]?.current || 0), currency[hint.cost_id]?.prec || 0)} ${currency[hint.cost_id]?.name}`">
               <u-button variant="soft" size="xs" class="cursor-pointer -my-8" icon="material-symbols:emoji-objects-outline-rounded" :loading="purchaseLoading" :disabled="!checkEnough(hint)" @click="() => purchaseHint(hint.id)">
-                {{ currency[hint.cost_id]?.name }} - {{ intPrecString(hint.cost_amount, currency[hint.cost_id]?.prec || 0) }}
+                <template v-if="hint.cost_amount === 0"> 解锁 </template>
+                <template v-else> {{ currency[hint.cost_id]?.name }} {{ intPrecString(-hint.cost_amount, currency[hint.cost_id]?.prec || 0, true, ' ') }} </template>
               </u-button>
             </u-tooltip>
             <u-tooltip v-else :disabled="checkEnough(hint)" arrow text="等待时间结束后才可购买">
@@ -145,7 +146,7 @@ defineExpose({
           <icon v-else name="material-symbols:expand-more-rounded" class="-me-1 size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
         </div>
         <template v-if="hint.state" #content>
-          <div class="px-4 py-px border-t dark:border-t-slate-700 border-t-slate-200">
+          <div class="px-4 py-px border-t dark:border-t-slate-700 border-t-slate-200 text-sm">
             <rbph-content :content="hint.state" />
           </div>
         </template>
