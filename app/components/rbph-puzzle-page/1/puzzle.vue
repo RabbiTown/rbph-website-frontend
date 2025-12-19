@@ -21,7 +21,7 @@ function onSubmitSuccess(result: RbJudgeResult, answer: string) {
 
 <template>
   <div>
-    <u-card variant="soft" :ui="{ body: 'sm:py-2 py-2' }">
+    <u-card variant="soft" :ui="{ body: 'sm:py-2 py-2 sm:px-12 px-12' }">
       <rbph-content :content="data.data" />
     </u-card>
 

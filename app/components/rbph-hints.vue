@@ -70,7 +70,7 @@ async function purchaseHint(hintId: number) {
       {
         errorHints: {
           [-2]: '余额不足。',
-          [-1]: '提示不存在或已购买。',
+          [-1]: '提示暂未开放或已购买。',
         },
       }
     );
@@ -83,7 +83,7 @@ async function purchaseHint(hintId: number) {
       const cur = currency.value[hint.cost_id];
       toast.add({
         title: '已购买提示',
-        description: `已花费 ${intPrecString(hint.cost_amount, cur?.prec || 0)} ${cur?.name} 购买提示【${hint.title}】`,
+        description: hint.cost_id ? `已花费 ${intPrecString(hint.cost_amount, cur?.prec || 0)} ${cur?.name} 购买提示【${hint.title}】` : `已解锁提示【${hint.title}】`,
         icon: 'material-symbols:check-rounded',
         color: 'success',
       });
@@ -98,13 +98,13 @@ async function purchaseHint(hintId: number) {
 }
 
 function checkEnough(hint: RbHint): boolean {
+  if (!hint.cost_id) return true;
   const cur = currency.value[hint.cost_id];
   return cur ? cur.current >= hint.cost_amount : false;
 }
 
 function calcCooldown(hint: RbHint): number {
   if (!props.utimeAt) return Infinity;
-  console.log(Math.max(hint.cooldown * 1000 - (currentTime.value - utimeAtMs.value), 0));
   return Math.max(hint.cooldown * 1000 - (currentTime.value - utimeAtMs.value), 0);
 }
 
@@ -135,7 +135,7 @@ defineExpose({
           <template v-if="!hint.state">
             <u-tooltip v-if="!calcCooldown(hint)" :disabled="checkEnough(hint)" arrow :text="`还需 ${intPrecString(hint.cost_amount - (currency[hint.cost_id]?.current || 0), currency[hint.cost_id]?.prec || 0)} ${currency[hint.cost_id]?.name}`">
               <u-button variant="soft" size="xs" class="cursor-pointer -my-8" icon="material-symbols:emoji-objects-outline-rounded" :loading="purchaseLoading" :disabled="!checkEnough(hint)" @click="() => purchaseHint(hint.id)">
-                <template v-if="hint.cost_amount === 0"> 解锁 </template>
+                <template v-if="!hint.cost_id"> 解锁 </template>
                 <template v-else> {{ currency[hint.cost_id]?.name }} {{ intPrecString(-hint.cost_amount, currency[hint.cost_id]?.prec || 0, true, ' ') }} </template>
               </u-button>
             </u-tooltip>

@@ -1,0 +1,3 @@
+<template>
+  <u-separator />
+</template>

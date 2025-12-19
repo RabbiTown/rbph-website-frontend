@@ -48,42 +48,36 @@ export function useSyncTime() {
   return syncTime;
 }
 
-let currencyFetchState: Promise<void> | undefined;
+let inited = false;
 
 export function useCurrency() {
   const currency = useState<RbTeamCurrencyWrapper | undefined>('currency');
 
   async function updateData() {
-    if (currencyFetchState) return currencyFetchState;
+    syncTime.stopAutoUpdate();
 
-    async function inner() {
-      syncTime.stopAutoUpdate();
+    const api = useApi();
+    const gameId = useState<RbGame | undefined>('game').value?.id;
 
-      const api = useApi();
-      const gameId = useState<RbGame | undefined>('game').value?.id;
+    if (gameId) {
+      try {
+        const { data } = await api.get<RbTeamCurrencyWrapper>(`/games/${gameId}/teams/self/currency`);
 
-      if (gameId) {
-        try {
-          const { data } = await api.get<RbTeamCurrencyWrapper>(`/games/${gameId}/teams/self/currency`);
-
-          currency.value = data;
-          syncTime.syncWith(new Date(currency.value.server_time));
-        } catch (error) {
-          if (getRbErrorCode(error) === -104) {
-            currency.value = undefined;
-          }
+        currency.value = data;
+        syncTime.syncWith(new Date(currency.value.server_time));
+      } catch (error) {
+        if (getRbErrorCode(error) === -104) {
+          currency.value = undefined;
         }
       }
-
-      syncTime.startAutoUpdate();
     }
 
-    currencyFetchState = inner();
-    currencyFetchState.finally(() => (currencyFetchState = undefined));
+    syncTime.startAutoUpdate();
   }
 
-  if (!currency.value) {
-    updateData();
+  if (!inited) {
+    watch(useState<RbGame | undefined>('game'), () => updateData(), { immediate: true });
+    inited = true;
   }
 
   function calcCurrent(target: RbTeamCurrency): number {
