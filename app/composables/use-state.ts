@@ -79,8 +79,8 @@ export function useGame() {
   return { ref: useState<RbGame | undefined>('game') };
 }
 
-export async function usePuzzle() {
-  return useState<RbPuzzleShowData | undefined>('puzzle');
+export function usePuzzle() {
+  return { ref: useState<RbPuzzleShowData | undefined>('puzzle') };
 }
 
 export async function updateGameState(new_id: string) {

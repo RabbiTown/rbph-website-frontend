@@ -6,13 +6,19 @@ definePageMeta({
   layout: 'game',
 });
 
+useUser().required();
+
 const api = useApi();
 const toast = useToast();
 
 const user = useUser().ref;
-const game = useState<RbGame>('game');
+const game = useGame().ref;
 const team = useTeam();
 const teamData = team.ref;
+
+useHead({
+  titleTemplate:  computed(() => `队伍信息 - ${game.value?.title}`),
+});
 
 const member = computed(() => teamData.value?.members.find(it => it.id === user.value?.id));
 const isCaptain = computed(() => member.value?.is_captain);
@@ -105,7 +111,7 @@ async function editSubmit(event: FormSubmitEvent<EditSchema>) {
 
   try {
     const { code } = await api.patch(
-      `/games/${game.value.id}/teams/self`,
+      `/games/${game.value?.id}/teams/self`,
       {
         tname: event.data.name,
         pass: event.data.pass,
@@ -146,7 +152,7 @@ async function leaveTeamSubmit() {
   if (member.value?.is_captain) {
     try {
       const { code } = await api.post(
-        `/games/${game.value.id}/teams/self/disband`,
+        `/games/${game.value?.id}/teams/self/disband`,
         {},
         {
           errorHints: {
@@ -171,7 +177,7 @@ async function leaveTeamSubmit() {
   } else {
     try {
       const { code } = await api.post(
-        `/games/${game.value.id}/teams/self/leave`,
+        `/games/${game.value?.id}/teams/self/leave`,
         {},
         {
           errorHints: {
@@ -261,7 +267,7 @@ async function createSubmit(event: FormSubmitEvent<CreateSchema>) {
 
   try {
     const { code } = await api.post(
-      `/games/${game.value.id}/teams/self`,
+      `/games/${game.value?.id}/teams/self`,
       { tname: event.data.name, pass: event.data.pass, bio: event.data.bio },
       {
         errorHints: {

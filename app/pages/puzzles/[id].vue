@@ -7,7 +7,7 @@ useUser().required();
 
 const route = useRoute();
 
-const puzzle = await usePuzzle();
+const puzzle = usePuzzle().ref;
 
 const puzzle_id = computed(() => route.params.id as string);
 

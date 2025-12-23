@@ -12,6 +12,12 @@ const roundId = computed(() => route.params.id as string);
 
 const round = ref<RbRoundUserData>();
 
+const game = useGame().ref;
+
+useHead({
+  titleTemplate: computed(() => `${round.value?.data.title} - ${game.value?.title}`),
+});
+
 const okSubmissionsComp = useTemplateRef('ok-submissions');
 const submitResultComp = useTemplateRef('submit-result');
 

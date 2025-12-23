@@ -1,4 +1,8 @@
 <script setup lang="ts">
+useHead({
+  titleTemplate: '验证账号 - RBPH',
+});
+
 const api = useApi();
 const route = useRoute();
 const toast = useToast();

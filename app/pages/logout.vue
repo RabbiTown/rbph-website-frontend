@@ -5,6 +5,10 @@ const toast = useToast();
 
 const success = ref('load');
 
+useHead({
+  titleTemplate:  '退出登录 - RBPH',
+});
+
 onMounted(async () => {
   try {
     const { code } = await api.post('/auth/logout');

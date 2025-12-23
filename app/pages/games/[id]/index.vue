@@ -3,7 +3,11 @@ definePageMeta({
   layout: 'game-full',
 });
 
-const game = useState<RbGame>('game');
+const game = useGame().ref;
+
+useHead({
+  titleTemplate:  computed(() => `${game.value?.title}`),
+});
 </script>
 
 <template>

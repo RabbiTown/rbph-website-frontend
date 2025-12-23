@@ -5,6 +5,12 @@ definePageMeta({
   layout: 'game',
 });
 
+const game = useGame().ref;
+
+useHead({
+  titleTemplate:  computed(() => `排行榜 - ${game.value?.title}`),
+});
+
 const api = useApi();
 
 const pageData = ref<LeaderBoardInfo>();
@@ -123,7 +129,7 @@ async function updateData(newId: number | undefined) {
 }
 
 watch(
-  useGame().ref,
+  game,
   async newGame => {
     pageData.value = undefined;
     updateData(newGame?.id);

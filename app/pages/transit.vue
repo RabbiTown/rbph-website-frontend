@@ -1,8 +1,8 @@
-<template>
-  <div></div>
-</template>
-
 <script setup lang="ts">
+useHead({
+  titleTemplate: '请稍后…',
+});
+
 try {
   const { data } = await useApi().get<RbGame[]>('/games/online');
   if (data.length == 1) {

@@ -3,6 +3,10 @@ import type { Schema } from 'inspector/promises';
 import * as v from 'valibot';
 import type { FormSubmitEvent } from '@nuxt/ui';
 
+useHead({
+  titleTemplate:  '注册 - RBPH',
+});
+
 const schema = v.object({
   email: v.pipe(v.string(), v.email('无效邮箱')),
   password: v.pipe(v.string(), v.minLength(8, '至少需要 8 个字符'), v.maxLength(64, '最多可用 64 个字符'), v.regex(/^[!-~]{8,64}$/, '存在无效字符')),
