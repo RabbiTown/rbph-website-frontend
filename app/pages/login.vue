@@ -32,8 +32,7 @@ async function submit(event: FormSubmitEvent<Schema>) {
       },
     });
 
-    const { data } = await api.get('/user/info');
-    useState('user').value = data;
+    useUser().updateData();
 
     if (code == 0) {
       toast.add({

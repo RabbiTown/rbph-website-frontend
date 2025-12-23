@@ -30,13 +30,13 @@ const columns = ref<TableColumn<RbSubmission>[]>([
   },
   {
     accessorKey: 'user_answer',
-    header: () => h('span', ['内容', h(RbTooltip, { text: '鼠标悬停可查看归一化结果' }, h(Icon, { name: 'material-symbols:help-outline-rounded', class: 'size-4 align-middle mb-0.5 ms-1 text-secondary cursor-help' }))]),
+    header: () => h('span', ['内容', h(RbTooltip, { text: '鼠标悬停可查看归一化结果' }, () => h(Icon, { name: 'material-symbols:help-outline-rounded', class: 'size-4 align-middle mb-0.5 ms-1 text-secondary cursor-help' }))]),
     cell: ({ row, getValue }) => {
-      return h(RbTooltip, { text: row.original.norm_answer }, h('span', { variant: 'ghost', color: 'neutral', class: 'cursor-help' }, getValue<string>()));
+      return h(RbTooltip, { text: row.original.norm_answer }, () => h('span', { variant: 'ghost', color: 'neutral', class: 'cursor-help' }, getValue<string>()));
     },
     meta: {
       class: {
-        td: 'max-w-[15em] break-words whitespace-normal',
+        td: 'max-w-[15em] wrap-anywhere whitespace-normal',
       },
     },
   },
@@ -45,7 +45,7 @@ const columns = ref<TableColumn<RbSubmission>[]>([
     header: '结果',
     cell: ({ getValue }) => {
       const action = judgeActionConsts[getValue<RbJudgeAction>()];
-      return h(UBadge, { color: action.color, variant: 'soft', icon: action.icon }, action.name);
+      return h(UBadge, { color: action.color, variant: 'soft', icon: action.icon }, () => action.name);
     },
     meta: {
       class: {
@@ -60,7 +60,7 @@ const columns = ref<TableColumn<RbSubmission>[]>([
     meta: {
       class: {
         th: 'min-w-[15em]',
-        td: 'max-w-[15em] break-words whitespace-normal',
+        td: 'max-w-[15em] wrap-anywhere whitespace-normal',
       },
     },
   },
@@ -76,7 +76,11 @@ const columns = ref<TableColumn<RbSubmission>[]>([
   },
 ]);
 
+const loading = ref(false);
+
 async function updateData(newId: number | undefined = undefined) {
+  loading.value = true;
+
   const puzzleId = newId || props.puzzleId;
   if (puzzleId) {
     try {
@@ -86,6 +90,8 @@ async function updateData(newId: number | undefined = undefined) {
       handleError(error, '获取提交记录失败');
     }
   }
+
+  loading.value = false;
 }
 
 async function updatePage(newPage: number) {
@@ -111,7 +117,7 @@ defineExpose({
 <template>
   <div>
     <div v-if="pageData">
-      <u-table v-if="pageData.data.length > 0" :data="pageData.data" :columns="columns" />
+      <u-table v-if="pageData.data.length > 0" :loading="loading" :data="pageData.data" :columns="columns" />
       <u-empty v-else :description="onlyOk ? '暂无成功提交' : '暂无提交'" />
     </div>
     <div v-else class="h-full">

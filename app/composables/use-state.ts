@@ -1,47 +1,82 @@
-export async function useUser(required: boolean = true) {
+export function navigateToLogin() {
+  navigateTo(`/login?url=${useRoute().path}`);
+}
+
+const userUsed = ref(false);
+let userUpdatePromise: Promise<void> | null = null;
+
+export function useUser(activate: boolean = true) {
   const user = useState<RbUser | undefined>('user');
-  if (user.value) {
-    return user;
+
+  async function updateData() {
+    if (userUpdatePromise) return userUpdatePromise;
+
+    async function inner() {
+      try {
+        const { data } = await useApi().get<RbUser>('/user/info');
+        user.value = data;
+      } catch (error) {
+        if (getRbErrorCode(error) === -101) {
+          user.value = undefined;
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    userUpdatePromise = inner().finally(() => (userUpdatePromise = null));
   }
 
-  try {
-    const { data } = await useApi().get<RbUser>('/user/info');
-    user.value = data;
-  } catch (error) {
-    if (getRbErrorCode(error) === -101 && required) {
-      user.value = undefined;
-      if (required) {
-        navigateTo(`/login?url=${useRoute().path}`);
-      }
+  function required() {
+    if (!user.value) {
+      updateData().then(() => {
+        if (!user.value) {
+          navigateToLogin();
+        }
+      });
     }
   }
 
-  return user;
+  if (activate && !userUsed.value) {
+    userUsed.value = true;
+    updateData();
+  }
+
+  return { ref: user, updateData, required, activated: userUsed };
 }
 
-export async function useTeam() {
+const teamUsed = ref(false);
+
+export function useTeam(activate: boolean = true) {
   const team = useState<RbTeam | undefined>('team');
-  if (team.value) {
-    return team;
-  }
 
-  const gameId = useState<RbGame | undefined>('game').value?.id;
-  if (gameId) {
-    try {
-      const { data } = await useApi().get<RbTeam>(`/games/${gameId}/teams/self`);
-      team.value = data;
-    } catch (error) {
-      if (getRbErrorCode(error) === -104) {
-        team.value = undefined;
+  async function updateData() {
+    const gameId = useState<RbGame | undefined>('game').value?.id;
+
+    if (gameId) {
+      try {
+        const { data } = await useApi().get<RbTeam>(`/games/${gameId}/teams/self`);
+        team.value = data;
+      } catch (error) {
+        if (getRbErrorCode(error) === -104) {
+          team.value = undefined;
+        } else {
+          throw error;
+        }
       }
     }
   }
 
-  return team;
+  if (activate && !teamUsed.value) {
+    teamUsed.value = true;
+    updateData();
+  }
+
+  return { ref: team, updateData, activated: teamUsed };
 }
 
-export async function useGame() {
-  return useState<RbGame | undefined>('game');
+export function useGame() {
+  return { ref: useState<RbGame | undefined>('game') };
 }
 
 export async function usePuzzle() {
@@ -58,26 +93,12 @@ export async function updateGameState(new_id: string) {
   const game = useState<RbGame>('game');
 
   if (game.value?.id !== id) {
-    // reset game-related states
-    useState('team').value = undefined;
-
     try {
       const { data } = await api.get<RbGame>(`/games/${id}`);
       game.value = data;
     } catch (error) {
       showError(error instanceof Error ? error : String(error));
       return;
-    }
-
-    try {
-      const { data } = await api.get<RbTeam>(`/games/${id}/teams/self`);
-      useState('team').value = data;
-    } catch (error) {
-      const code = getRbErrorCode(error);
-      if (code != -104 && code != -101) {
-        showError(error instanceof Error ? error : String(error));
-        return;
-      }
     }
 
     localStorage.setItem('rbph::select_game', id.toString());

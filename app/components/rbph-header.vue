@@ -1,8 +1,8 @@
 <script setup lang="ts">
-const user = await useUser(false);
+const user = useUser().ref;
 
 const game = useState<RbGame>('game');
-const team = await useTeam();
+const team = useTeam().ref;
 
 const gameStarted = computed(() => game.value && team.value && new Date(Date.now()) >= new Date(game.value.start_at));
 
@@ -62,8 +62,8 @@ const userMenuItems = computed(() => {
       <u-tooltip v-if="team" text="站内信">
         <u-button color="neutral" variant="ghost" :to="`/games/${game.id}/mail`" icon="material-symbols:mail-outline-rounded" />
       </u-tooltip>
-      <u-dropdown-menu :items="userMenuItems">
-        <u-tooltip v-if="user" text="用户信息">
+      <u-dropdown-menu v-if="user" :items="userMenuItems">
+        <u-tooltip text="用户信息">
           <u-button color="neutral" variant="ghost" class="cursor-pointer" icon="material-symbols:deployed-code-account-outline-rounded" />
         </u-tooltip>
       </u-dropdown-menu>

@@ -28,7 +28,7 @@ const columns = ref<TableColumn<LeaderBoardTeamInfo>[]>([
     cell: ({ row, getValue }) => [h('div', { class: 'text-lg text-highlighted font-bold' }, getValue<string>()), h('div', row.original.bio)],
     meta: {
       class: {
-        td: 'overflow-hidden text-pretty wrap-break-word whitespace-normal',
+        td: 'overflow-hidden text-pretty wrap-anywhere whitespace-normal',
       },
     },
   },
@@ -39,9 +39,9 @@ const columns = ref<TableColumn<LeaderBoardTeamInfo>[]>([
       const state = getValue<string>();
 
       if (state) {
-        return [h(UBadge, { color: 'success', variant: 'soft', icon: 'material-symbols:flag-rounded' }, '已完赛'), h('div', { class: 'mt-1 ms-1 text-xs' }, formatDate(state))];
+        return [h(UBadge, { color: 'success', variant: 'soft', icon: 'material-symbols:flag-rounded' }, () => '已完赛'), h('div', { class: 'mt-1 ms-1 text-xs' }, formatDate(state))];
       } else {
-        return h(UBadge, { color: 'secondary', variant: 'soft', icon: 'material-symbols:flag-outline-rounded' }, '未完赛');
+        return h(UBadge, { color: 'secondary', variant: 'soft', icon: 'material-symbols:flag-outline-rounded' }, () => '未完赛');
       }
     },
     meta: {
@@ -58,9 +58,9 @@ const columns = ref<TableColumn<LeaderBoardTeamInfo>[]>([
       const state = getValue<string>();
 
       if (state) {
-        return [h(UBadge, { color: 'success', variant: 'soft', icon: 'material-symbols:check-rounded' }, `解出 ${state} 题`), h('div', { class: 'mt-1 ms-1 text-xs' }, formatDate(row.original.last_solved_at))];
+        return [h(UBadge, { color: 'success', variant: 'soft', icon: 'material-symbols:check-rounded' }, () => `解出 ${state} 题`), h('div', { class: 'mt-1 ms-1 text-xs' }, formatDate(row.original.last_solved_at))];
       } else {
-        return h(UBadge, { color: 'secondary', variant: 'soft', icon: 'material-symbols:coffee-rounded' }, '暂无解出');
+        return h(UBadge, { color: 'secondary', variant: 'soft', icon: 'material-symbols:coffee-rounded' }, () => '暂无解出');
       }
     },
     meta: {
@@ -77,16 +77,26 @@ const columns = ref<TableColumn<LeaderBoardTeamInfo>[]>([
 
       const finishState = row.getValue<string>('finish_at');
       if (finishState) {
-        result.push(h('div', h(UBadge, { color: 'success', variant: 'soft', icon: 'material-symbols:flag-rounded' })));
+        result.push(
+          h(
+            'div',
+            h(UBadge, { color: 'success', variant: 'soft', icon: 'material-symbols:flag-rounded' }, () => '已完赛')
+          )
+        );
       } else {
-        result.push(h('div', h(UBadge, { color: 'secondary', variant: 'soft', icon: 'material-symbols:flag-outline-rounded' }, '未完赛')));
+        result.push(
+          h(
+            'div',
+            h(UBadge, { color: 'secondary', variant: 'soft', icon: 'material-symbols:flag-outline-rounded' }, () => '未完赛')
+          )
+        );
       }
 
       const solveState = row.getValue<string>('solves');
       if (solveState) {
-        result.push(h('div', { class: 'mt-1 ms-1' }, `解出 ${solveState} 题`));
+        result.push(h('div', { class: 'mt-1 ms-1' }, () => `解出 ${solveState} 题`));
       } else {
-        result.push(h('div', { class: 'mt-1 ms-1' }, '暂无解出'));
+        result.push(h('div', { class: 'mt-1 ms-1' }, () => '暂无解出'));
       }
 
       return result;
@@ -113,13 +123,29 @@ async function updateData(newId: number | undefined) {
 }
 
 watch(
-  await useGame(),
+  useGame().ref,
   async newGame => {
     pageData.value = undefined;
     updateData(newGame?.id);
   },
   { immediate: true }
 );
+
+const showLength = ref(0);
+const showData = computed(() => pageData.value?.data.slice(0, showLength.value));
+
+onMounted(() => {
+  useInfiniteScroll(
+    window,
+    () => {
+      showLength.value += 50;
+    },
+    {
+      distance: 50,
+      canLoadMore: () => showLength.value < (pageData.value?.data.length || 0),
+    }
+  );
+});
 </script>
 
 <template>
@@ -134,7 +160,7 @@ watch(
       </div>
     </div>
     <div v-if="pageData">
-      <u-table v-if="pageData.data.length > 0" :data="pageData.data" :columns="columns" :ui="{ base: 'md:table-auto table-fixed w-full' }" />
+      <u-table v-if="pageData.data.length > 0" :data="showData" :columns="columns" :ui="{ base: 'md:table-auto table-fixed w-full' }" />
       <u-empty v-else description="暂无有效队伍" />
     </div>
     <div v-else class="h-full">

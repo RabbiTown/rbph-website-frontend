@@ -9,26 +9,19 @@ definePageMeta({
 const api = useApi();
 const toast = useToast();
 
-const user = await useUser();
+const user = useUser().ref;
 const game = useState<RbGame>('game');
-const team = useState<RbTeam | undefined>('team');
+const team = useTeam();
+const teamData = team.ref;
 
-const member = computed(() => team.value?.members.find(it => it.id === user.value?.id));
+const member = computed(() => teamData.value?.members.find(it => it.id === user.value?.id));
 const isCaptain = computed(() => member.value?.is_captain);
 
 async function reloadTeamInfo() {
-  try {
-    const { data } = await api.get<RbTeam>(`/games/${game.value.id}/teams/self`);
-    team.value = data;
-
-    updateAllState();
-  } catch (error) {
-    if (getRbErrorCode(error) != -104) {
-      handleError(error, '队伍信息获取失败');
-    } else {
-      team.value = undefined;
-    }
-  }
+  team
+    .updateData()
+    .then(() => updateAllState())
+    .catch(error => handleError(error, '队伍信息获取失败'));
 }
 
 const submitLoading = ref(false);
@@ -41,8 +34,9 @@ const UUser = resolveComponent('u-user');
 const UBadge = resolveComponent('u-badge');
 
 const memberSorted = computed(() => {
-  if (!team.value || !team.value.members) return [];
-  return [...team.value.members].sort((a, b) => {
+  const data = teamData.value;
+  if (!data || !data.members) return [];
+  return [...data.members].sort((a, b) => {
     if (a.is_captain !== b.is_captain) {
       return a.is_captain ? -1 : 1;
     }
@@ -54,7 +48,7 @@ const memberColumns: TableColumn<RbTeamMember>[] = [
   {
     accessorKey: 'is_captain',
     header: '',
-    cell: ({ getValue }) => (getValue() ? h(UTooltip, { text: '队长' }, h(Icon, { name: 'material-symbols:flag-outline-rounded', size: 20, class: 'align-sub' })) : ''),
+    cell: ({ getValue }) => (getValue() ? h(UTooltip, { text: '队长' }, () => h(Icon, { name: 'material-symbols:flag-outline-rounded', size: 20, class: 'align-sub' })) : ''),
     meta: {
       class: {
         td: 'w-0 text-center',
@@ -75,11 +69,11 @@ const memberColumns: TableColumn<RbTeamMember>[] = [
       return [
         member.value?.is_captain && id !== member.value?.id
           ? [
-              h(UTooltip, { text: '设为队长' }, h(UButton, { icon: 'material-symbols:award-star-outline-rounded', color: 'neutral', variant: 'link', class: 'cursor-pointer', onClick: () => alert('123') })),
-              h(UTooltip, { text: '移除成员' }, h(UButton, { icon: 'material-symbols:person-remove-outline-rounded', color: 'error', variant: 'link', class: 'cursor-pointer', onClick: () => alert('123') })),
+              h(UTooltip, { text: '设为队长' }, () => h(UButton, { icon: 'material-symbols:award-star-outline-rounded', color: 'neutral', variant: 'link', class: 'cursor-pointer', onClick: () => alert('123') })),
+              h(UTooltip, { text: '移除成员' }, () => h(UButton, { icon: 'material-symbols:person-remove-outline-rounded', color: 'error', variant: 'link', class: 'cursor-pointer', onClick: () => alert('123') })),
             ]
           : '',
-        id === member.value?.id ? h(UBadge, {}, '你') : '',
+        id === member.value?.id ? h(UBadge, {}, () => '你') : '',
       ];
     },
     meta: {
@@ -108,6 +102,35 @@ const editState = reactive({
 
 async function editSubmit(event: FormSubmitEvent<EditSchema>) {
   submitLoading.value = true;
+
+  try {
+    const { code } = await api.patch(
+      `/games/${game.value.id}/teams/self`,
+      {
+        tname: event.data.name,
+        pass: event.data.pass,
+        bio: event.data.bio,
+      },
+      {
+        errorHints: {
+          [-1]: '没有权限修改队伍信息。',
+        },
+      }
+    );
+
+    if (code == 0) {
+      toast.add({
+        title: '成功修改队伍信息',
+        icon: 'material-symbols:check-rounded',
+        color: 'success',
+      });
+      reloadTeamInfo();
+    }
+  } catch (error) {
+    handleError(error, '修改队伍信息失败', true);
+  } finally {
+    submitLoading.value = false;
+  }
 }
 
 function editRandomPass() {
@@ -121,10 +144,30 @@ async function leaveTeamSubmit() {
   submitLoading.value = true;
 
   if (member.value?.is_captain) {
-    toast.add({
-      title: 'todo',
-    });
-    submitLoading.value = false;
+    try {
+      const { code } = await api.post(
+        `/games/${game.value.id}/teams/self/disband`,
+        {},
+        {
+          errorHints: {
+            [-1]: '目前不能解散队伍。',
+          },
+        }
+      );
+
+      if (code == 0) {
+        toast.add({
+          title: '已解散队伍',
+          icon: 'material-symbols:check-rounded',
+          color: 'success',
+        });
+        reloadTeamInfo();
+      }
+    } catch (error) {
+      handleError(error, '解散队伍失败', true);
+    } finally {
+      submitLoading.value = false;
+    }
   } else {
     try {
       const { code } = await api.post(
@@ -139,7 +182,7 @@ async function leaveTeamSubmit() {
 
       if (code == 0) {
         toast.add({
-          title: '成功离开队伍！',
+          title: '已离开队伍',
           icon: 'material-symbols:check-rounded',
           color: 'success',
         });
@@ -251,11 +294,12 @@ function createRandomPass() {
 }
 
 function updateAllState() {
-  if (team.value) {
-    editState.id = team.value.id || 0;
-    editState.name = team.value.tname || '';
-    editState.pass = team.value.pass || '';
-    editState.bio = team.value.bio || '';
+  const data = teamData.value;
+  if (data) {
+    editState.id = data.id || 0;
+    editState.name = data.tname || '';
+    editState.pass = data.pass || '';
+    editState.bio = data.bio || '';
   }
   joinState.pass = '';
   createState.name = '';
@@ -263,12 +307,12 @@ function updateAllState() {
   createRandomPass();
 }
 
-updateAllState();
+watch(teamData, () => updateAllState(), { immediate: true });
 </script>
 
 <template>
   <div>
-    <template v-if="team">
+    <template v-if="teamData">
       <u-main class="py-8 flex gap-8 md:flex-nowrap flex-wrap">
         <u-card variant="subtle" class="md:flex-1 w-full">
           <div class="font-bold text-xl mb-8">队伍信息</div>

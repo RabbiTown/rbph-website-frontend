@@ -3,6 +3,8 @@ definePageMeta({
   layout: 'game',
 });
 
+useUser().required();
+
 const route = useRoute();
 
 const puzzle = await usePuzzle();

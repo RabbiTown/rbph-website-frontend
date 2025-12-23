@@ -3,6 +3,8 @@ definePageMeta({
   layout: 'game',
 });
 
+useUser().required();
+
 const api = useApi();
 const route = useRoute();
 
