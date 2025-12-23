@@ -182,3 +182,27 @@ export interface RbPuzzleHintTeamData {
   data: RbHint[];
   state: RbHintTeamState[];
 }
+
+export interface RbLeaderBoardTeam {
+  id: number;
+  tname: string;
+  bio: string;
+  finish_at?: string;
+  last_solved_at?: string;
+  solves: number;
+  members: string[];
+}
+
+export interface LeaderBoardTeamInfo {
+  id: number;
+  tname: string;
+  bio: string;
+  finish_at?: string;
+  last_solved_at?: string;
+  solves: number;
+  members: string[];
+}
+
+export interface LeaderBoardInfo {
+  data: LeaderBoardTeamInfo[];
+}

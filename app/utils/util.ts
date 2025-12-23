@@ -24,7 +24,7 @@ export function getErrorToast(error: unknown, title: string, forceHint: boolean 
   };
 }
 
-export function formatDate(_date: Date | string | undefined) {
+export function formatDate(_date: Date | string | undefined = undefined) {
   const date = new Date(_date || Date.now());
   return date.toLocaleString();
 }
@@ -46,18 +46,21 @@ export function intPrecString(num: number, prec: number, keepPlus: boolean = fal
   const isNeg = num < 0;
   const absStr = Math.abs(num).toString();
 
-  if (prec === 0) return num.toString();
-
-  const len = absStr.length;
   let result: string;
 
-  if (len > prec) {
-    const intPart = absStr.slice(0, len - prec);
-    const decPart = absStr.slice(len - prec);
-    result = `${intPart}.${decPart}`;
+  if (prec === 0) {
+    result = absStr;
   } else {
-    const zeros = '0'.repeat(prec - len);
-    result = `0.${zeros}${absStr}`;
+    const len = absStr.length;
+
+    if (len > prec) {
+      const intPart = absStr.slice(0, len - prec);
+      const decPart = absStr.slice(len - prec);
+      result = `${intPart}.${decPart}`;
+    } else {
+      const zeros = '0'.repeat(prec - len);
+      result = `0.${zeros}${absStr}`;
+    }
   }
 
   return isNeg ? `-${pad}${result}` : keepPlus ? `+${pad}${result}` : result;

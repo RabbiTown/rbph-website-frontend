@@ -6,7 +6,7 @@ definePageMeta({
 const api = useApi();
 const route = useRoute();
 
-const round_id = computed(() => route.params.id as string);
+const roundId = computed(() => route.params.id as string);
 
 const round = ref<RbRoundUserData>();
 
@@ -14,14 +14,14 @@ const okSubmissionsComp = useTemplateRef('ok-submissions');
 const submitResultComp = useTemplateRef('submit-result');
 
 let fetchToken = 0;
-watch(
-  round_id,
-  async new_id => {
-    const token = ++fetchToken;
+async function updateData(id: string | undefined = undefined) {
+  const token = ++fetchToken;
 
+  const newId = id || roundId.value;
+  if (newId) {
     round.value = undefined;
     try {
-      const { data } = await api.get<RbRoundUserData>(`/rounds/${new_id}`);
+      const { data } = await api.get<RbRoundUserData>(`/rounds/${newId}`);
       if (token !== fetchToken) return;
 
       round.value = data;
@@ -31,12 +31,22 @@ watch(
     } catch (error) {
       showError(error instanceof Error ? error : String(error));
     }
+  }
+}
+
+watch(
+  roundId,
+  async newId => {
+    await updateData(newId);
   },
   { immediate: true }
 );
 
-function onSubmitSuccess(result: RbJudgeResult, answer: string) {
+async function onSubmitSuccess(result: RbJudgeResult, answer: string) {
   if (result.action > 0) {
+    if (result.action == RbJudgeAction.StartGame) {
+      await updateData();
+    }
     okSubmissionsComp.value?.updateData();
   }
   submitResultComp.value?.updateSuccess(result, answer);
