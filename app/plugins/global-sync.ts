@@ -60,12 +60,39 @@ export default defineNuxtPlugin(() => {
   sync.listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
     if (user.ref.value?.id !== data.user.id) {
       const action = judgeActionConsts[data.action];
+      if (data.solved) {
+        toast.add({
+          title: `队友 ${data.user.name} 解决了谜题！`,
+          description: h('span', [`【${data.puzzle.title}】提交结果：`, h('span', { class: `font-bold text-${action.color}` }, action.name), ` [${data.answer}]`]),
+          color: 'success',
+          icon: 'material-symbols:person-play-outline-rounded',
+          duration: 10000,
+        });
+      } else {
+        toast.add({
+          title: `队友 ${data.user.name} 向谜题提交了答案`,
+          description: h('span', [`【${data.puzzle.title}】提交结果：`, h('span', { class: `font-bold text-${action.color}` }, action.name), ` [${data.answer}]`]),
+          color: action.color,
+          icon: 'material-symbols:person-play-outline-rounded',
+          duration: 10000,
+        });
+      }
+    }
+    if (data.unlocks && data.unlocks.length > 0) {
       toast.add({
-        title: `队友 ${data.user.name} 向谜题提交了答案`,
-        description: `【${data.puzzle.title}】提交结果：${action.name} [${data.answer}]`,
-        color: action.color,
-        icon: 'material-symbols:person-play-outline-rounded',
+        title: `解锁了新的谜题！`,
+        actions: data.unlocks.map(puzzle => {
+          return {
+            icon: 'material-symbols:arrow-forward-rounded',
+            label: puzzle.title,
+            variant: 'soft',
+            to: `/puzzles/${puzzle.id}`,
+          };
+        }),
+        color: 'success',
+        icon: 'material-symbols:extension-outline-rounded',
         duration: 10000,
+        ui: { actions: 'flex-wrap' },
       });
     }
   });
@@ -93,26 +120,6 @@ export default defineNuxtPlugin(() => {
         color: 'success',
         icon: 'i-material-symbols:lock-open-right-outline-rounded',
         duration: 10000,
-      });
-    }
-  });
-
-  sync.listen(SyncMessageType.PuzzleUnlocked, ({ data }) => {
-    if (data.puzzles.length > 0) {
-      toast.add({
-        title: `解锁了新的谜题！`,
-        actions: data.puzzles.map(puzzle => {
-          return {
-            icon: 'material-symbols:arrow-forward-rounded',
-            label: puzzle.title,
-            variant: 'soft',
-            to: `/puzzles/${puzzle.id}`,
-          };
-        }),
-        color: 'success',
-        icon: 'material-symbols:extension-outline-rounded',
-        duration: 10000,
-        ui: { actions: 'flex-wrap' },
       });
     }
   });

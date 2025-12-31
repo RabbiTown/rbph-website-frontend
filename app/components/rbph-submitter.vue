@@ -22,7 +22,7 @@ const state = reactive({
 const color = ref<'error' | 'warning' | 'success' | 'primary' | 'secondary' | 'info' | 'neutral'>();
 
 watch(
-  () => [props.puzzle],
+  () => props.puzzle,
   async () => {
     color.value = props.success ? 'success' : 'neutral';
   },
@@ -30,7 +30,7 @@ watch(
 );
 
 watch(
-  () => [props.success],
+  () => props.success,
   async () => {
     color.value = props.success ? 'success' : color.value;
   },
@@ -56,7 +56,7 @@ async function submitAnswer(answer: string) {
     const action = judgeActionConsts[data.action];
 
     const toastData = {
-      title: `${action.name} [${answer}]`,
+      title: h('span', [h('span', { class: `font-bold text-${action.color}` }, action.name), ` [${answer}]`]),
       description: data.result || action.desc,
       icon: action.icon,
       color: action.color,

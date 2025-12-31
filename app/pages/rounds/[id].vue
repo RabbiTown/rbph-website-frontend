@@ -76,14 +76,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
   if (data.puzzle.id === round.value?.data.puzzle && !arrayRemove(submitted, data.answer)) {
     onSubmitSuccess(data.action);
   }
-  // TODO : correct don't necessarily means it is solved (for the first time or maybe something else wtf idk)
-  if (data.action === RbJudgeAction.Correct && round.value?.puzzles.find(x => x.id === data.puzzle.id)) {
-    updateData();
-  }
-});
-
-useSync().listen(SyncMessageType.PuzzleUnlocked, ({ data }) => {
-  if (data.puzzles.find(x => x.round_id === round.value?.data.id)) {
+  if ((data.solved && round.value?.puzzles.find(x => x.id === data.puzzle.id)) || data.unlocks?.find(x => x.round_id === round.value?.data.id)) {
     updateData();
   }
 });
