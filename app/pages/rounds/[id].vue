@@ -42,23 +42,51 @@ async function updateData(id: string | undefined = undefined) {
   }
 }
 
+let submitted: string[] = [];
+
 watch(
   roundId,
   async newId => {
+    submitted = [];
     await updateData(newId);
   },
   { immediate: true }
 );
 
-async function onSubmitSuccess(result: RbJudgeResult, answer: string) {
-  if (result.action > 0) {
-    if (result.action == RbJudgeAction.StartGame) {
-      await updateData();
+function onSubmitSuccess(action: RbJudgeAction) {
+  if (action > 0) {
+    if (action == RbJudgeAction.StartGame) {
+      updateData();
     }
     okSubmissionsComp.value?.updateData();
   }
+}
+
+function onSelfSubmitSuccess(result: RbJudgeResult, answer: string) {
+  onSubmitSuccess(result.action);
   submitResultComp.value?.updateSuccess(result, answer);
 }
+
+function onSelfSubmitFailed(reason: string, answer: string) {
+  submitResultComp.value?.updateFail(reason, answer);
+  arrayRemove(submitted, answer);
+}
+
+useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
+  if (data.puzzle.id === round.value?.data.puzzle && !arrayRemove(submitted, data.answer)) {
+    onSubmitSuccess(data.action);
+  }
+  // TODO : correct don't necessarily means it is solved (for the first time or maybe something else wtf idk)
+  if (data.action === RbJudgeAction.Correct && round.value?.puzzles.find(x => x.id === data.puzzle.id)) {
+    updateData();
+  }
+});
+
+useSync().listen(SyncMessageType.PuzzleUnlocked, ({ data }) => {
+  if (data.puzzles.find(x => x.round_id === round.value?.data.id)) {
+    updateData();
+  }
+});
 </script>
 
 <template>
@@ -83,7 +111,7 @@ async function onSubmitSuccess(result: RbJudgeResult, answer: string) {
 
     <template v-if="round.data.puzzle">
       <u-separator class="my-6" :ui="{ container: 'w-full', border: 'md:w-3/12 w-0' }">
-        <rbph-submitter class="w-full" :puzzle="round.data.puzzle" @submit-success="onSubmitSuccess" @submit-fail="submitResultComp?.updateFail" />
+        <rbph-submitter class="w-full" :puzzle="round.data.puzzle" @submit="x => submitted.push(x)" @submit-success="onSelfSubmitSuccess" @submit-fail="onSelfSubmitFailed" />
       </u-separator>
       <rbph-submit-result ref="submit-result" />
 

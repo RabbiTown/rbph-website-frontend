@@ -54,12 +54,14 @@ async function updateData(newId: number | undefined = undefined) {
   }
 }
 
+const purchased: number[] = [];
 const purchaseLoading = ref(false);
 
 async function purchaseHint(hintId: number) {
   const api = useApi();
 
   purchaseLoading.value = true;
+  purchased.push(hintId);
 
   try {
     const hint = rawData.value?.data.find(x => x.id === hintId);
@@ -82,7 +84,7 @@ async function purchaseHint(hintId: number) {
     if (hint) {
       const cur = currency.value[hint.cost_id];
       toast.add({
-        title: '已购买提示',
+        title: hint.cost_id ? '已购买提示' : '已解锁提示',
         description: hint.cost_id ? `已花费 ${intPrecString(hint.cost_amount, cur?.prec || 0)} ${cur?.name} 购买提示【${hint.title}】` : `已解锁提示【${hint.title}】`,
         icon: 'material-symbols:check-rounded',
         color: 'success',
@@ -91,6 +93,7 @@ async function purchaseHint(hintId: number) {
 
     useCurrency().updateData();
   } catch (error) {
+    arrayRemove(purchased, hintId);
     handleError(error, '提示购买失败');
   }
 
@@ -116,6 +119,12 @@ watch(
   },
   { immediate: true }
 );
+
+useSync().listen(SyncMessageType.PuzzleHintUnlocked, ({ data }) => {
+  if (data.puzzle.id === props.puzzleId && !arrayRemove(purchased, data.hint.id)) {
+    updateData();
+  }
+});
 
 defineExpose({
   updateData,

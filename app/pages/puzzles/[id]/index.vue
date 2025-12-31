@@ -3,7 +3,7 @@ const puzzle = usePuzzle().ref;
 const game = useGame().ref;
 
 useHead({
-  titleTemplate:  computed(() => `${puzzle.value?.data.title} - ${game.value?.title}`),
+  titleTemplate: computed(() => `${puzzle.value?.data.title} - ${game.value?.title}`),
 });
 </script>
 

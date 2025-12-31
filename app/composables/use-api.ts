@@ -24,10 +24,6 @@ interface ApiRequestOptions<TBody = unknown> extends Omit<FetchOptions, 'body' |
 }
 
 export function useApi() {
-  const config = useRuntimeConfig();
-
-  const buildUrl = (path: string) => (/^https?:/i.test(path) ? path : `${config.public.apiBase ?? ''}${path}`);
-
   const normalizeResponse = <T>(payload: ApiEnvelope<T> | T, errorHints?: Record<number, string>): ApiResult<T> => {
     if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'code' in payload) {
       const envelope = payload as ApiEnvelope<T> & Record<string, unknown>;

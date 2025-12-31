@@ -48,11 +48,11 @@ export function useSyncTime() {
   return syncTime;
 }
 
-let inited = false;
+const currencyUsed = ref(false);
 
-export function useCurrency() {
-  const currency = ref<RbTeamCurrencyWrapper>();
+const currency = ref<RbTeamCurrencyWrapper>();
 
+export function useCurrency(activate: boolean = true) {
   async function updateData() {
     syncTime.stopAutoUpdate();
 
@@ -75,9 +75,9 @@ export function useCurrency() {
     syncTime.startAutoUpdate();
   }
 
-  if (!inited) {
-    inited = true;
-    watch(useState('team'), () => updateData(), { immediate: true });
+  if (activate) {
+    currencyUsed.value = true;
+    updateData();
   }
 
   function calcCurrent(target: RbTeamCurrency): number {
@@ -117,5 +117,6 @@ export function useCurrency() {
     getCurrent,
     getAllCurrent,
     updateData,
+    activated: currencyUsed,
   };
 }

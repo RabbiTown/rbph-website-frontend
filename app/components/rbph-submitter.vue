@@ -7,6 +7,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  (e: 'submit', answer: string): void;
   (e: 'submit-success', result: RbJudgeResult, answer: string): void;
   (e: 'submit-fail', reason: string, answer: string): void;
 }>();
@@ -21,9 +22,17 @@ const state = reactive({
 const color = ref<'error' | 'warning' | 'success' | 'primary' | 'secondary' | 'info' | 'neutral'>();
 
 watch(
-  () => props.puzzle,
+  () => [props.puzzle],
   async () => {
     color.value = props.success ? 'success' : 'neutral';
+  },
+  { immediate: true }
+);
+
+watch(
+  () => [props.success],
+  async () => {
+    color.value = props.success ? 'success' : color.value;
   },
   { immediate: true }
 );
@@ -54,7 +63,7 @@ async function submitAnswer(answer: string) {
       duration: 10000,
     };
 
-    if (curToast) {
+    if (curToast && toast.toasts.value.find(x => x.id === curToast?.id)) {
       toast.update(curToast.id, toastData);
     } else {
       toast.add(toastData);
@@ -84,6 +93,7 @@ async function submitAnswer(answer: string) {
 function submit() {
   if (!submitLoading.value && state.answer.trim()) {
     const answer = state.answer;
+    emit('submit', answer);
     submitAnswer(answer)
       .then(result => {
         emit('submit-success', result, answer);

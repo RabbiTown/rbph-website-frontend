@@ -5,6 +5,8 @@ definePageMeta({
   layout: 'game',
 });
 
+useUser().required();
+
 const game = useGame().ref;
 
 useHead({

@@ -36,7 +36,7 @@ const columns = ref<TableColumn<RbSubmission>[]>([
     },
     meta: {
       class: {
-        td: 'max-w-[15em] wrap-anywhere whitespace-normal',
+        td: 'min-w-[15em] md:min-w-none max-w-[15em] wrap-anywhere whitespace-normal',
       },
     },
   },

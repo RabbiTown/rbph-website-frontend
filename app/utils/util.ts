@@ -65,3 +65,18 @@ export function intPrecString(num: number, prec: number, keepPlus: boolean = fal
 
   return isNeg ? `-${pad}${result}` : keepPlus ? `+${pad}${result}` : result;
 }
+
+export function buildUrl(path: string) {
+  const config = useRuntimeConfig();
+  return /^https?:/i.test(path) ? path : `${config.public.apiBase ?? ''}${path}`;
+}
+
+export function arrayRemove<T>(arr: T[] | undefined, item: T): T | undefined {
+  if (arr) {
+    const idx = arr.indexOf(item);
+    if (idx >= 0) {
+      return arr.splice(idx, 1)[0];
+    }
+  }
+  return undefined;
+}
