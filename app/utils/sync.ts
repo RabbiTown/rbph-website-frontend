@@ -37,6 +37,14 @@ export interface SyncMessageMap {
   [SyncMessageType.TeamGameFinished]: object;
 
   // 300 - puzzle
-  [SyncMessageType.PuzzleSubmitted]: { user: { id: number; name: string }; puzzle: { id: number; title: string }; answer: string; action: RbJudgeAction; solved?: boolean; unlocks?: { id: number; title: string; round_id: number }[] };
+  [SyncMessageType.PuzzleSubmitted]: {
+    user: { id: number; name: string };
+    puzzle: { id: number; title: string };
+    answer: string;
+    action: RbJudgeAction;
+    cooldown_till?: string;
+    solved?: boolean;
+    unlocks?: { id: number; title: string; round_id: number }[];
+  };
   [SyncMessageType.PuzzleHintUnlocked]: { user: { id: number; name: string }; puzzle: { id: number; title: string }; hint: { id: number; title: string; cost_id?: number; cost_amount: number } };
 }

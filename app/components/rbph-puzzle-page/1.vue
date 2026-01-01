@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import type { BreadcrumbItem, NavigationMenuItem } from '@nuxt/ui';
 
-const props = defineProps<{
-  data?: RbPuzzleShowData;
-}>();
+const puzzle = defineModel<RbPuzzleShowData | undefined>();
 
-const puzzleId = computed(() => props.data?.data.id);
+const puzzleId = computed(() => puzzle.value?.data.id);
 
 const navItems = computed<NavigationMenuItem[]>(() =>
   puzzleId.value
@@ -29,7 +27,7 @@ const navItems = computed<NavigationMenuItem[]>(() =>
         {
           label: '人工提示',
           icon: 'material-symbols:near-me-outline-rounded',
-          to: `/puzzles/${puzzleId.value}/help`,
+          to: `/puzzles/${puzzleId.value}/tickets`,
         },
       ]
     : []
@@ -37,12 +35,12 @@ const navItems = computed<NavigationMenuItem[]>(() =>
 
 const breadItems = computed<BreadcrumbItem[]>(() => [
   {
-    label: props.data?.data.round.title,
-    to: `/rounds/${props.data?.data.round.id}`,
+    label: puzzle.value?.data.round.title,
+    to: `/rounds/${puzzle.value?.data.round.id}`,
     icon: 'material-symbols:grid-view-outline-rounded',
   },
   {
-    label: props.data?.data.title,
+    label: puzzle.value?.data.title,
     to: `/puzzles/${puzzleId.value}`,
     icon: 'material-symbols:extension-outline-rounded',
   },
@@ -54,11 +52,11 @@ const breadItems = computed<BreadcrumbItem[]>(() => [
     <u-breadcrumb class="mb-6" :items="breadItems" />
     <div class="flex items-baseline justify-between md:flex-row flex-col">
       <div class="text-3xl font-bold">
-        {{ data?.data.title }}
+        {{ puzzle?.data.title }}
       </div>
       <div class="mt-2 text-secondary ms-0.5 text-xs">
         <icon name="material-symbols:schedule-outline-rounded" class="align-middle mb-0.5" />
-        解锁于 {{ formatDate(data?.state.utime_at) }}
+        解锁于 {{ formatDate(puzzle?.state.utime_at) }}
       </div>
     </div>
 

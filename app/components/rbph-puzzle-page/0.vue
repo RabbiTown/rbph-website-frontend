@@ -1,11 +1,9 @@
 <script setup lang="ts">
-defineProps<{
-  data: RbPuzzleShowData;
-}>();
+const puzzle = defineModel<RbPuzzleShowData | undefined>();
 </script>
 
 <template>
   <div>
-    {{ data }}
+    {{ puzzle }}
   </div>
 </template>

@@ -1,7 +1,5 @@
 <script setup lang="ts">
-const props = defineProps<{
-  data: RbPuzzleShowData;
-}>();
+const puzzle = defineModel<RbPuzzleShowData | undefined>();
 
 const currency = useCurrency().getAllCurrent();
 </script>
@@ -15,7 +13,7 @@ const currency = useCurrency().getAllCurrent();
       </u-badge>
     </div>
     <div>
-      <rbph-hints :puzzle-id="data.data.id" :utime-at="data.state.utime_at" />
+      <rbph-hints :puzzle-id="puzzle?.data.id" :utime-at="puzzle?.state.utime_at" />
     </div>
   </div>
 </template>

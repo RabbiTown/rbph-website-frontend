@@ -27,6 +27,15 @@ export function useUser(activate: boolean = true) {
     userUpdatePromise = inner().finally(() => (userUpdatePromise = null));
   }
 
+  async function waitUpdate() {
+    if (userUpdatePromise) {
+      await userUpdatePromise;
+      return user;
+    } else {
+      return user;
+    }
+  }
+
   function required() {
     if (!user.value) {
       updateData().then(() => {
@@ -42,7 +51,7 @@ export function useUser(activate: boolean = true) {
     updateData();
   }
 
-  return { ref: user, updateData, required, activated: userUsed };
+  return { ref: user, updateData, required, waitUpdate, activated: userUsed };
 }
 
 const teamUsed = ref(false);
@@ -51,6 +60,8 @@ export function useTeam(activate: boolean = true) {
   const team = useState<RbTeam | undefined>('team');
 
   async function updateData() {
+    if (await useAggreInfo().waitUpdate()) return;
+
     const gameId = useState<RbGame | undefined>('game').value?.id;
 
     if (gameId) {
@@ -83,22 +94,63 @@ export function usePuzzle() {
   return { ref: useState<RbPuzzleShowData | undefined>('puzzle') };
 }
 
-export async function updateGameState(new_id: string) {
-  const id = parseInt(new_id);
-  if (isNaN(id)) {
+let aggreStatePromise: Promise<void> | null = null;
+
+export function useAggreInfo() {
+  function updateState(gameId: number) {
+    if (aggreStatePromise) return aggreStatePromise;
+    async function inner() {
+      try {
+        const { data } = await useApi().get<RbGameAggreInfo>(`/games/${gameId}/info`);
+        useNuxtApp().$syncWithAggreInfo(data);
+      } catch (error) {
+        showError(error instanceof Error ? error : String(error));
+        return;
+      }
+    }
+    aggreStatePromise = inner().finally(() => (aggreStatePromise = null));
+    return aggreStatePromise;
+  }
+
+  async function waitUpdate() {
+    if (aggreStatePromise) {
+      try {
+        await aggreStatePromise;
+        return true;
+      } catch {
+        /* ignored */
+      }
+    }
+    return false;
+  }
+
+  return {
+    updateState,
+    waitUpdate,
+  };
+}
+
+export async function updateGameState(new_id: string | undefined = undefined, forceUpdate: boolean = false) {
+  const game = useState<RbGame>('game');
+
+  const id = new_id ? parseInt(new_id) : game.value?.id;
+  if (!id || isNaN(id)) {
     throw 'Invalid game.';
   }
 
   const api = useApi();
-  const game = useState<RbGame>('game');
 
-  if (game.value?.id !== id) {
-    try {
-      const { data } = await api.get<RbGame>(`/games/${id}`);
-      game.value = data;
-    } catch (error) {
-      showError(error instanceof Error ? error : String(error));
-      return;
+  if (forceUpdate || game.value?.id !== id) {
+    if ((await useUser().waitUpdate()).value) {
+      useAggreInfo().updateState(id);
+    } else {
+      try {
+        const { data } = await api.get<RbGame>(`/games/${id}`);
+        game.value = data;
+      } catch (error) {
+        showError(error instanceof Error ? error : String(error));
+        return;
+      }
     }
 
     localStorage.setItem('rbph::select_game', id.toString());

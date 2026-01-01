@@ -1,16 +1,17 @@
 <script setup lang="ts">
 const props = defineProps<{
-  data?: RbPuzzleShowData;
   page?: string;
 }>();
+
+const puzzle = defineModel<RbPuzzleShowData | undefined>();
 
 const UEmpty = resolveComponent('u-empty');
 const USkeleton = resolveComponent('u-skeleton');
 
 const page = computed(() => {
-  if (!props.data) return null;
+  if (!puzzle.value) return null;
 
-  const type = props.data.data.ptype;
+  const type = puzzle.value.data.ptype;
   return defineAsyncComponent({
     loader: async () => {
       if (props.page) {
@@ -26,5 +27,5 @@ const page = computed(() => {
 </script>
 
 <template>
-  <component :is="page" :data="data" />
+  <component :is="page" v-model="puzzle" />
 </template>

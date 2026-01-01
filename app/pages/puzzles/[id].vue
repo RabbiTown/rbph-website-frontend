@@ -22,6 +22,6 @@ watch(
 
 <template>
   <div>
-    <rbph-puzzle-page :data="puzzle" />
+    <rbph-puzzle-page v-model="puzzle" />
   </div>
 </template>

@@ -4,16 +4,20 @@ import type { Toast } from '@nuxt/ui/runtime/composables/useToast.js';
 const props = defineProps<{
   puzzle?: number;
   success?: boolean;
+  cooldownTill?: string;
+  maxSubmit?: number;
 }>();
 
 const emit = defineEmits<{
   (e: 'submit', answer: string): void;
-  (e: 'submit-success', result: RbJudgeResult, answer: string): void;
+  (e: 'submit-success', resp: RbJudgeResponse, answer: string): void;
   (e: 'submit-fail', reason: string, answer: string): void;
 }>();
 
 const api = useApi();
 const toast = useToast();
+
+const currentTime = useCurrentTimeSec();
 
 const state = reactive({
   answer: '',
@@ -37,6 +41,22 @@ watch(
   { immediate: true }
 );
 
+const cooldown = computed(() => {
+  const till = props.cooldownTill ? new Date(props.cooldownTill).getTime() : undefined;
+  if (!till) return 0;
+  return Math.max(till - currentTime.value, 0);
+});
+
+watch(
+  () => props.cooldownTill,
+  async () => {
+    if (cooldown.value > 0) {
+      state.answer = '';
+    }
+  },
+  { immediate: true }
+);
+
 const submitLoading = ref(false);
 
 async function submitAnswer(answer: string) {
@@ -52,12 +72,14 @@ async function submitAnswer(answer: string) {
       duration: Infinity,
     });
 
-    const { data } = await api.post<RbJudgeResult>(`/puzzles/${props.puzzle}/submit`, { answer }, { errorHints: { [-1]: '答案无效。', [-2]: '已经提交过这个答案了！' } });
-    const action = judgeActionConsts[data.action];
+    const { data } = await api.post<RbJudgeResponse>(`/puzzles/${props.puzzle}/submit`, { answer }, { errorHints: { [-1]: '答案无效。', [-2]: '已经提交过这个答案了！', [-3]: '目前不允许提交。' } });
+    const result = data.result;
+
+    const action = judgeActionConsts[result.action];
 
     const toastData = {
       title: h('span', [h('span', { class: `font-bold text-${action.color}` }, action.name), ` [${answer}]`]),
-      description: data.result || action.desc,
+      description: result.result || action.desc,
       icon: action.icon,
       color: action.color,
       duration: 10000,
@@ -101,6 +123,12 @@ function submit() {
       .catch(reason => emit('submit-fail', reason, answer));
   }
 }
+
+const inputStyle = computed(() => {
+  if (cooldown.value > 0) return { placeholder: `提交冷却中：${formatTime(cooldown.value)}`, icon: 'material-symbols:schedule-outline-rounded' };
+  if (props.success) return { placeholder: `你的队伍已通过本题`, icon: 'material-symbols:check-rounded' };
+  return { placeholder: `提交答案`, icon: 'material-symbols:send-outline-rounded' };
+});
 </script>
 
 <template>
@@ -109,12 +137,13 @@ function submit() {
       v-model="state.answer"
       class="flex-1"
       variant="subtle"
-      :leading-icon="success ? 'material-symbols:check-rounded' : 'material-symbols:send-outline-rounded'"
+      :leading-icon="inputStyle.icon"
       :color="color"
-      :placeholder="success ? '你的队伍已通过本题' : '提交答案'"
+      :placeholder="inputStyle.placeholder"
       :ui="{ trailing: 'pe-0', base: 'rounded-none rounded-l-lg' }"
+      :disabled="cooldown > 0"
       @keyup.enter="submit"
     />
-    <u-button :loading="submitLoading" :disabled="state.answer.trim().length < 1" :color="color" class="-ms-px justify-center cursor-pointer h-full rounded-none rounded-r-lg px-3" variant="subtle" @click="submit">提交</u-button>
+    <u-button :loading="submitLoading" :disabled="state.answer.trim().length < 1 || cooldown > 0" :color="color" class="-ms-px justify-center cursor-pointer h-full rounded-none rounded-r-lg px-3" variant="subtle" @click="submit">提交</u-button>
   </div>
 </template>

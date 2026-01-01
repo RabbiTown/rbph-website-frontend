@@ -62,9 +62,13 @@ function onSubmitSuccess(action: RbJudgeAction) {
   }
 }
 
-function onSelfSubmitSuccess(result: RbJudgeResult, answer: string) {
-  onSubmitSuccess(result.action);
-  submitResultComp.value?.updateSuccess(result, answer);
+function onSelfSubmitSuccess(resp: RbJudgeResponse, answer: string) {
+  onSubmitSuccess(resp.result.action);
+  submitResultComp.value?.updateSuccess(resp.result, answer);
+
+  if (resp.cooldown_till && round.value?.state.puzzle) {
+    round.value.state.puzzle.cooldown_till = resp.cooldown_till;
+  }
 }
 
 function onSelfSubmitFailed(reason: string, answer: string) {
@@ -75,8 +79,12 @@ function onSelfSubmitFailed(reason: string, answer: string) {
 useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
   if (data.puzzle.id === round.value?.data.puzzle && !arrayRemove(submitted, data.answer)) {
     onSubmitSuccess(data.action);
+
+    if (data.cooldown_till && round.value.state.puzzle) {
+      round.value.state.puzzle.cooldown_till = data.cooldown_till;
+    }
   }
-  if ((data.solved && round.value?.puzzles.find(x => x.id === data.puzzle.id)) || data.unlocks?.find(x => x.round_id === round.value?.data.id)) {
+  if ((data.solved && round.value?.state.puzzles.find(x => x.id === data.puzzle.id)) || data.unlocks?.find(x => x.round_id === round.value?.data.id)) {
     updateData();
   }
 });
@@ -93,18 +101,27 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
     <u-card variant="soft" :ui="{ body: 'sm:py-2 py-2' }">
       <rbph-content :content="round?.data" />
 
-      <template v-if="round.puzzles.length > 0">
+      <template v-if="round.state.puzzles.length > 0">
         <u-separator icon="material-symbols:extension-outline-rounded" class="mt-6 mb-2" />
         <div class="text-3xl font-bold text-center">谜题</div>
         <div class="flex justify-center gap-2 my-4 flex-wrap">
-          <rbph-puzzle-card v-for="puzzle in round.puzzles" :key="puzzle.id" class="md:max-w-7/12 w-full" :puzzle="puzzle" />
+          <rbph-puzzle-card v-for="puzzle in round.state.puzzles" :key="puzzle.id" class="md:max-w-7/12 w-full" :puzzle="puzzle" />
         </div>
       </template>
     </u-card>
 
-    <template v-if="round.data.puzzle">
+    <template v-if="round.data.puzzle && round.state.puzzle">
       <u-separator class="my-6" :ui="{ container: 'w-full', border: 'md:w-3/12 w-0' }">
-        <rbph-submitter class="w-full" :puzzle="round.data.puzzle" @submit="x => submitted.push(x)" @submit-success="onSelfSubmitSuccess" @submit-fail="onSelfSubmitFailed" />
+        <rbph-submitter
+          class="w-full"
+          :puzzle="round.data.puzzle"
+          :success="round.state.puzzle.state === RbTeamPuzzleState.Solved"
+          :cooldown-till="round.state.puzzle.cooldown_till"
+          :max-submit="round.state.puzzle.max_submit"
+          @submit="x => submitted.push(x)"
+          @submit-success="onSelfSubmitSuccess"
+          @submit-fail="onSelfSubmitFailed"
+        />
       </u-separator>
       <rbph-submit-result ref="submit-result" />
 

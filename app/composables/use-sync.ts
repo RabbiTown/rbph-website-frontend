@@ -100,3 +100,73 @@ export function useSync() {
     disconnect,
   };
 }
+
+class SyncTime {
+  serverTime: number = NaN;
+  localTime: number = 0;
+
+  currentTimeRef: Ref<number> = ref(Date.now());
+
+  timeoutId: ReturnType<typeof setTimeout> | undefined = undefined;
+  intervalId: ReturnType<typeof setTimeout> | undefined = undefined;
+
+  syncWith(server_time: Date) {
+    this.serverTime = server_time.getTime();
+    this.localTime = Date.now();
+    this.updateCurrentTimeRef();
+  }
+
+  calcCurrentTime() {
+    if (isNaN(this.serverTime)) {
+      return Date.now();
+    } else {
+      return this.serverTime + Date.now() - this.localTime;
+    }
+  }
+
+  updateCurrentTimeRef() {
+    this.currentTimeRef.value = this.calcCurrentTime();
+  }
+
+  startAutoUpdate() {
+    this.stopAutoUpdate();
+
+    const current = this.calcCurrentTime();
+    const nextMs = 60000 - (current % 60000);
+    this.timeoutId = setTimeout(() => {
+      this.updateCurrentTimeRef();
+      this.intervalId = setInterval(() => this.updateCurrentTimeRef(), 60000);
+    }, nextMs);
+  }
+
+  stopAutoUpdate() {
+    clearTimeout(this.timeoutId);
+    clearInterval(this.intervalId);
+  }
+}
+
+const syncTime = new SyncTime();
+
+export function useSyncTime() {
+  return syncTime;
+}
+
+export function useCurrentTimeSec() {
+  useSyncTime().updateCurrentTimeRef();
+
+  const syncTime = useSyncTime().currentTimeRef;
+
+  const currentTime = ref(syncTime.value);
+
+  watch(syncTime, val => {
+    currentTime.value = val;
+  });
+
+  const timer = setInterval(() => {
+    currentTime.value += 1000;
+  }, 1000);
+
+  onUnmounted(() => clearInterval(timer));
+
+  return currentTime;
+}

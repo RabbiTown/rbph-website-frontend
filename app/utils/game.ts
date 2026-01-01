@@ -66,8 +66,10 @@ export enum RbTeamPuzzleState {
 
 export interface RbPuzzleTeamData {
   state: RbTeamPuzzleState;
+  max_submit?: number;
   answers: string[];
   utime_at: string;
+  cooldown_till?: string;
 }
 
 export interface RbPuzzleShowData {
@@ -113,6 +115,11 @@ export interface RbJudgeResult {
   answer?: string;
 }
 
+export interface RbJudgeResponse {
+  result: RbJudgeResult;
+  cooldown_till?: string;
+}
+
 export interface RbSubmission {
   user_id: number;
   user_answer: string;
@@ -145,9 +152,14 @@ export interface RbRoundInnerPuzzleData {
   answer?: string;
 }
 
+export interface RbRoundTeamData {
+  puzzle?: RbPuzzleTeamData;
+  puzzles: RbRoundInnerPuzzleData[];
+}
+
 export interface RbRoundUserData {
   data: RbRound;
-  puzzles: RbRoundInnerPuzzleData[];
+  state: RbRoundTeamData;
 }
 
 export interface RbTeamCurrency {
@@ -158,11 +170,6 @@ export interface RbTeamCurrency {
   amount: number;
   max_amount: number;
   utime_at: string;
-}
-
-export interface RbTeamCurrencyWrapper {
-  server_time: string;
-  data: RbTeamCurrency[];
 }
 
 export interface RbHint {
@@ -217,4 +224,11 @@ export interface RbAnnouncementInfo {
   game_id?: number;
   puzzle_id?: number;
   utime_at: string;
+}
+
+export interface RbGameAggreInfo {
+  game: RbGame;
+  team?: RbTeam;
+  currency?: RbTeamCurrency[];
+  server_time: string;
 }

@@ -9,21 +9,8 @@ const utimeAtMs = computed(() => new Date(props.utimeAt || '').getTime());
 const api = useApi();
 const toast = useToast();
 const currency = useCurrency().getAllCurrent();
-const syncTime = useSyncTime().currentTimeRef;
 
-const currentTime = ref(0);
-
-watch(
-  syncTime,
-  () => {
-    currentTime.value = syncTime.value;
-  },
-  { immediate: true }
-);
-
-setInterval(() => {
-  currentTime.value += 1000;
-}, 1000);
+const currentTime = useCurrentTimeSec();
 
 const rawData = ref<RbPuzzleHintTeamData>();
 
@@ -101,7 +88,7 @@ async function purchaseHint(hintId: number) {
 }
 
 function checkEnough(hint: RbHint): boolean {
-  if (!hint.cost_id) return true;
+  if (!hint.cost_id || hint.cost_amount <= 0) return true;
   const cur = currency.value[hint.cost_id];
   return cur ? cur.current >= hint.cost_amount : false;
 }
