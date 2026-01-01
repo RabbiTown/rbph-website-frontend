@@ -4,8 +4,10 @@ import * as v from 'valibot';
 import type { FormSubmitEvent } from '@nuxt/ui';
 
 useHead({
-  titleTemplate:  '注册 - RBPH',
+  titleTemplate: '注册 - RBPH',
 });
+
+const route = useRoute();
 
 const schema = v.object({
   email: v.pipe(v.string(), v.email('无效邮箱')),
@@ -30,8 +32,7 @@ async function submit(event: FormSubmitEvent<Schema>) {
   try {
     const { code } = await api.post('/auth/register', event.data, {
       errorHints: {
-        [-3]: '请求错误。',
-        [-2]: '请求错误。',
+        [-2]: '请求无效。',
         [-1]: '邮箱已占用。',
       },
     });
@@ -43,8 +44,11 @@ async function submit(event: FormSubmitEvent<Schema>) {
         color: 'success',
       });
 
+      const currentPath = route.fullPath;
       setTimeout(() => {
-        navigateTo('/login');
+        if (route.fullPath === currentPath) {
+          navigateTo('/login');
+        }
       }, 3000);
     } else if (code == 1) {
       toast.add({
@@ -52,6 +56,14 @@ async function submit(event: FormSubmitEvent<Schema>) {
         description: `请检查收件箱和垃圾信箱。`,
         icon: 'material-symbols:check-rounded',
         color: 'success',
+        duration: 10000,
+      });
+    } else if (code == 2) {
+      toast.add({
+        title: '已发送过验证码',
+        description: `请检查收件箱和垃圾信箱，或寻求站方帮助。`,
+        icon: 'material-symbols:error-med-outline-rounded',
+        color: 'error',
         duration: 10000,
       });
     }

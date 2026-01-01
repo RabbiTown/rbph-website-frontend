@@ -4,7 +4,7 @@ import * as v from 'valibot';
 import type { FormSubmitEvent } from '@nuxt/ui';
 
 useHead({
-  titleTemplate:  '登录 - RBPH',
+  titleTemplate: '登录 - RBPH',
 });
 
 const schema = v.object({
@@ -46,9 +46,12 @@ async function submit(event: FormSubmitEvent<Schema>) {
         color: 'success',
       });
 
+      const currentPath = route.fullPath;
       setTimeout(() => {
-        const target = typeof route.query.url === 'string' ? route.query.url : '/';
-        navigateTo(target);
+        if (route.fullPath === currentPath) {
+          const target = typeof route.query.url === 'string' ? route.query.url : '/';
+          navigateTo(target);
+        }
       }, 1000);
     }
   } catch (error) {

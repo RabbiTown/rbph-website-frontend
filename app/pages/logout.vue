@@ -6,7 +6,7 @@ const toast = useToast();
 const success = ref('load');
 
 useHead({
-  titleTemplate:  '退出登录 - RBPH',
+  titleTemplate: '退出登录 - RBPH',
 });
 
 onMounted(async () => {
@@ -24,9 +24,12 @@ onMounted(async () => {
 
       success.value = 'ok';
 
+      const currentPath = route.fullPath;
       setTimeout(() => {
-        const target = typeof route.query.url === 'string' ? route.query.url : '/';
-        navigateTo(target);
+        if (route.fullPath === currentPath) {
+          const target = typeof route.query.url === 'string' ? route.query.url : '/';
+          navigateTo(target);
+        }
       }, 1000);
     }
   } catch {

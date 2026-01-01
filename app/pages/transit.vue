@@ -20,10 +20,7 @@ try {
           label: '登录',
           color: 'neutral',
           variant: 'outline',
-          onClick: e => {
-            e?.stopPropagation();
-            navigateTo('/login');
-          },
+          to: '/login',
         },
       ],
     });
