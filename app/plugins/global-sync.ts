@@ -101,14 +101,12 @@ export default defineNuxtPlugin(() => {
     if (user.ref.value?.id !== data.user.id) {
       if (data.hint.cost_id) {
         const cur = currency.value[data.hint.cost_id];
-        console.log(currency.value, data.hint.cost_id);
-        console.log(data);
         if (cur) {
           toast.add({
             title: `队友 ${data.user.name} 购买了谜题提示`,
             description: `已花费 ${intPrecString(data.hint.cost_amount, cur.prec)} ${cur?.name} 购买谜题【${data.puzzle.title}】提示【${data.hint.title}】`,
             color: 'success',
-            icon: 'i-material-symbols:lock-open-right-outline-rounded',
+            icon: 'material-symbols:lock-open-right-outline-rounded',
             duration: 10000,
           });
           return;
@@ -118,9 +116,45 @@ export default defineNuxtPlugin(() => {
         title: `你的队友 ${data.user.name} 解锁了谜题提示`,
         description: `已解锁谜题【${data.puzzle.title}】提示【${data.hint.title}】`,
         color: 'success',
-        icon: 'i-material-symbols:lock-open-right-outline-rounded',
+        icon: 'material-symbols:lock-open-right-outline-rounded',
         duration: 10000,
       });
     }
+  });
+
+  sync.listen(SyncMessageType.TeamInfoUpdated, () => {
+    useTeam().updateData();
+  });
+
+  sync.listen(SyncMessageType.TeamDisbanded, () => {
+    toast.add({
+      title: '你所在的队伍已解散',
+      description: '人生有梦，各自精彩。',
+      color: 'error',
+      icon: 'material-symbols:group-off-outline-rounded',
+      duration: 10000,
+    });
+    useTeam().updateData();
+  });
+
+  sync.listen(SyncMessageType.TeamSelfKicked, () => {
+    toast.add({
+      title: '你已被移出所在队伍',
+      description: '离开只是新的开始。',
+      color: 'warning',
+      icon: 'material-symbols:person-remove-outline-rounded',
+      duration: 10000,
+    });
+    useTeam().updateData();
+  });
+
+  sync.listen(SyncMessageType.TeamSelfPromoted, () => {
+    toast.add({
+      title: '你已被设为队长',
+      description: '已取得队长权限。',
+      color: 'warning',
+      icon: 'material-symbols:award-star-outline-rounded',
+      duration: 10000,
+    });
   });
 });

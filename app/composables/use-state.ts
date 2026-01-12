@@ -55,12 +55,17 @@ export function useUser(activate: boolean = true) {
 }
 
 const teamUsed = ref(false);
+let teamLastUpdate = 0;
 
 export function useTeam(activate: boolean = true) {
   const team = useState<RbTeam | undefined>('team');
 
   async function updateData() {
     if (await useAggreInfo().waitUpdate()) return;
+
+    const now = Date.now();
+    if (now - teamLastUpdate < 500) return;
+    teamLastUpdate = now;
 
     const gameId = useState<RbGame | undefined>('game').value?.id;
 

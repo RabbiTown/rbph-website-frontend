@@ -17,17 +17,14 @@ const team = useTeam();
 const teamData = team.ref;
 
 useHead({
-  titleTemplate:  computed(() => `队伍信息 - ${game.value?.title}`),
+  titleTemplate: computed(() => `队伍信息 - ${game.value?.title}`),
 });
 
 const member = computed(() => teamData.value?.members.find(it => it.id === user.value?.id));
 const isCaptain = computed(() => member.value?.is_captain);
 
 async function reloadTeamInfo() {
-  team
-    .updateData()
-    .then(() => updateAllState())
-    .catch(error => handleError(error, '队伍信息获取失败'));
+  team.updateData().catch(error => handleError(error, '队伍信息获取失败'));
 }
 
 const submitLoading = ref(false);
@@ -36,6 +33,7 @@ const submitLoading = ref(false);
 const Icon = resolveComponent('icon');
 const UButton = resolveComponent('u-button');
 const UTooltip = resolveComponent('u-tooltip');
+const UPopover = resolveComponent('u-popover');
 const UUser = resolveComponent('u-user');
 const UBadge = resolveComponent('u-badge');
 
@@ -71,14 +69,34 @@ const memberColumns: TableColumn<RbTeamMember>[] = [
     accessorKey: 'id',
     header: '',
     cell: ({ getValue }) => {
-      const id = getValue();
+      const id = getValue<number>();
+      const warn = (handler: () => void) =>
+        h('div', { class: 'py-2 px-4 text-xs' }, [
+          h(Icon, { name: 'material-symbols:warning-outline-rounded', class: 'align-middle' }),
+          h('span', { class: 'text-xs' }, '这个操作不可撤销。'),
+          h(UButton, { loading: submitLoading.value, class: 'cursor-pointer', color: 'error', variant: 'soft', size: 'xs', onClick: handler }, () => '确定'),
+        ]);
       return [
         member.value?.is_captain && id !== member.value?.id
           ? [
-              h(UTooltip, { text: '设为队长' }, () => h(UButton, { icon: 'material-symbols:award-star-outline-rounded', color: 'neutral', variant: 'link', class: 'cursor-pointer', onClick: () => alert('123') })),
-              h(UTooltip, { text: '移除成员' }, () => h(UButton, { icon: 'material-symbols:person-remove-outline-rounded', color: 'error', variant: 'link', class: 'cursor-pointer', onClick: () => alert('123') })),
+              h(
+                UPopover,
+                { arrow: true },
+                {
+                  default: () => h(UTooltip, { text: '设为队长' }, h(UButton, { icon: 'material-symbols:award-star-outline-rounded', color: 'neutral', variant: 'link', class: 'cursor-pointer', disabled: submitLoading.value })),
+                  content: () => warn(() => promoteSubmit(id)),
+                }
+              ),
+              h(
+                UPopover,
+                { arrow: true },
+                {
+                  default: () => h(UTooltip, { text: '移除成员' }, h(UButton, { icon: 'material-symbols:person-remove-outline-rounded', color: 'error', variant: 'link', class: 'cursor-pointer', disabled: submitLoading.value })),
+                  content: () => warn(() => kickSubmit(id)),
+                }
+              ),
             ]
-          : '',
+          : [],
         id === member.value?.id ? h(UBadge, {}, () => '你') : '',
       ];
     },
@@ -120,6 +138,7 @@ async function editSubmit(event: FormSubmitEvent<EditSchema>) {
       {
         errorHints: {
           [-1]: '没有权限修改队伍信息。',
+          [RbErrorCode.Forbidden]: '没有权限修改队伍信息。',
         },
       }
     );
@@ -157,6 +176,7 @@ async function leaveTeamSubmit() {
         {
           errorHints: {
             [-1]: '目前不能解散队伍。',
+            [RbErrorCode.Forbidden]: '没有权限解散队伍。',
           },
         }
       );
@@ -202,6 +222,70 @@ async function leaveTeamSubmit() {
   }
 }
 
+async function promoteSubmit(target: number) {
+  submitLoading.value = true;
+
+  try {
+    const { code } = await api.post(
+      `/games/${game.value?.id}/teams/self/promote`,
+      { target },
+      {
+        errorHints: {
+          [-2]: '你已经是队长了！',
+          [-1]: '队员已离开队伍。',
+          [RbErrorCode.Forbidden]: '没有权限设置队长。',
+        },
+      }
+    );
+
+    if (code == 0) {
+      const memberName = teamData.value?.members.find(x => x.id === target)?.nickname;
+      toast.add({
+        title: memberName ? `已将 ${memberName} 设置为队长` : '已将该队员设置为队长',
+        icon: 'material-symbols:check-rounded',
+        color: 'success',
+      });
+      reloadTeamInfo();
+    }
+  } catch (error) {
+    handleError(error, '设置队长失败', true);
+  } finally {
+    submitLoading.value = false;
+  }
+}
+
+async function kickSubmit(target: number) {
+  submitLoading.value = true;
+
+  try {
+    const { code } = await api.post(
+      `/games/${game.value?.id}/teams/self/kick`,
+      { target },
+      {
+        errorHints: {
+          [-2]: '不能将自己移出队伍！',
+          [-1]: '队员已离开队伍。',
+          [RbErrorCode.Forbidden]: '没有权限移除队员。',
+        },
+      }
+    );
+
+    if (code == 0) {
+      const memberName = teamData.value?.members.find(x => x.id === target)?.nickname;
+      toast.add({
+        title: memberName ? `已将 ${memberName} 移出队伍` : '已将该队员移出队伍',
+        icon: 'material-symbols:check-rounded',
+        color: 'success',
+      });
+      reloadTeamInfo();
+    }
+  } catch (error) {
+    handleError(error, '移出队伍失败', true);
+  } finally {
+    submitLoading.value = false;
+  }
+}
+
 /* no team - join */
 const joinSchema = v.object({
   id: v.pipe(v.number()),
@@ -223,7 +307,7 @@ async function joinSubmit(event: FormSubmitEvent<JoinSchema>) {
       { password: event.data.pass },
       {
         errorHints: {
-          [-104]: '队伍 ID 无效。',
+          [RbErrorCode.NotFound]: '队伍 ID 无效。',
           [-4]: '输入密码错误。',
           [-3]: '队伍已满。',
           [-2]: '队伍已锁定，请联系工作人员。',

@@ -44,7 +44,7 @@ function connect() {
   ws.onmessage = ev => {
     try {
       const data = JSON.parse(ev.data);
-      if (data.type && data.data) {
+      if (data.type) {
         const type = data.type in SyncMessageType ? (data.type as SyncMessageType) : SyncMessageType.Unknown;
         (listeners[type] ?? []).forEach(l => l(data));
       }

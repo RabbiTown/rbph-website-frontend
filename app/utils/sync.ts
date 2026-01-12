@@ -5,12 +5,10 @@ export enum SyncMessageType {
   GameNewAnnouncement = 101,
 
   // 200 - team
-  TeamMemberJoined = 201,
-  TeamMemberLeft = 202,
-  TeamDisbanded = 203,
-  TeamInfoUpdated = 204,
-  TeamGameStarted = 205,
-  TeamGameFinished = 206,
+  TeamInfoUpdated = 201,
+  TeamDisbanded = 202,
+  TeamSelfKicked = 203,
+  TeamSelfPromoted = 204,
 
   // 300 - puzzle
   PuzzleSubmitted = 301,
@@ -29,12 +27,10 @@ export interface SyncMessageMap {
   [SyncMessageType.GameNewAnnouncement]: object;
 
   // 200 - team
-  [SyncMessageType.TeamMemberJoined]: object;
-  [SyncMessageType.TeamMemberLeft]: object;
-  [SyncMessageType.TeamDisbanded]: object;
-  [SyncMessageType.TeamInfoUpdated]: object;
-  [SyncMessageType.TeamGameStarted]: object;
-  [SyncMessageType.TeamGameFinished]: object;
+  [SyncMessageType.TeamDisbanded]: null;
+  [SyncMessageType.TeamInfoUpdated]: null;
+  [SyncMessageType.TeamSelfKicked]: null;
+  [SyncMessageType.TeamSelfPromoted]: null;
 
   // 300 - puzzle
   [SyncMessageType.PuzzleSubmitted]: {
