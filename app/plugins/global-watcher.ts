@@ -27,7 +27,7 @@ export default defineNuxtPlugin(() => {
     syncing.value = true;
 
     try {
-      useGame().ref.value = info.game;
+      useGame().ref.value = { ...info.game, rounds: info.rounds };
       useTeam().ref.value = info.team;
       useCurrency().ref.value = info.currency || [];
       useSyncTime().syncWith(new Date(info.server_time));

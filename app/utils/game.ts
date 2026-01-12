@@ -11,6 +11,8 @@ export interface RbGame {
   ctime_at?: string;
 
   cover?: string;
+
+  rounds?: Pick<RbRound, 'id' | 'title'>[];
 }
 
 export enum RbTeamState {
@@ -230,5 +232,6 @@ export interface RbGameAggreInfo {
   game: RbGame;
   team?: RbTeam;
   currency?: RbTeamCurrency[];
+  rounds?: Pick<RbRound, 'id' | 'title'>[];
   server_time: string;
 }
