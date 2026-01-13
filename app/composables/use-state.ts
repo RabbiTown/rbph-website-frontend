@@ -91,8 +91,33 @@ export function useTeam(activate: boolean = true) {
   return { ref: team, updateData, activated: teamUsed };
 }
 
+let roundLastUpdate = 0;
+
 export function useGame() {
-  return { ref: useState<RbGame | undefined>('game') };
+  const ref = useState<RbGame | undefined>('game');
+
+  async function updateRoundState() {
+    if (await useAggreInfo().waitUpdate()) return;
+
+    const now = Date.now();
+    if (now - roundLastUpdate < 500) return;
+    roundLastUpdate = now;
+
+    if (ref.value?.id) {
+      try {
+        const { data } = await useApi().get<Pick<RbRound, 'id' | 'title'>[]>(`/games/${ref.value.id}/rounds`);
+        ref.value.rounds = data;
+      } catch (error) {
+        if (getRbErrorCode(error) === RbErrorCode.NotFound) {
+          ref.value.rounds = [];
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+
+  return { ref, updateRoundState };
 }
 
 export function usePuzzle() {

@@ -24,7 +24,7 @@ export function getErrorToast(error: unknown, title: string, forceHint: boolean 
   };
 }
 
-export function formatDate(_date: Date | string | undefined = undefined) {
+export function formatDate(_date: Date | string | number | undefined = undefined) {
   const date = new Date(_date || Date.now());
   return date.toLocaleString();
 }

@@ -3,6 +3,7 @@ import type { Toast } from '@nuxt/ui/runtime/composables/useToast.js';
 export default defineNuxtPlugin(() => {
   const sync = useSync();
   const user = useUser(false);
+  const team = useTeam(false);
   const toast = useToast();
   const currency = useCurrency().getAllCurrent();
 
@@ -28,6 +29,13 @@ export default defineNuxtPlugin(() => {
     },
     { immediate: true }
   );
+
+  watch([user.ref, team.ref], (newVal, oldVal) => {
+    if (oldVal && oldVal[0]?.id === newVal[0]?.id && oldVal[1]?.id !== newVal[1]?.id) {
+      // team updated, while user not updated
+      useGame().updateRoundState();
+    }
+  });
 
   watch(sync.online, newState => {
     let toastData: Omit<Partial<Toast>, 'id'> | undefined = undefined;
@@ -58,9 +66,21 @@ export default defineNuxtPlugin(() => {
   });
 
   sync.listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
+    useCurrency().updateData();
+
     if (user.ref.value?.id !== data.user.id) {
       const action = judgeActionConsts[data.action];
-      if (data.solved) {
+
+      if (data.action === RbJudgeAction.FinishGame) {
+        toast.add({
+          title: h('span', { class: `font-bold text-${action.color}` }, '你的队伍已完赛！'),
+          description: h('span', [`队友 ${data.user.name} 向最终谜题提交正确。 [${data.answer}]`]),
+          color: 'success',
+          icon: action.icon,
+          duration: 10000,
+        });
+        useTeam().updateData();
+      } else if (data.solved) {
         toast.add({
           title: `队友 ${data.user.name} 解决了谜题！`,
           description: h('span', [`【${data.puzzle.title}】提交结果：`, h('span', { class: `font-bold text-${action.color}` }, action.name), ` [${data.answer}]`]),
@@ -94,10 +114,13 @@ export default defineNuxtPlugin(() => {
         duration: 10000,
         ui: { actions: 'flex-wrap' },
       });
+      useGame().updateRoundState();
     }
   });
 
   sync.listen(SyncMessageType.PuzzleHintUnlocked, ({ data }) => {
+    useCurrency().updateData();
+
     if (user.ref.value?.id !== data.user.id) {
       if (data.hint.cost_id) {
         const cur = currency.value[data.hint.cost_id];

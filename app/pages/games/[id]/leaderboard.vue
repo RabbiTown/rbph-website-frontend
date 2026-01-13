@@ -10,10 +10,11 @@ useUser().required();
 const game = useGame().ref;
 
 useHead({
-  titleTemplate:  computed(() => `排行榜 - ${game.value?.title}`),
+  titleTemplate: computed(() => `排行榜 - ${game.value?.title}`),
 });
 
 const api = useApi();
+const team = useTeam();
 
 const pageData = ref<LeaderBoardInfo>();
 
@@ -33,7 +34,10 @@ const columns = ref<TableColumn<LeaderBoardTeamInfo>[]>([
   {
     accessorKey: 'tname',
     header: '队伍',
-    cell: ({ row, getValue }) => [h('div', { class: 'text-lg text-highlighted font-bold' }, getValue<string>()), h('div', row.original.bio)],
+    cell: ({ row, getValue }) => [
+      h('div', { class: 'text-lg text-highlighted font-bold' }, [getValue<string>(), row.original.id === team.ref.value?.id ? h(Icon, { name: 'material-symbols:location-on-outline-rounded', class: 'text-warning align-middle ms-1 mb-0.5' }) : null]),
+      h('div', row.original.bio),
+    ],
     meta: {
       class: {
         td: 'overflow-hidden text-pretty wrap-anywhere whitespace-normal',
@@ -118,16 +122,20 @@ const columns = ref<TableColumn<LeaderBoardTeamInfo>[]>([
   },
 ]);
 
-async function updateData(newId: number | undefined) {
-  const gameId = newId;
+async function updateData(newId: number | undefined = undefined): Promise<boolean> {
+  const gameId = newId || game.value?.id;
   if (gameId) {
     try {
-      const { data } = await api.get<LeaderBoardInfo>(`/games/${gameId}/leaderboard`);
-      pageData.value = data;
+      const { data } = await api.get<LeaderBoardInfo>(`/games/${gameId}/leaderboard`, { query: { version: pageData.value?.version } });
+      if (data) {
+        pageData.value = data;
+        return true;
+      }
     } catch (error) {
       handleError(error, '获取排行榜信息失败');
     }
   }
+  return false;
 }
 
 watch(
@@ -142,6 +150,10 @@ watch(
 const showLength = ref(0);
 const showData = computed(() => pageData.value?.data.slice(0, showLength.value));
 
+const updateTime = ref(Date.now());
+
+let timer: number | null = null;
+
 onMounted(() => {
   useInfiniteScroll(
     window,
@@ -153,6 +165,16 @@ onMounted(() => {
       canLoadMore: () => showLength.value < (pageData.value?.data.length || 0),
     }
   );
+
+  timer = window.setInterval(() => {
+    updateData().then(updated => {
+      if (updated) updateTime.value = Date.now();
+    });
+  }, 5000);
+});
+
+onUnmounted(() => {
+  if (timer) clearInterval(timer);
 });
 </script>
 
@@ -163,7 +185,7 @@ onMounted(() => {
         <div class="text-3xl font-bold">排行榜</div>
         <div class="mt-2 text-secondary ms-0.5 text-xs">
           <icon name="material-symbols:schedule-outline-rounded" class="align-middle mb-0.5" />
-          更新于 {{ formatDate() }}
+          更新于 {{ formatDate(updateTime) }}
         </div>
       </div>
     </div>

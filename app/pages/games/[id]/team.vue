@@ -316,12 +316,13 @@ async function joinSubmit(event: FormSubmitEvent<JoinSchema>) {
       }
     );
 
-    if (code == 0) {
+    if (code === 0) {
       toast.add({
         title: '成功加入队伍！',
         icon: 'material-symbols:check-rounded',
         color: 'success',
       });
+
       reloadTeamInfo();
     }
   } catch (error) {

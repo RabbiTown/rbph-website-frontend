@@ -1,10 +1,15 @@
 const currencyUsed = ref(false);
+let currencyLastUpdate = 0;
 
 const currency = ref<RbTeamCurrency[]>();
 
 export function useCurrency(activate: boolean = true) {
   async function updateData() {
     if (await useAggreInfo().waitUpdate()) return;
+
+    const now = Date.now();
+    if (now - currencyLastUpdate < 500) return;
+    currencyLastUpdate = now;
 
     const api = useApi();
     const gameId = useState<RbGame | undefined>('game').value?.id;
@@ -14,6 +19,7 @@ export function useCurrency(activate: boolean = true) {
         const { data } = await api.get<RbTeamCurrency[]>(`/games/${gameId}/teams/self/currency`);
 
         currency.value = data;
+        useSyncTime().updateCurrentTimeRef();
       } catch (error) {
         if (getRbErrorCode(error) === -104) {
           currency.value = undefined;
@@ -27,10 +33,10 @@ export function useCurrency(activate: boolean = true) {
     updateData();
   }
 
-  const syncTime = useSyncTime();
+  const syncTime = useSyncTime().currentTimeRef;
 
   function calcCurrent(target: RbTeamCurrency): number {
-    return Math.min(target.amount + Math.floor((syncTime.currentTimeRef.value - new Date(target.utime_at).getTime()) / 60000) * target.growth, target.max_amount);
+    return Math.min(target.amount + Math.floor((syncTime.value - new Date(target.utime_at).getTime()) / 60000) * target.growth, target.max_amount);
   }
 
   function getCurrent(id: number): ComputedRef<number | undefined> {

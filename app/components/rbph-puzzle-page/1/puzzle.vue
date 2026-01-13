@@ -6,9 +6,12 @@ const submitResultComp = useTemplateRef('submit-result');
 
 function onSubmitSuccess(action: RbJudgeAction) {
   if (action > 0) {
-    if (action === RbJudgeAction.Correct) {
+    if (action === RbJudgeAction.Correct || action === RbJudgeAction.FinishGame) {
       if (puzzle.value) puzzle.value.state.state = RbTeamPuzzleState.Solved;
-      console.log(puzzle);
+      useGame().updateRoundState();
+      if (action === RbJudgeAction.FinishGame) {
+        useTeam().updateData();
+      }
     }
     okSubmissionsComp.value?.updateData();
   }
@@ -32,10 +35,8 @@ function onSelfSubmitFailed(reason: string, answer: string) {
 
 useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
   if (data.puzzle.id === puzzle.value?.data.id && !arrayRemove(submitted, data.answer)) {
-    onSubmitSuccess(data.action);
-
-    if (data.cooldown_till && puzzle.value) {
-      puzzle.value.state.cooldown_till = data.cooldown_till;
+    if (data.action > 0) {
+      okSubmissionsComp.value?.updateData();
     }
   }
 });

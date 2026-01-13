@@ -92,6 +92,7 @@ export enum RbJudgeAction {
   Milestone = 2,
   StartGame = 3,
   EasterEgg = 4,
+  FinishGame = 5,
 }
 
 export interface JudgeActionConst {
@@ -109,6 +110,7 @@ export const judgeActionConsts: Record<RbJudgeAction, JudgeActionConst> = {
   [RbJudgeAction.Milestone]: { name: '里程碑', icon: 'material-symbols:flag-outline-rounded', color: 'warning', desc: '这是本题的一个中间答案。' },
   [RbJudgeAction.StartGame]: { name: '开始游戏', icon: 'material-symbols:celebration-rounded', color: 'success', desc: '你的队伍已开始游戏。' },
   [RbJudgeAction.EasterEgg]: { name: '彩蛋', icon: 'material-symbols:auto-awesome-outline-rounded', color: 'primary', desc: '这是一个彩蛋！' },
+  [RbJudgeAction.FinishGame]: { name: '恭喜完赛', icon: 'material-symbols:auto-awesome-outline-rounded', color: 'success', desc: '回答正确，恭喜完赛！' },
 };
 
 export interface RbJudgeResult {
@@ -215,6 +217,7 @@ export interface LeaderBoardTeamInfo {
 
 export interface LeaderBoardInfo {
   data: LeaderBoardTeamInfo[];
+  version: number;
 }
 
 export interface RbAnnouncementInfo {

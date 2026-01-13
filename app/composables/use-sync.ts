@@ -114,6 +114,7 @@ class SyncTime {
     this.serverTime = server_time.getTime();
     this.localTime = Date.now();
     this.updateCurrentTimeRef();
+    this.startAutoUpdate();
   }
 
   calcCurrentTime() {

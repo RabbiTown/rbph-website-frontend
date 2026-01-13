@@ -45,6 +45,28 @@ const breadItems = computed<BreadcrumbItem[]>(() => [
     icon: 'material-symbols:extension-outline-rounded',
   },
 ]);
+
+function onSubmitSuccess(action: RbJudgeAction) {
+  if (action > 0) {
+    if (action === RbJudgeAction.Correct || action === RbJudgeAction.FinishGame) {
+      if (puzzle.value) puzzle.value.state.state = RbTeamPuzzleState.Solved;
+      useGame().updateRoundState();
+      if (action === RbJudgeAction.FinishGame) {
+        useTeam().updateData();
+      }
+    }
+  }
+}
+
+useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
+  if (data.puzzle.id === puzzle.value?.data.id) {
+    onSubmitSuccess(data.action);
+
+    if (data.cooldown_till && puzzle.value) {
+      puzzle.value.state.cooldown_till = data.cooldown_till;
+    }
+  }
+});
 </script>
 
 <template>

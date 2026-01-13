@@ -58,6 +58,7 @@ function onSubmitSuccess(action: RbJudgeAction) {
     if (action == RbJudgeAction.StartGame) {
       updateData();
       useCurrency().updateData();
+      useGame().updateRoundState();
     }
     okSubmissionsComp.value?.updateData();
   }
