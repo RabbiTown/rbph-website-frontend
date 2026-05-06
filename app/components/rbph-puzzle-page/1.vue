@@ -59,6 +59,8 @@ function onSubmitSuccess(action: RbJudgeAction) {
 }
 
 useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
+  if (useSid().consume(data.sid)) return;
+
   if (data.puzzle.id === puzzle.value?.data.id) {
     onSubmitSuccess(data.action);
 

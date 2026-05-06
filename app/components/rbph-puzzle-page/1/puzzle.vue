@@ -17,8 +17,6 @@ function onSubmitSuccess(action: RbJudgeAction) {
   }
 }
 
-const submitted: string[] = [];
-
 function onSelfSubmitSuccess(resp: RbJudgeResponse, answer: string) {
   onSubmitSuccess(resp.result.action);
   submitResultComp.value?.updateSuccess(resp.result, answer);
@@ -26,15 +24,24 @@ function onSelfSubmitSuccess(resp: RbJudgeResponse, answer: string) {
   if (resp.cooldown_till && puzzle.value) {
     puzzle.value.state.cooldown_till = resp.cooldown_till;
   }
+
+  if (resp.solved && puzzle.value) {
+    puzzle.value.state.state = RbTeamPuzzleState.Solved;
+  }
+
+  if (resp.unlocks && resp.unlocks.length > 0) {
+    useGame().updateRoundState();
+  }
 }
 
 function onSelfSubmitFailed(reason: string, answer: string) {
   submitResultComp.value?.updateFail(reason, answer);
-  arrayRemove(submitted, answer);
 }
 
 useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
-  if (data.puzzle.id === puzzle.value?.data.id && !arrayRemove(submitted, data.answer)) {
+  if (useSid().consume(data.sid)) return;
+
+  if (data.puzzle.id === puzzle.value?.data.id) {
     if (data.action > 0) {
       okSubmissionsComp.value?.updateData();
     }
@@ -56,7 +63,6 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
         :success="puzzle.state.state === RbTeamPuzzleState.Solved"
         :cooldown-till="puzzle.state.cooldown_till"
         :max-submit="puzzle.state.max_submit"
-        @submit="x => submitted.push(x)"
         @submit-success="onSelfSubmitSuccess"
         @submit-fail="onSelfSubmitFailed"
       />

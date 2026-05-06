@@ -66,6 +66,8 @@ export default defineNuxtPlugin(() => {
   });
 
   sync.listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
+    if (useSid().consume(data.sid)) return;
+
     useCurrency().updateData();
 
     if (user.ref.value?.id !== data.user.id) {
@@ -119,6 +121,8 @@ export default defineNuxtPlugin(() => {
   });
 
   sync.listen(SyncMessageType.PuzzleHintUnlocked, ({ data }) => {
+    if (useSid().consume(data.sid)) return;
+
     useCurrency().updateData();
 
     if (user.ref.value?.id !== data.user.id) {

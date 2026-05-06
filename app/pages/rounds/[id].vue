@@ -13,6 +13,7 @@ const roundId = computed(() => route.params.id as string);
 const round = ref<RbRoundUserData>();
 
 const game = useGame().ref;
+const sidStore = useSid();
 
 useHead({
   titleTemplate: computed(() => buildTitleParts([{ text: round.value?.data.title }, { text: game.value?.title, sep: ' - ' }])),
@@ -42,12 +43,9 @@ async function updateData(id: string | undefined = undefined) {
   }
 }
 
-let submitted: string[] = [];
-
 watch(
   roundId,
   async newId => {
-    submitted = [];
     await updateData(newId);
   },
   { immediate: true },
@@ -71,22 +69,35 @@ function onSelfSubmitSuccess(resp: RbJudgeResponse, answer: string) {
   if (resp.cooldown_till && round.value?.state.puzzle) {
     round.value.state.puzzle.cooldown_till = resp.cooldown_till;
   }
+
+  if (resp.solved && round.value?.state.puzzle) {
+    round.value.state.puzzle.state = RbTeamPuzzleState.Solved;
+  }
+
+  if (resp.unlocks?.some(x => x.round_id === round.value?.data.id)) {
+    updateData();
+  }
+
+  if (resp.unlocks && resp.unlocks.length > 0) {
+    useGame().updateRoundState();
+  }
 }
 
 function onSelfSubmitFailed(reason: string, answer: string) {
   submitResultComp.value?.updateFail(reason, answer);
-  arrayRemove(submitted, answer);
 }
 
 useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
-  if (data.puzzle.id === round.value?.data.puzzle && !arrayRemove(submitted, data.answer)) {
+  const isSelfEcho = sidStore.consume(data.sid);
+
+  if (data.puzzle.id === round.value?.data.puzzle && !isSelfEcho) {
     onSubmitSuccess(data.action);
 
     if (data.cooldown_till && round.value.state.puzzle) {
       round.value.state.puzzle.cooldown_till = data.cooldown_till;
     }
   }
-  if ((data.solved && round.value?.state.puzzles.find(x => x.id === data.puzzle.id)) || data.unlocks?.find(x => x.round_id === round.value?.data.id)) {
+  if (!isSelfEcho && ((data.solved && round.value?.state.puzzles.find(x => x.id === data.puzzle.id)) || data.unlocks?.find(x => x.round_id === round.value?.data.id))) {
     updateData();
   }
 });
@@ -120,7 +131,6 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
           :success="round.state.puzzle.state === RbTeamPuzzleState.Solved"
           :cooldown-till="round.state.puzzle.cooldown_till"
           :max-submit="round.state.puzzle.max_submit"
-          @submit="x => submitted.push(x)"
           @submit-success="onSelfSubmitSuccess"
           @submit-fail="onSelfSubmitFailed"
         />

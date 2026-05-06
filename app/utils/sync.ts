@@ -34,6 +34,7 @@ export interface SyncMessageMap {
 
   // 300 - puzzle
   [SyncMessageType.PuzzleSubmitted]: {
+    sid?: string;
     user: { id: number; name: string };
     puzzle: { id: number; title: string };
     answer: string;
@@ -42,5 +43,5 @@ export interface SyncMessageMap {
     solved?: boolean;
     unlocks?: { id: number; title: string; round_id: number }[];
   };
-  [SyncMessageType.PuzzleHintUnlocked]: { user: { id: number; name: string }; puzzle: { id: number; title: string }; hint: { id: number; title: string; cost_id?: number; cost_amount: number } };
+  [SyncMessageType.PuzzleHintUnlocked]: { sid?: string; user: { id: number; name: string }; puzzle: { id: number; title: string }; hint: { id: number; title: string; cost_id?: number; cost_amount: number } };
 }

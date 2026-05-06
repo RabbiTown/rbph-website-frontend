@@ -9,6 +9,7 @@ const utimeAtMs = computed(() => new Date(props.utimeAt || '').getTime());
 const api = useApi();
 const toast = useToast();
 const currency = useCurrency().getAllCurrent();
+const sidStore = useSid();
 
 const currentTime = useCurrentTimeSec();
 
@@ -41,21 +42,20 @@ async function updateData(newId: number | undefined = undefined) {
   }
 }
 
-const purchased: number[] = [];
 const purchaseLoading = ref(false);
 
 async function purchaseHint(hintId: number) {
   const api = useApi();
+  const sid = sidStore.create('hint-purchase');
 
   purchaseLoading.value = true;
-  purchased.push(hintId);
 
   try {
     const hint = rawData.value?.data.find(x => x.id === hintId);
 
     const { data } = await api.post<RbHintTeamState>(
       `/hints/${hintId}/purchase`,
-      {},
+      { sid },
       {
         errorHints: {
           [-2]: '余额不足。',
@@ -80,7 +80,7 @@ async function purchaseHint(hintId: number) {
 
     useCurrency().updateData();
   } catch (error) {
-    arrayRemove(purchased, hintId);
+    sidStore.clear(sid);
     handleError(error, '提示购买失败');
   }
 
@@ -108,7 +108,9 @@ watch(
 );
 
 useSync().listen(SyncMessageType.PuzzleHintUnlocked, ({ data }) => {
-  if (data.puzzle.id === props.puzzleId && !arrayRemove(purchased, data.hint.id)) {
+  if (useSid().consume(data.sid)) return;
+
+  if (data.puzzle.id === props.puzzleId) {
     updateData();
   }
 });

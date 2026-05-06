@@ -123,6 +123,8 @@ export interface RbJudgeResult {
 export interface RbJudgeResponse {
   result: RbJudgeResult;
   cooldown_till?: string;
+  solved?: boolean;
+  unlocks?: { id: number; title: string; round_id: number }[];
 }
 
 export interface RbSubmission {

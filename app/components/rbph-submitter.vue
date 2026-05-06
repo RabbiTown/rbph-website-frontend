@@ -16,6 +16,7 @@ const emit = defineEmits<{
 
 const api = useApi();
 const toast = useToast();
+const sidStore = useSid();
 
 const currentTime = useCurrentTimeSec();
 
@@ -61,6 +62,7 @@ const submitLoading = ref(false);
 
 async function submitAnswer(answer: string) {
   submitLoading.value = true;
+  const sid = sidStore.create('puzzle-submit');
 
   let curToast: Toast | undefined = undefined;
   try {
@@ -72,7 +74,7 @@ async function submitAnswer(answer: string) {
       duration: Infinity,
     });
 
-    const { data } = await api.post<RbJudgeResponse>(`/puzzles/${props.puzzle}/submit`, { answer }, { errorHints: { [-1]: '答案无效。', [-2]: '已经提交过这个答案了！', [-3]: '目前不允许提交。' } });
+    const { data } = await api.post<RbJudgeResponse>(`/puzzles/${props.puzzle}/submit`, { answer, sid }, { errorHints: { [-1]: '答案无效。', [-2]: '已经提交过这个答案了！', [-3]: '目前不允许提交。' } });
     const result = data.result;
 
     const action = judgeActionConsts[result.action];
@@ -95,9 +97,29 @@ async function submitAnswer(answer: string) {
       color.value = action.color;
     }
 
+    if (data.unlocks && data.unlocks.length > 0) {
+      toast.add({
+        title: `解锁了新的谜题！`,
+        actions: data.unlocks.map(puzzle => {
+          return {
+            icon: 'material-symbols:arrow-forward-rounded',
+            label: puzzle.title,
+            variant: 'soft',
+            to: `/puzzles/${puzzle.id}`,
+          };
+        }),
+        color: 'success',
+        icon: 'material-symbols:extension-outline-rounded',
+        duration: 10000,
+        ui: { actions: 'flex-wrap' },
+      });
+    }
+
+    useCurrency().updateData();
     submitLoading.value = false;
     return data;
   } catch (error) {
+    sidStore.clear(sid);
     const toastData = { duration: 5000, ...getErrorToast(error, `提交失败 [${answer}]`, true) };
     toastData.description = toastData.description || '请尝试稍后重新提交。';
 
