@@ -13,9 +13,8 @@ const toast = useToast();
 
 const game = useGame().ref;
 
-type TicketFullInfo = TicketAggreInfo & TicketMessageInfo;
-
-const ticket = ref<TicketFullInfo>();
+const pageData = ref<TicketThread>();
+const ticket = computed(() => pageData.value?.ticket);
 
 const ticket_id = computed(() => route.params.id as string);
 
@@ -29,11 +28,11 @@ async function updateData(new_id: string | undefined = undefined) {
 
   if (ticket.value?.id !== id) {
     try {
-      const { data } = await useApi().get<TicketFullInfo>(`/tickets/${new_id}`);
-      ticket.value = data;
+      const { data } = await useApi().get<TicketThread>(`/tickets/${new_id}`);
+      pageData.value = data;
 
-      if (data.game_id) {
-        updateGameState(data.game_id.toString());
+      if (data.ticket?.game_id) {
+        updateGameState(data.ticket.game_id.toString());
       }
     } catch (error) {
       showError(error instanceof Error ? error : String(error));
@@ -73,11 +72,11 @@ const draftMessage = ref('');
 async function submitMessage() {
   submitLoading.value = true;
 
-  const gameId = game.value?.id;
-  if (gameId) {
+  const ticketId = ticket.value?.id;
+  if (ticketId) {
     try {
-      const { code } = await api.post<TicketSendResponse>(
-        `/games/${gameId}/tickets/self/send`,
+      const { code, data } = await api.post<TicketSendResponse>(
+        `/tickets/${ticketId}/send`,
         { content: draftMessage.value },
         { errorHints: { [-1]: '这条人工提示已关闭。', [-2]: '积压信息过多，请先等待工作人员回复。', [-3]: '内容类型无效或无权使用。', [-4]: '发送的信息过长。', [-5]: '信息要求的费用无效。' } },
       );
@@ -90,7 +89,11 @@ async function submitMessage() {
           icon: 'material-symbols:check-rounded',
           color: 'success',
         });
-        updateData();
+        pageData.value = {
+          ticket: data.ticket ?? pageData.value?.ticket,
+          messages: [...(pageData.value?.messages ?? []), data.msg],
+          perm: pageData.value?.perm ?? { can_send: true, can_host: false, can_view_locked: false },
+        };
       }
     } catch (error) {
       handleError(error, '站内信发送失败');

@@ -250,6 +250,11 @@ export enum RbTicketSenderType {
   Host = 1,
 }
 
+export enum TicketOpenBlock {
+  Pending = 1,
+  Cooldown = 2,
+}
+
 export interface TicketMessage {
   id: number;
   sender: { id: number; nickname: string };
@@ -262,15 +267,37 @@ export interface TicketMessage {
   content_type?: RbContentType;
 
   ctime_at: string;
-  utime_at: string;
+  utime_at: string | null;
 }
 
-export interface TicketAggreInfo {
+export interface TicketSummary {
   id: number;
   state: RbTicketState;
-  team: Pick<RbTeam, 'id' | 'name' | 'state'>;
+  game_id?: number;
+  team?: Pick<RbTeam, 'id' | 'name' | 'state'>;
   puzzle?: Pick<RbPuzzle, 'id' | 'title' | 'round'> & Pick<RbPuzzleTeamData, 'state'>;
-  game_id: number;
+  msg_count?: number;
+  last_at: string | null;
+  last_by?: RbTicketSenderType;
+  has_locked: boolean;
+}
+
+export interface TicketPerm {
+  can_send: boolean;
+  can_host: boolean;
+  can_view_locked: boolean;
+}
+
+export interface TicketThread {
+  ticket?: TicketSummary | null;
+  messages: TicketMessage[];
+  perm: TicketPerm;
+}
+
+export interface TicketPuzzleList {
+  can_open: boolean;
+  block?: TicketOpenBlock;
+  tickets: TicketSummary[];
 }
 
 export interface TicketMessageInfo {
@@ -278,9 +305,16 @@ export interface TicketMessageInfo {
 }
 
 export interface TicketSendResponse {
-  ticket_id?: number;
   message_id: number;
+  ticket?: TicketSummary;
+  msg: TicketMessage;
 }
 
-export type TicketDetailInfo = Pick<TicketAggreInfo, 'id' | 'state'>;
-export type TicketOpenResponse = Required<TicketSendResponse>;
+export interface TicketOpenResponse {
+  ticket_id: number;
+  message_id: number;
+  thread: TicketThread;
+}
+
+export type TicketAggreInfo = TicketSummary;
+export type TicketDetailInfo = TicketSummary;

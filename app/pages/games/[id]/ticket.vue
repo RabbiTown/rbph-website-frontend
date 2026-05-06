@@ -14,13 +14,13 @@ useHead({
 const api = useApi();
 const toast = useToast();
 
-const pageData = ref<TicketMessageInfo>();
+const pageData = ref<TicketThread>();
 
 async function updateData(newId: number | undefined = undefined): Promise<boolean> {
   const gameId = newId || game.value?.id;
   if (gameId) {
     try {
-      const { data } = await api.get<TicketMessageInfo>(`/games/${gameId}/tickets/self`);
+      const { data } = await api.get<TicketThread>(`/games/${gameId}/tickets/self`);
       pageData.value = data;
       return true;
     } catch (error) {
@@ -48,7 +48,7 @@ async function submitMessage() {
   const gameId = game.value?.id;
   if (gameId) {
     try {
-      const { code } = await api.post<TicketSendResponse>(
+      const { code, data } = await api.post<TicketSendResponse>(
         `/games/${gameId}/tickets/self/send`,
         { content: draftMessage.value },
         { errorHints: { [-1]: '队伍站内信被禁用。', [-2]: '积压信息过多，请先等待工作人员回复。', [-3]: '内容类型无效或无权使用。', [-4]: '发送的信息过长。', [-5]: '信息要求的费用无效。' } },
@@ -62,7 +62,11 @@ async function submitMessage() {
           icon: 'material-symbols:check-rounded',
           color: 'success',
         });
-        updateData();
+        pageData.value = {
+          ticket: data.ticket ?? pageData.value?.ticket,
+          messages: [...(pageData.value?.messages ?? []), data.msg],
+          perm: pageData.value?.perm ?? { can_send: true, can_host: false, can_view_locked: false },
+        };
       }
     } catch (error) {
       handleError(error, '站内信发送失败');

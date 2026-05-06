@@ -4,13 +4,13 @@ const puzzle = defineModel<RbPuzzleShowData | undefined>();
 const api = useApi();
 const toast = useToast();
 
-const pageData = ref<TicketDetailInfo[]>();
+const pageData = ref<TicketPuzzleList>();
 
 async function updateData(): Promise<boolean> {
   const puzzleId = puzzle.value?.data.id;
   if (puzzleId) {
     try {
-      const { data } = await api.get<TicketDetailInfo[]>(`/puzzles/${puzzleId}/tickets`);
+      const { data } = await api.get<TicketPuzzleList>(`/puzzles/${puzzleId}/tickets`);
       pageData.value = data;
       return true;
     } catch (error) {
@@ -38,7 +38,7 @@ async function submitMessage() {
   const puzzleId = puzzle.value?.data.id;
   if (puzzleId) {
     try {
-      const { code } = await api.post<TicketOpenResponse>(
+      const { code, data } = await api.post<TicketOpenResponse>(
         `/puzzles/${puzzleId}/tickets`,
         { content: draftMessage.value },
         { errorHints: { [-1]: '无法处理请求。', [-2]: '同时只能请求一个人工提示。', [-3]: '题目人工提示暂未开放。', [-4]: '内容类型无效或无权使用。', [-5]: '发送的信息过长。' } },
@@ -52,7 +52,15 @@ async function submitMessage() {
           icon: 'material-symbols:check-rounded',
           color: 'success',
         });
-        updateData();
+        const openedTicket = data.thread.ticket;
+        if (openedTicket) {
+          const tickets = pageData.value?.tickets ?? [];
+          pageData.value = {
+            can_open: false,
+            block: TicketOpenBlock.Pending,
+            tickets: [openedTicket, ...tickets.filter(ticket => ticket.id !== openedTicket.id)],
+          };
+        }
       }
     } catch (error) {
       handleError(error, '人工提示请求失败');
@@ -67,7 +75,7 @@ async function submitMessage() {
   <div>
     <div v-if="pageData" class="flex flex-col gap-4">
       <u-chat-prompt
-        v-if="pageData.length === 0"
+        v-if="pageData.can_open"
         v-model="draftMessage"
         class="mb-6"
         placeholder="请求人工提示"
@@ -83,7 +91,7 @@ async function submitMessage() {
           <span class="text-xs"> 支持 Markdown 语法 · 使用 Shift + Enter 换行</span>
         </template>
       </u-chat-prompt>
-      <rbph-ticket-card v-for="ticket in pageData" :key="ticket.id" :ticket="ticket" />
+      <rbph-ticket-card v-for="ticket in pageData.tickets" :key="ticket.id" :ticket="ticket" />
     </div>
     <div v-else class="h-full">
       <u-skeleton class="w-full h-full min-h-24" />
