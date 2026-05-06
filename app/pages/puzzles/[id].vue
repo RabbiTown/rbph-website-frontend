@@ -14,9 +14,11 @@ const puzzle_id = computed(() => route.params.id as string);
 watch(
   puzzle_id,
   async new_id => {
-    updatePuzzleState(new_id);
+    usePuzzle()
+      .updateState(new_id)
+      .catch(e => showError({ status: 400, statusText: e }));
   },
-  { immediate: true }
+  { immediate: true },
 );
 </script>
 

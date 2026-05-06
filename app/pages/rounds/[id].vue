@@ -15,7 +15,7 @@ const round = ref<RbRoundUserData>();
 const game = useGame().ref;
 
 useHead({
-  titleTemplate: computed(() => `${round.value?.data.title} - ${game.value?.title}`),
+  titleTemplate: computed(() => buildTitleParts([{ text: round.value?.data.title }, { text: game.value?.title, sep: ' - ' }])),
 });
 
 const okSubmissionsComp = useTemplateRef('ok-submissions');
@@ -50,7 +50,7 @@ watch(
     submitted = [];
     await updateData(newId);
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 function onSubmitSuccess(action: RbJudgeAction) {

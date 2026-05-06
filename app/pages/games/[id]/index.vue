@@ -6,7 +6,7 @@ definePageMeta({
 const game = useGame().ref;
 
 useHead({
-  titleTemplate:  computed(() => `${game.value?.title}`),
+  titleTemplate: computed(() => game.value?.title ?? 'RBPH'),
 });
 </script>
 

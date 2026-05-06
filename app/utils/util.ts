@@ -12,7 +12,7 @@ export function handleError(error: unknown, title: string, forceHint: boolean = 
 export function getErrorToast(error: unknown, title: string, forceHint: boolean = false): Partial<Toast> {
   const my = error as { data?: { code?: number; hint?: string; message?: string } };
   const fallback = error instanceof Error ? error.message : String(error);
-  const message = forceHint ? my?.data?.hint : my?.data?.message ?? fallback;
+  const message = forceHint ? my?.data?.hint : (my?.data?.message ?? fallback);
   const codeExt = my.data?.code ? ` (${my.data?.code})` : '';
   const description = message ? message + codeExt : undefined;
 
@@ -79,4 +79,17 @@ export function arrayRemove<T>(arr: T[] | undefined, item: T): T | undefined {
     }
   }
   return undefined;
+}
+
+export interface TitlePart {
+  text?: string;
+  sep?: string;
+  end?: string;
+}
+
+export function buildTitleParts(parts: TitlePart[]) {
+  return parts
+    .filter(p => p && p.text)
+    .map(p => `${p.sep ?? ''}${p.text}${p.end ?? ''}`)
+    .join('');
 }

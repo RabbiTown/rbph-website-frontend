@@ -1,8 +1,8 @@
 import { env } from 'process';
 import { setGlobalDispatcher, ProxyAgent } from 'undici';
 
-if (env.https_proxy) {
-  const dispatcher = new ProxyAgent({ uri: new URL(env.https_proxy).toString() });
+if (env.HTTPS_PROXY) {
+  const dispatcher = new ProxyAgent({ uri: new URL(env.HTTPS_PROXY).toString() });
   setGlobalDispatcher(dispatcher);
 }
 

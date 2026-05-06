@@ -6,9 +6,9 @@ const gameId = computed(() => route.params.id as string);
 watch(
   gameId,
   async newId => {
-    updateGameState(newId).catch(e => showError(e));
+    updateGameState(newId).catch(e => showError({ status: 400, statusText: e }));
   },
-  { immediate: true }
+  { immediate: true },
 );
 </script>
 

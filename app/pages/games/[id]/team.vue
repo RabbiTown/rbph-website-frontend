@@ -17,7 +17,7 @@ const team = useTeam();
 const teamData = team.ref;
 
 useHead({
-  titleTemplate: computed(() => `队伍信息 - ${game.value?.title}`),
+  titleTemplate: computed(() => buildTitleParts([{ text: '队伍信息' }, { text: game.value?.title, sep: ' - ' }])),
 });
 
 const member = computed(() => teamData.value?.members.find(it => it.id === user.value?.id));
@@ -131,7 +131,7 @@ async function editSubmit(event: FormSubmitEvent<EditSchema>) {
     const { code } = await api.patch(
       `/games/${game.value?.id}/teams/self`,
       {
-        tname: event.data.name,
+        name: event.data.name,
         pass: event.data.pass,
         bio: event.data.bio,
       },
@@ -353,7 +353,7 @@ async function createSubmit(event: FormSubmitEvent<CreateSchema>) {
   try {
     const { code } = await api.post(
       `/games/${game.value?.id}/teams/self`,
-      { tname: event.data.name, pass: event.data.pass, bio: event.data.bio },
+      { name: event.data.name, pass: event.data.pass, bio: event.data.bio },
       {
         errorHints: {
           [-2]: '提交的凭据无效。',
@@ -388,7 +388,7 @@ function updateAllState() {
   const data = teamData.value;
   if (data) {
     editState.id = data.id || 0;
-    editState.name = data.tname || '';
+    editState.name = data.name || '';
     editState.pass = data.pass || '';
     editState.bio = data.bio || '';
   }

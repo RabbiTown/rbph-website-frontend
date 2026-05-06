@@ -30,7 +30,8 @@ export function useApi() {
       const code = typeof envelope.code === 'number' ? envelope.code : 0;
 
       if (code < 0) {
-        const resolvedMessage = envelope.message ?? errorHints?.[code];
+        const hint = errorHints?.[code] ?? defaultErrorHints[code];
+        const resolvedMessage = envelope.message ?? hint;
         const statusMessage = resolvedMessage ?? `API error ${code}`;
 
         throw createError({
@@ -39,7 +40,7 @@ export function useApi() {
           data: {
             code,
             message: resolvedMessage,
-            hint: errorHints?.[code],
+            hint,
           },
         });
       }

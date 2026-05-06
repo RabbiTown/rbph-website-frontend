@@ -3,7 +3,7 @@ const puzzle = usePuzzle().ref;
 const game = useGame().ref;
 
 useHead({
-  titleTemplate: computed(() => `${puzzle.value?.data.title} @ 提示 - ${game.value?.title}`),
+  titleTemplate: computed(() => buildTitleParts([{ text: puzzle.value?.data.title, end: ' @ ' }, { text: '提示' }, { text: game.value?.title, sep: ' - ' }])),
 });
 </script>
 

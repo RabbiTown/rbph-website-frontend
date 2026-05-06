@@ -120,10 +120,6 @@ export function useGame() {
   return { ref, updateRoundState };
 }
 
-export function usePuzzle() {
-  return { ref: useState<RbPuzzleShowData | undefined>('puzzle') };
-}
-
 let aggreStatePromise: Promise<void> | null = null;
 
 export function useAggreInfo() {
@@ -164,9 +160,7 @@ export async function updateGameState(new_id: string | undefined = undefined, fo
   const game = useState<RbGame>('game');
 
   const id = new_id ? parseInt(new_id) : game.value?.id;
-  if (!id || isNaN(id)) {
-    throw 'Invalid game.';
-  }
+  if (!id || isNaN(id)) throw 'Invalid game id';
 
   const api = useApi();
 
@@ -192,25 +186,27 @@ export async function resetTeamState() {
   useState('currency').value = undefined;
 }
 
-export async function updatePuzzleState(new_id: string | undefined = undefined) {
+export function usePuzzle() {
   const puzzle = useState<RbPuzzleShowData | undefined>('puzzle');
 
-  const id = new_id ? parseInt(new_id) : puzzle.value?.data.id || NaN;
-  if (isNaN(id)) {
-    throw 'Invalid puzzle.';
-  }
+  async function updateState(new_id: string | undefined = undefined) {
+    const id = new_id ? parseInt(new_id) : puzzle.value?.data.id || NaN;
+    if (isNaN(id)) throw 'Invalid puzzle id';
 
-  if (puzzle.value?.data.id !== id) {
-    try {
-      const { data } = await useApi().get<RbPuzzleShowData>(`/puzzles/${new_id}`);
-      puzzle.value = data;
-      if (data.data.game_id) {
-        updateGameState(data.data.game_id.toString());
+    if (puzzle.value?.data.id !== id) {
+      try {
+        const { data } = await useApi().get<RbPuzzleShowData>(`/puzzles/${new_id}`);
+        puzzle.value = data;
+        if (data.data.game_id) {
+          updateGameState(data.data.game_id.toString());
+        }
+      } catch (error) {
+        showError(error instanceof Error ? error : String(error));
       }
-    } catch (error) {
-      showError(error instanceof Error ? error : String(error));
     }
   }
+
+  return { ref: puzzle, updateState };
 }
 
 export async function resetStates() {

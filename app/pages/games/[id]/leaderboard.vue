@@ -10,7 +10,7 @@ useUser().required();
 const game = useGame().ref;
 
 useHead({
-  titleTemplate: computed(() => `排行榜 - ${game.value?.title}`),
+  titleTemplate: computed(() => buildTitleParts([{ text: '排行榜' }, { text: game.value?.title, sep: ' - ' }])),
 });
 
 const api = useApi();
@@ -32,7 +32,7 @@ const columns = ref<TableColumn<LeaderBoardTeamInfo>[]>([
     },
   },
   {
-    accessorKey: 'tname',
+    accessorKey: 'name',
     header: '队伍',
     cell: ({ row, getValue }) => [
       h('div', { class: 'text-lg text-highlighted font-bold' }, [getValue<string>(), row.original.id === team.ref.value?.id ? h(Icon, { name: 'material-symbols:location-on-outline-rounded', class: 'text-warning align-middle ms-1 mb-0.5' }) : null]),

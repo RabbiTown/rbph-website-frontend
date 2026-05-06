@@ -70,7 +70,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
 </script>
 
 <template>
-  <div class="py-6">
+  <div v-if="puzzle" class="py-6">
     <u-breadcrumb class="mb-6" :items="breadItems" />
     <div class="flex items-baseline justify-between md:flex-row flex-col">
       <div class="text-3xl font-bold">

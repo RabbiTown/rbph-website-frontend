@@ -86,7 +86,7 @@ const roundMenuItems = computed(() => {
         <u-button color="neutral" variant="ghost" :to="`/games/${game.id}/leaderboard`" icon="material-symbols:leaderboard-outline-rounded" />
       </u-tooltip>
       <u-tooltip v-if="team" text="站内信">
-        <u-button color="neutral" variant="ghost" :to="`/games/${game.id}/mail`" icon="material-symbols:mail-outline-rounded" />
+        <u-button color="neutral" variant="ghost" :to="`/games/${game.id}/ticket`" icon="material-symbols:mail-outline-rounded" />
       </u-tooltip>
       <u-dropdown-menu v-if="user" :items="userMenuItems" :ui="{ content: 'w-40' }">
         <u-tooltip text="用户信息">

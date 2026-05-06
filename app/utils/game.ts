@@ -31,8 +31,8 @@ export interface RbTeamMember {
 
 export interface RbTeam {
   id: number;
-  tname: string;
-  tstate: RbTeamState;
+  name: string;
+  state: RbTeamState;
   pass: string;
   bio: string;
   ctime_at: string;
@@ -47,6 +47,7 @@ export enum RbPuzzleType {
 export enum RbContentType {
   Markdown = 0,
   Html = 1,
+  UnsafeMarkdown = 2,
 }
 
 export interface RbPuzzle {
@@ -197,7 +198,7 @@ export interface RbPuzzleHintTeamData {
 
 export interface RbLeaderBoardTeam {
   id: number;
-  tname: string;
+  name: string;
   bio: string;
   finish_at?: string;
   last_solved_at?: string;
@@ -207,7 +208,7 @@ export interface RbLeaderBoardTeam {
 
 export interface LeaderBoardTeamInfo {
   id: number;
-  tname: string;
+  name: string;
   bio: string;
   finish_at?: string;
   last_solved_at?: string;
@@ -238,3 +239,48 @@ export interface RbGameAggreInfo {
   rounds?: Pick<RbRound, 'id' | 'title'>[];
   server_time: string;
 }
+
+export enum RbTicketState {
+  Closed = 0,
+  Open = 1,
+}
+
+export enum RbTicketSenderType {
+  Team = 0,
+  Host = 1,
+}
+
+export interface TicketMessage {
+  id: number;
+  sender: { id: number; nickname: string };
+  sender_type: RbTicketSenderType;
+  cost_id?: number;
+  cost_amount: number;
+  unlocked: boolean;
+
+  content?: string;
+  content_type?: RbContentType;
+
+  ctime_at: string;
+  utime_at: string;
+}
+
+export interface TicketAggreInfo {
+  id: number;
+  state: RbTicketState;
+  team: Pick<RbTeam, 'id' | 'name' | 'state'>;
+  puzzle?: Pick<RbPuzzle, 'id' | 'title' | 'round'> & Pick<RbPuzzleTeamData, 'state'>;
+  game_id: number;
+}
+
+export interface TicketMessageInfo {
+  messages: TicketMessage[];
+}
+
+export interface TicketSendResponse {
+  ticket_id?: number;
+  message_id: number;
+}
+
+export type TicketDetailInfo = Pick<TicketAggreInfo, 'id' | 'state'>;
+export type TicketOpenResponse = Required<TicketSendResponse>;

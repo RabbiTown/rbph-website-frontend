@@ -6,7 +6,7 @@ definePageMeta({
 const game = useGame().ref;
 
 useHead({
-  titleTemplate: computed(() => `公告 - ${game.value?.title}`),
+  titleTemplate: computed(() => buildTitleParts([{ text: '公告' }, { text: game.value?.title, sep: ' - ' }])),
 });
 
 const api = useApi();
