@@ -313,7 +313,7 @@ export interface TicketSummary {
   id: number;
   state: RbTicketState;
   game_id?: number;
-  team?: Pick<RbTeam, 'id' | 'name' | 'state'>;
+  team?: Pick<RbTeam, 'id' | 'name' | 'state'> & { currency?: RbTeamCurrency[] };
   puzzle?: Pick<RbPuzzle, 'id' | 'title' | 'round'> & Pick<RbPuzzleTeamData, 'state'>;
   msg_count?: number;
   last_at: string | null;
@@ -325,7 +325,7 @@ export interface TicketPerm {
   can_host: boolean;
   can_view_locked: boolean;
   content_type: RbContentType[];
-  currency: RbTeamCurrency[];
+  currency: number[];
 }
 
 export function canSendTicket(perm?: TicketPerm): boolean {

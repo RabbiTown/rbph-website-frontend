@@ -13,8 +13,6 @@ const route = useRoute();
 const toast = useToast();
 
 const game = useGame().ref;
-const currency = useCurrency();
-const currencyRef = currency.getAllCurrent();
 
 const pageData = ref<TicketThread>();
 const ticket = computed(() => pageData.value?.ticket);
@@ -296,22 +294,34 @@ const tabItems = computed(
 );
 
 const allowedCurrencyTypes = computed(() => pageData.value?.perm.currency ?? []);
+const teamCurrency = computed(() => {
+  const tc = pageData.value?.ticket?.team?.currency;
+  const result: Record<number, RbTeamCurrency & { current: number }> = {};
+  if (!tc) return result;
+  for (const x of tc) {
+    result[x.id] = {
+      ...x,
+      current: useCurrency().calcCurrent(x),
+    };
+  }
+  return result;
+});
 const currencyTypeItems = computed(() => [
   { label: '无需解锁', value: null, icon: 'material-symbols:lock-open-right-outline-rounded' },
-  ...(pageData.value?.perm.currency.map(it => {
-    return { label: it.name, value: it.id, icon: 'material-symbols:emoji-objects-outline-rounded' } satisfies SelectItem;
-  }) ?? []),
+  ...allowedCurrencyTypes.value.map(id => {
+    return { label: teamCurrency.value[id]?.name ?? `#${id}`, value: id, icon: 'material-symbols:emoji-objects-outline-rounded' } satisfies SelectItem;
+  }),
 ]);
 const reqCurrencyId = ref<number | null>(null);
 const reqCurrencyAmount = ref(0);
-const reqCurrencyType = computed(() => allowedCurrencyTypes.value.find(it => it.id === reqCurrencyId.value));
+const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined : teamCurrency.value[reqCurrencyId.value]));
 </script>
 
 <template>
   <div v-if="ticket" class="py-6">
     <u-breadcrumb class="mb-6" :items="breadItems" />
     <div class="mb-4">
-      <rbph-currency-badges />
+      <rbph-currency-badges :currency="teamCurrency" />
     </div>
     <div class="flex items-baseline justify-between md:flex-row flex-col">
       <div>
@@ -338,13 +348,13 @@ const reqCurrencyType = computed(() => allowedCurrencyTypes.value.find(it => it.
         {{ formatDate(item.date) }}
       </template>
       <template #description="{ item }">
-        <div v-if="item.message.content !== undefined || (item.data.cost_id !== null && item.data.cost_id !== undefined)" class="px-4 py-4 ring ring-default mt-2 rounded-md text-default">
+        <div v-if="item.message?.content !== undefined || (item.data.cost_id !== null && item.data.cost_id !== undefined)" class="px-4 py-4 ring ring-default mt-2 rounded-md text-default">
           <rbph-content v-if="item.message.content !== undefined" :content="item.message" />
           <div v-else class="flex align-middle gap-2">
             这条消息已被锁定……
             <u-popover arrow>
               <u-button class="cursor-pointer" size="xs" color="error" variant="soft" icon="material-symbols:lock-outline">
-                解锁：{{ currencyRef[item.data.cost_id]?.name }} {{ intPrecString(-item.data.cost_amount, currencyRef[item.data.cost_id]?.prec ?? 0, true, ' ') }}
+                解锁：{{ teamCurrency[item.data.cost_id]?.name }} {{ intPrecString(-item.data.cost_amount, teamCurrency[item.data.cost_id]?.prec ?? 0, true, ' ') }}
               </u-button>
               <template #content>
                 <div class="py-2 px-4 text-xs">
@@ -357,11 +367,11 @@ const reqCurrencyType = computed(() => allowedCurrencyTypes.value.find(it => it.
           </div>
           <div v-if="item.data.cost_id !== null && item.data.cost_id !== undefined" class="flex justify-end">
             <u-badge v-if="item.data.unlocked" class="mt-2" color="success" variant="soft" icon="material-symbols:lock-open-right-outline-rounded">
-              已解锁：{{ currencyRef[item.data.cost_id]?.name }} {{ intPrecString(-item.data.cost_amount, currencyRef[item.data.cost_id]?.prec ?? 0, true, ' ') }}
+              已解锁：{{ teamCurrency[item.data.cost_id]?.name }} {{ intPrecString(-item.data.cost_amount, teamCurrency[item.data.cost_id]?.prec ?? 0, true, ' ') }}
             </u-badge>
             <u-popover v-else-if="pageData?.perm.can_view_locked" class="mt-2" arrow>
               <u-button class="cursor-pointer" size="xs" color="error" variant="soft" icon="material-symbols:lock-outline">
-                未解锁：{{ currencyRef[item.data.cost_id]?.name }} {{ intPrecString(-item.data.cost_amount, currencyRef[item.data.cost_id]?.prec ?? 0, true, ' ') }}
+                未解锁：{{ teamCurrency[item.data.cost_id]?.name }} {{ intPrecString(-item.data.cost_amount, teamCurrency[item.data.cost_id]?.prec ?? 0, true, ' ') }}
               </u-button>
               <template #content>
                 <div class="py-2 px-4 text-xs">

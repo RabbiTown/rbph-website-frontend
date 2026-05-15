@@ -71,6 +71,7 @@ export function useCurrency(activate: boolean = true) {
     ref: currency,
     getCurrent,
     getAllCurrent,
+    calcCurrent,
     updateData,
     activated: currencyUsed,
   };
