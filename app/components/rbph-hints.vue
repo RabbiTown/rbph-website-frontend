@@ -144,7 +144,7 @@ defineExpose({
           <icon v-else name="material-symbols:expand-more-rounded" class="-me-1 size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
         </div>
         <template v-if="hint.state" #content>
-          <div class="px-4 py-px border-t dark:border-t-slate-700 border-t-slate-200 text-sm">
+          <div class="px-4 py-4 border-t dark:border-t-slate-700 border-t-slate-200 text-sm">
             <rbph-content :content="hint.state" />
           </div>
         </template>

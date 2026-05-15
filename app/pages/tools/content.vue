@@ -48,7 +48,7 @@ const full = ref(false);
 
       <div class="flex flex-1 flex-col gap-2 px-2.5 py-2">
         <u-switch v-model="full" label="Full Screen" class="px-2.5 py-1.5 justify-end" />
-        <u-card class="flex-1" variant="soft" :ui="{ body: 'sm:py-2 py-2' }">
+        <u-card class="flex-1" variant="soft" :ui="{ body: 'py-4' }">
           <rbph-content :content="content" :debounce="500" />
         </u-card>
       </div>

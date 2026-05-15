@@ -15,11 +15,11 @@ const color = computed(() => {
 const puzzleStateLabel = computed(() => {
   switch (props.ticket.puzzle?.state) {
     case RbTeamPuzzleState.Solved:
-      return '已通过';
+      return '谜题已通过';
     case RbTeamPuzzleState.Unlocked:
-      return '未通过';
+      return '谜题未通过';
     default:
-      return '未解锁';
+      return '谜题未解锁';
   }
 });
 

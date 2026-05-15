@@ -253,11 +253,32 @@ export enum RbTicketSenderType {
 }
 
 export enum TicketOpenBlock {
-  Pending = 1,
-  Cooldown = 2,
+  Ok = 0,
+  CurrentPuzzlePending = -1,
+  PendingLimit = -2,
+  Cooldown = -3,
+}
+
+export enum RbTicketSendBlock {
+  Ok = 0,
+  NoAccess = -1,
+  Closed = -2,
+  Pending = -3,
+}
+
+export enum RbTicketOperationAction {
+  Open = 1,
+  Close = 2,
+  AutoCloseSolved = 3,
+}
+
+export enum RbTicketThreadItemType {
+  Message = 0,
+  Operation = 1,
 }
 
 export interface TicketMessage {
+  type?: RbTicketThreadItemType.Message;
   id: number;
   sender: { id: number; nickname: string };
   sender_type: RbTicketSenderType;
@@ -272,6 +293,22 @@ export interface TicketMessage {
   utime_at: string | null;
 }
 
+export interface TicketOperation {
+  type: RbTicketThreadItemType.Operation;
+  id: number;
+  action: RbTicketOperationAction;
+  actor: { id: number; nickname: string };
+  actor_type: RbTicketSenderType;
+  message?: TicketMessage;
+  ctime_at: string;
+}
+
+export type TicketThreadItem = TicketMessage | TicketOperation;
+
+export function isTicketMessage(item: TicketThreadItem): item is TicketMessage {
+  return item.type !== RbTicketThreadItemType.Operation;
+}
+
 export interface TicketSummary {
   id: number;
   state: RbTicketState;
@@ -281,24 +318,43 @@ export interface TicketSummary {
   msg_count?: number;
   last_at: string | null;
   last_by?: RbTicketSenderType;
-  has_locked: boolean;
 }
 
 export interface TicketPerm {
-  can_send: boolean;
+  send_block: RbTicketSendBlock;
   can_host: boolean;
   can_view_locked: boolean;
+  content_type: RbContentType[];
+  currency: RbTeamCurrency[];
+}
+
+export function canSendTicket(perm?: TicketPerm): boolean {
+  if (!perm) return false;
+  return perm.send_block === RbTicketSendBlock.Ok && perm.content_type.length > 0;
+}
+
+export function getDefaultTicketContentType(perm?: Pick<TicketPerm, 'content_type'>): RbContentType {
+  return perm?.content_type[0] ?? RbContentType.UnsafeMarkdown;
+}
+
+export function canUseTicketContentType(perm: Pick<TicketPerm, 'content_type'> | undefined, contentType: RbContentType): boolean {
+  return Boolean(perm?.content_type.includes(contentType));
 }
 
 export interface TicketThread {
   ticket?: TicketSummary | null;
-  messages: TicketMessage[];
+  messages: TicketThreadItem[];
   perm: TicketPerm;
 }
 
 export interface TicketPuzzleList {
-  can_open: boolean;
-  block?: TicketOpenBlock;
+  open_block: TicketOpenBlock;
+  cooldown_till?: string | null;
+  open_tickets?: {
+    id: number;
+    puzzle_id: number;
+    puzzle_title: string;
+  }[];
   tickets: TicketSummary[];
 }
 
@@ -310,12 +366,40 @@ export interface TicketSendResponse {
   message_id: number;
   ticket?: TicketSummary;
   msg: TicketMessage;
+  perm?: TicketPerm;
+}
+
+export interface TicketCloseResponse {
+  ticket?: TicketSummary;
+  thread: TicketThread;
+  perm?: TicketPerm;
+}
+
+export interface TicketUnlockResponse {
+  id: number;
+  sender: { id: number; nickname: string };
+  sender_type: RbTicketSenderType;
+  cost_id: number | null;
+  cost_amount: number;
+  unlocked: boolean;
+  content?: string | null;
+  content_type?: RbContentType | null;
+  ctime_at: string;
+  utime_at?: string | null;
 }
 
 export interface TicketOpenResponse {
   ticket_id: number;
   message_id: number;
   thread: TicketThread;
+}
+
+export interface TicketSendRequest {
+  content: string;
+  content_type: RbContentType;
+  sender_type?: RbTicketSenderType;
+  cost_id?: number | null;
+  cost_amount?: number;
 }
 
 export type TicketAggreInfo = TicketSummary;

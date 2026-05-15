@@ -15,6 +15,9 @@ const api = useApi();
 const toast = useToast();
 
 const pageData = ref<TicketThread>();
+const canSend = computed(() => canSendTicket(pageData.value?.perm));
+const messages = computed(() => pageData.value?.messages.filter(isTicketMessage) ?? []);
+const draftContentType = ref(RbContentType.UnsafeMarkdown);
 
 async function updateData(newId: number | undefined = undefined): Promise<boolean> {
   const gameId = newId || game.value?.id;
@@ -43,16 +46,16 @@ const submitLoading = ref(false);
 
 const draftMessage = ref('');
 async function submitMessage() {
+  if (!canSend.value) return;
+
   submitLoading.value = true;
 
   const gameId = game.value?.id;
   if (gameId) {
     try {
-      const { code, data } = await api.post<TicketSendResponse>(
-        `/games/${gameId}/tickets/self/send`,
-        { content: draftMessage.value },
-        { errorHints: { [-1]: '队伍站内信被禁用。', [-2]: '积压信息过多，请先等待工作人员回复。', [-3]: '内容类型无效或无权使用。', [-4]: '发送的信息过长。', [-5]: '信息要求的费用无效。' } },
-      );
+      const { code, data } = await api.post<TicketSendResponse>(`/games/${gameId}/tickets/self/send`, { content: draftMessage.value, content_type: draftContentType.value } satisfies TicketSendRequest, {
+        errorHints: { [-1]: '队伍站内信被禁用。', [-2]: '积压信息过多，请先等待工作人员回复。', [-3]: '内容类型无效或无权使用。', [-4]: '发送的信息过长。', [-5]: '信息要求的费用无效。' },
+      });
       draftMessage.value = '';
 
       if (code === 0) {
@@ -62,11 +65,13 @@ async function submitMessage() {
           icon: 'material-symbols:check-rounded',
           color: 'success',
         });
+        const perm = data.perm ?? pageData.value?.perm ?? { send_block: RbTicketSendBlock.Ok, can_host: false, can_view_locked: false, content_type: [RbContentType.UnsafeMarkdown] };
         pageData.value = {
           ticket: data.ticket ?? pageData.value?.ticket,
           messages: [...(pageData.value?.messages ?? []), data.msg],
-          perm: pageData.value?.perm ?? { can_send: true, can_host: false, can_view_locked: false },
+          perm,
         };
+        draftContentType.value = getDefaultTicketContentType(perm);
       }
     } catch (error) {
       handleError(error, '站内信发送失败');
@@ -79,20 +84,23 @@ async function submitMessage() {
 
 <template>
   <div>
-    <div class="py-6">
+    <div class="pt-6">
       <div class="flex items-baseline justify-between md:flex-row flex-col">
         <div class="text-3xl font-bold">站内信</div>
       </div>
     </div>
-    <u-chat-prompt v-model="draftMessage" class="mb-6" placeholder="发送站内信" :ui="{ footer: 'text-muted mt-1 justify-end' }" :rows="3" :disabled="!pageData || submitLoading" :loading="!pageData" @submit="submitMessage">
-      <u-chat-prompt-submit variant="soft" class="rounded-full cursor-pointer" :disabled="!pageData || submitLoading" :loading="submitLoading" />
-      <template #footer>
-        <icon name="material-symbols:markdown-outline-rounded" />
-        <span class="text-xs"> 支持 Markdown 语法 · 使用 Shift + Enter 换行</span>
-      </template>
-    </u-chat-prompt>
-    <div v-if="pageData && pageData.messages.length > 0" class="flex flex-wrap gap-4">
-      <u-card v-for="msg in pageData.messages" :key="msg.id" class="w-full" variant="subtle" :ui="{ body: 'sm:p-0 p-0' }">
+    <rbph-message-edit
+      v-model:draft="draftMessage"
+      v-model:content-type="draftContentType"
+      class="my-6"
+      placeholder="发送站内信"
+      :content-types="pageData?.perm.content_type"
+      :disabled="!canSend || submitLoading"
+      :loading="!pageData || submitLoading"
+      @submit="submitMessage"
+    />
+    <div v-if="pageData && messages.length > 0" class="flex flex-wrap gap-4">
+      <u-card v-for="msg in messages" :key="msg.id" class="w-full" variant="subtle" :ui="{ body: 'sm:p-0 p-0' }">
         <u-collapsible :default-open="true" :unmount-on-hide="false">
           <div class="px-5 py-3 flex items-center group dark:bg-slate-800 bg-slate-100 cursor-pointer">
             <icon class="align-middle me-2 text-primary" name="material-symbols:chat-outline-rounded" />
@@ -109,8 +117,8 @@ async function submitMessage() {
             </div>
             <icon name="material-symbols:expand-more-rounded" class="-me-1 size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
           </div>
-          <template v-if="msg.content && msg.content_type" #content>
-            <div class="px-4 py-px border-t dark:border-t-slate-700 border-t-slate-200 text-sm">
+          <template v-if="msg.content && msg.content_type !== undefined" #content>
+            <div class="px-4 py-4 border-t dark:border-t-slate-700 border-t-slate-200 text-sm">
               <rbph-content :content="msg as RbContent" />
             </div>
           </template>

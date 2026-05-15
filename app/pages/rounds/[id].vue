@@ -111,7 +111,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
       </span>
     </div>
 
-    <u-card variant="soft" :ui="{ body: 'sm:py-2 py-2' }">
+    <u-card variant="soft" :ui="{ body: 'py4' }">
       <rbph-content :content="round?.data" />
 
       <template v-if="round.state.puzzles.length > 0">
