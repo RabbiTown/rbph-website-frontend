@@ -256,7 +256,7 @@ interface SendBlockConst {
 
 const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
   [RbTicketSendBlock.NoAccess]: { icon: 'material-symbols:error-med-outline-rounded', color: 'error', desc: '没有发送权限。' },
-  [RbTicketSendBlock.Closed]: { icon: 'material-symbols:check-rounded', color: 'success', desc: '工单已关闭，不再接受新的回复。' },
+  [RbTicketSendBlock.Closed]: { icon: 'material-symbols:check-rounded', color: 'success', desc: '人工提示已关闭，不再接受新的回复。' },
   [RbTicketSendBlock.Pending]: { icon: 'material-symbols:more-horiz', color: 'warning', desc: '请等待工作人员回复。' },
 };
 
@@ -344,7 +344,7 @@ const reqCurrencyType = computed(() => allowedCurrencyTypes.value.find(it => it.
             这条消息已被锁定……
             <u-popover arrow>
               <u-button class="cursor-pointer" size="xs" color="error" variant="soft" icon="material-symbols:lock-outline">
-                解锁：{{ currencyRef[item.data.cost_id]?.name }} - {{ intPrecString(item.data.cost_amount, currencyRef[item.data.cost_id]?.prec ?? 0) }}
+                解锁：{{ currencyRef[item.data.cost_id]?.name }} {{ intPrecString(-item.data.cost_amount, currencyRef[item.data.cost_id]?.prec ?? 0, true, ' ') }}
               </u-button>
               <template #content>
                 <div class="py-2 px-4 text-xs">
@@ -357,11 +357,11 @@ const reqCurrencyType = computed(() => allowedCurrencyTypes.value.find(it => it.
           </div>
           <div v-if="item.data.cost_id !== null && item.data.cost_id !== undefined" class="flex justify-end">
             <u-badge v-if="item.data.unlocked" class="mt-2" color="success" variant="soft" icon="material-symbols:lock-open-right-outline-rounded">
-              已解锁：{{ currencyRef[item.data.cost_id]?.name }} - {{ intPrecString(item.data.cost_amount, currencyRef[item.data.cost_id]?.prec ?? 0) }}
+              已解锁：{{ currencyRef[item.data.cost_id]?.name }} {{ intPrecString(-item.data.cost_amount, currencyRef[item.data.cost_id]?.prec ?? 0, true, ' ') }}
             </u-badge>
             <u-popover v-else-if="pageData?.perm.can_view_locked" class="mt-2" arrow>
               <u-button class="cursor-pointer" size="xs" color="error" variant="soft" icon="material-symbols:lock-outline">
-                未解锁：{{ currencyRef[item.data.cost_id]?.name }} - {{ intPrecString(item.data.cost_amount, currencyRef[item.data.cost_id]?.prec ?? 0) }}
+                未解锁：{{ currencyRef[item.data.cost_id]?.name }} {{ intPrecString(-item.data.cost_amount, currencyRef[item.data.cost_id]?.prec ?? 0, true, ' ') }}
               </u-button>
               <template #content>
                 <div class="py-2 px-4 text-xs">
@@ -392,11 +392,11 @@ const reqCurrencyType = computed(() => allowedCurrencyTypes.value.find(it => it.
       </template>
       <template #as-host>
         <u-alert v-if="pageData?.ticket?.state === RbTicketState.Closed" class="mb-2" variant="subtle" title="工单已关闭。" description="你仍然可以作为工作人员回复，但是该队伍无法再追问。" icon="material-symbols:check-rounded" color="success" />
-        <u-alert v-else class="mb-2" variant="subtle" title="将作为工作人员回复。" description="请向该队伍提供必要的帮助。" icon="material-symbols:check-rounded" color="warning" />
+        <u-alert v-else class="mb-2" variant="subtle" title="将作为工作人员回复。" description="请向该队伍提供必要的帮助。" icon="material-symbols:near-me-outline-rounded" color="warning" />
         <rbph-message-edit
           v-model:draft="draftMessage"
           v-model:content-type="draftContentType"
-          placeholder="回复人工提示"
+          placeholder="回复人工提示请求"
           :content-types="pageData?.perm.content_type"
           :disabled="submitLoading"
           :loading="!pageData || submitLoading"

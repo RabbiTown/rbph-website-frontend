@@ -50,7 +50,7 @@ watch(
 
 <template>
   <div>
-    <u-chat-prompt v-model="draft" variant="subtle" :placeholder="placeholder" :ui="{ footer: 'text-muted mt-1 justify-end' }" :rows="3" :disabled="disabled" :loading="loading" @submit="emit('submit')">
+    <u-chat-prompt v-model="draft" variant="subtle" :placeholder="placeholder" :ui="{ footer: 'text-muted mt-1 justify-end' }" :rows="3" :loading="loading" @submit="emit('submit')">
       <!-- <u-chat-prompt-submit variant="soft" class="rounded-full cursor-pointer" :disabled="disabled" :loading="loading" /> -->
       <template #footer>
         <icon name="material-symbols:markdown-outline-rounded" />
@@ -67,7 +67,7 @@ watch(
         <u-button v-if="canClose" class="justify-center cursor-pointer" color="error" variant="subtle" :loading="loading" :disabled="disabled" icon="material-symbols:check-rounded" @click="emit('submitClose')">
           {{ draft && draft?.length > 0 ? '回复并关闭工单' : '关闭工单' }}
         </u-button>
-        <u-button class="text-white min-w-20 justify-center cursor-pointer" :loading="loading" :disabled="disabled" @click="emit('submit')">发送</u-button>
+        <u-button class="text-white min-w-20 justify-center cursor-pointer" :loading="loading" :disabled="disabled || !draft?.length" @click="emit('submit')">发送</u-button>
       </div>
     </div>
   </div>

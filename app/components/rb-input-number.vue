@@ -33,10 +33,5 @@ const formatOptions = computed(() => ({
 </script>
 
 <template>
-  <u-input-number
-    v-bind="attrs"
-    v-model="displayValue"
-    :step="displayStep"
-    :format-options="formatOptions"
-  />
+  <u-input-number v-bind="attrs" v-model="displayValue" :step="displayStep" :step-snapping="false" :format-options="formatOptions" />
 </template>

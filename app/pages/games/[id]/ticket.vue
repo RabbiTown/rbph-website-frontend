@@ -65,7 +65,7 @@ async function submitMessage() {
           icon: 'material-symbols:check-rounded',
           color: 'success',
         });
-        const perm = data.perm ?? pageData.value?.perm ?? { send_block: RbTicketSendBlock.Ok, can_host: false, can_view_locked: false, content_type: [RbContentType.UnsafeMarkdown] };
+        const perm = data.perm ?? pageData.value?.perm ?? { send_block: RbTicketSendBlock.Ok, can_host: false, can_view_locked: false, content_type: [RbContentType.UnsafeMarkdown], currency: [] };
         pageData.value = {
           ticket: data.ticket ?? pageData.value?.ticket,
           messages: [...(pageData.value?.messages ?? []), data.msg],
@@ -80,6 +80,23 @@ async function submitMessage() {
 
   submitLoading.value = false;
 }
+
+const sendBlock = computed(() => {
+  const block = pageData.value?.perm.send_block;
+  return block ? sendBlockConsts[block] : undefined;
+});
+
+interface SendBlockConst {
+  icon: string;
+  color: 'error' | 'warning' | 'success' | 'primary' | 'secondary' | 'info' | 'neutral' | undefined;
+  desc: string;
+}
+
+const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
+  [RbTicketSendBlock.NoAccess]: { icon: 'material-symbols:error-med-outline-rounded', color: 'error', desc: '没有发送权限。' },
+  [RbTicketSendBlock.Closed]: { icon: 'material-symbols:check-rounded', color: 'success', desc: '本队伍站内信功能已被禁用。如果你认为这是一个错误，请通过其他渠道联系工作人员。' },
+  [RbTicketSendBlock.Pending]: { icon: 'material-symbols:more-horiz', color: 'warning', desc: '积压信息过多，请等待工作人员回复。' },
+};
 </script>
 
 <template>
@@ -89,7 +106,9 @@ async function submitMessage() {
         <div class="text-3xl font-bold">站内信</div>
       </div>
     </div>
+    <u-alert v-if="sendBlock" class="my-6" variant="subtle" :title="sendBlock.desc" :icon="sendBlock.icon" :color="sendBlock.color" />
     <rbph-message-edit
+      v-else
       v-model:draft="draftMessage"
       v-model:content-type="draftContentType"
       class="my-6"
