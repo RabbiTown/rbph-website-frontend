@@ -157,10 +157,14 @@ export function useAggreInfo() {
 }
 
 export async function updateGameState(new_id: string | undefined = undefined, forceUpdate: boolean = false) {
-  const game = useState<RbGame>('game');
+  const game = useState<RbGame | undefined>('game');
 
   const id = new_id ? parseInt(new_id) : game.value?.id;
-  if (!id || isNaN(id)) throw 'Invalid game id';
+  if (!id) {
+    game.value = undefined;
+    return;
+  }
+  if (isNaN(id)) throw 'Invalid game id';
 
   const api = useApi();
 
