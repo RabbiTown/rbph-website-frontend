@@ -1,5 +1,5 @@
 export function navigateToLogin() {
-  navigateTo(`/login?url=${useRoute().path}`);
+  return navigateTo(`/login?url=${useRoute().path}`);
 }
 
 const userUsed = ref(false);

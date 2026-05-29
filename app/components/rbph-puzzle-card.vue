@@ -10,7 +10,7 @@ const solved = computed(() => props.puzzle.state == RbTeamPuzzleState.Solved);
   <nuxt-link :to="`/puzzles/${puzzle.id}`">
     <u-button variant="subtle" :color="solved ? 'success' : 'neutral'" class="py-2.5 rounded-sm w-full" :to="`/puzzles/${puzzle.id}`">
       <div class="flex items-center">
-        <icon :name="solved ? 'material-symbols:check-circle-outline' : 'material-symbols:circle-outline'" class="size-5 mx-2 mt-0.5" />
+        <u-icon :name="solved ? 'material-symbols:check-circle-outline' : 'material-symbols:circle-outline'" class="size-5 mx-2 mt-0.5" />
         <div class="text-lg">
           {{ puzzle.title }}
         </div>

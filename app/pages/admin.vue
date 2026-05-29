@@ -71,6 +71,7 @@ const nav = computed(() => {
         label: '仪表盘',
         icon: 'material-symbols:space-dashboard-outline-rounded',
         to: `/admin/games/${game.ref.value.id}`,
+        exact: true,
       },
       {
         label: '谜题管理',

@@ -122,7 +122,7 @@ const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
       <u-card v-for="msg in messages" :key="msg.id" class="w-full" variant="subtle" :ui="{ body: 'sm:p-0 p-0' }">
         <u-collapsible :default-open="true" :unmount-on-hide="false">
           <div class="px-5 py-3 flex items-center group dark:bg-slate-800 bg-slate-100 cursor-pointer">
-            <icon class="align-middle me-2 text-primary" name="material-symbols:chat-outline-rounded" />
+            <u-icon class="align-middle me-2 text-primary" name="material-symbols:chat-outline-rounded" />
             <div class="text-sm flex-1 flex flex-wrap justify-between">
               <div>
                 <u-badge v-if="msg.sender_type === RbTicketSenderType.Host" variant="soft" color="warning" class="me-1">工作人员</u-badge>
@@ -130,11 +130,11 @@ const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
                 {{ msg.sender.nickname }}
               </div>
               <div v-if="msg.ctime_at" class="text-secondary text-xs flex items-center ms-1">
-                <icon name="material-symbols:schedule-outline-rounded" class="align-middle me-0.5" />
+                <u-icon name="material-symbols:schedule-outline-rounded" class="align-middle me-0.5" />
                 发送于 {{ formatDate(msg.ctime_at) }}
               </div>
             </div>
-            <icon name="material-symbols:expand-more-rounded" class="-me-1 size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
+            <u-icon name="material-symbols:expand-more-rounded" class="-me-1 size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
           </div>
           <template v-if="msg.content && msg.content_type !== undefined" #content>
             <div class="px-4 py-4 border-t dark:border-t-slate-700 border-t-slate-200 text-sm">

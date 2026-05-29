@@ -66,7 +66,7 @@ async function submit(event: FormSubmitEvent<Schema>) {
     <div class="flex items-center justify-center p-6">
       <div class="w-full max-w-xs">
         <div class="w-full flex justify-center my-4">
-          <icon name="material-symbols:login-rounded" size="40px" />
+          <u-icon name="material-symbols:login-rounded" size="40px" />
         </div>
         <div class="text-2xl font-bold mb-8 text-center">登录</div>
         <u-form :schema="schema" :state="state" class="space-y-4" @submit="submit">

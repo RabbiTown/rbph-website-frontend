@@ -184,7 +184,7 @@ onUnmounted(() => {
       <div class="flex items-baseline justify-between md:flex-row flex-col">
         <div class="text-3xl font-bold">排行榜</div>
         <div class="mt-2 text-secondary ms-0.5 text-xs">
-          <icon name="material-symbols:schedule-outline-rounded" class="align-middle mb-0.5" />
+          <u-icon name="material-symbols:schedule-outline-rounded" class="align-middle mb-0.5" />
           更新于 {{ formatDate(updateTime) }}
         </div>
       </div>

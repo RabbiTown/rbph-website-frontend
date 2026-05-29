@@ -440,7 +440,7 @@ watch(teamData, () => updateAllState(), { immediate: true });
                 </u-button>
                 <template #content>
                   <div class="py-2 px-4 text-xs">
-                    <icon name="material-symbols:warning-outline-rounded" class="align-middle" />
+                    <u-icon name="material-symbols:warning-outline-rounded" class="align-middle" />
                     <span class="text-xs"> 这个操作不可撤销。 </span>
                     <u-button :loading="submitLoading" class="cursor-pointer" color="error" variant="soft" size="xs" @click="leaveTeamSubmit"> 确定 </u-button>
                   </div>
@@ -460,7 +460,7 @@ watch(teamData, () => updateAllState(), { immediate: true });
         <u-card class="md:w-xs w-full md:h-128 h-96 flex items-center justify-center" variant="subtle">
           <div class="-mt-4">
             <div class="w-full flex justify-center mb-4">
-              <icon name="material-symbols:login-rounded" size="40px" />
+              <u-icon name="material-symbols:login-rounded" size="40px" />
             </div>
             <div class="font-bold text-xl mb-8 text-center">加入队伍</div>
             <u-form :schema="joinSchema" :state="joinState" class="space-y-4" @submit="joinSubmit">

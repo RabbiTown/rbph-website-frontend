@@ -126,7 +126,7 @@ defineExpose({
     <u-card v-for="hint in processedData" :key="hint.id" class="w-full" variant="subtle" :ui="{ body: 'sm:p-0 p-0' }">
       <u-collapsible :unmount-on-hide="false">
         <div :class="['px-5 py-3 flex items-center group dark:bg-slate-800 bg-slate-100', hint.state ? 'cursor-pointer' : '']">
-          <icon :class="['align-middle me-2', hint.state ? 'text-success' : 'text-error']" :name="hint.state ? 'material-symbols:lock-open-right-outline-rounded' : 'material-symbols:lock-outline'" />
+          <u-icon :class="['align-middle me-2', hint.state ? 'text-success' : 'text-error']" :name="hint.state ? 'material-symbols:lock-open-right-outline-rounded' : 'material-symbols:lock-outline'" />
           <div :class="['text-sm flex-1', !hint.state ? 'text-secondary' : '']">
             {{ hint.title }}
           </div>
@@ -141,7 +141,7 @@ defineExpose({
               <u-button variant="soft" size="xs" class="-my-8" icon="material-symbols:hourglass-outline-rounded" :disabled="true"> {{ formatTime(calcCooldown(hint)) }} </u-button>
             </u-tooltip>
           </template>
-          <icon v-else name="material-symbols:expand-more-rounded" class="-me-1 size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
+          <u-icon v-else name="material-symbols:expand-more-rounded" class="-me-1 size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
         </div>
         <template v-if="hint.state" #content>
           <div class="px-4 py-4 border-t dark:border-t-slate-700 border-t-slate-200 text-sm">

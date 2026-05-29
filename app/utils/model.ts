@@ -1,3 +1,10 @@
+export interface RbGameSettings {
+  team: {
+    max_members: number;
+  };
+  ticket: Record<string, unknown>;
+}
+
 export interface RbGameModel {
   id: number;
   title: string;
@@ -11,4 +18,5 @@ export interface RbGameModel {
   ctime_at?: string;
 
   cover?: string;
+  settings?: RbGameSettings;
 }

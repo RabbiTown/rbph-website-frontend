@@ -9,27 +9,29 @@
     "lint:fix": "eslint . --fix",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "clean": "nuxt cleanup"
   },
   "dependencies": {
-    "@iconify-json/material-symbols": "^1.2.50",
+    "@iconify-json/material-symbols": "^1.2.75",
+    "@internationalized/date": "^3.12.2",
     "@nuxt/eslint": "1.10.0",
     "@nuxt/image": "2.0.0",
-    "@nuxt/ui": "4.1.0",
-    "@nuxtjs/mdc": "0.19.1",
-    "@types/node": "^24.10.4",
-    "eslint": "^9.39.2",
-    "nuxt": "^4.2.2",
-    "tailwindcss": "^4.1.18",
-    "typescript": "^5.9.3",
-    "undici": "^7.24.0",
-    "valibot": "^1.2.0",
-    "vue": "^3.5.26",
-    "vue-router": "^4.6.4"
+    "@nuxt/ui": "4.8.1",
+    "@nuxtjs/mdc": "0.22.0",
+    "@types/node": "^25.9.1",
+    "eslint": "^9.39.4",
+    "nuxt": "^4.4.6",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^6.0.3",
+    "undici": "^8.3.0",
+    "valibot": "^1.4.1",
+    "vue": "^3.5.35",
+    "vue-router": "^5.1.0"
   },
   "packageManager": "pnpm@10.24.0+sha512.01ff8ae71b4419903b65c60fb2dc9d34cf8bb6e06d03bde112ef38f7a34d6904c424ba66bea5cdcf12890230bf39f9580473140ed9c946fef328b6e5238a345a",
   "devDependencies": {
-    "@vueuse/core": "^14.1.0",
-    "@vueuse/nuxt": "^14.1.0"
+    "@vueuse/core": "^14.3.0",
+    "@vueuse/nuxt": "^14.3.0"
   }
 }

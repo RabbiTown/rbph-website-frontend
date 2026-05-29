@@ -53,7 +53,7 @@ watch(
     <u-chat-prompt v-model="draft" variant="subtle" :placeholder="placeholder" :ui="{ footer: 'text-muted mt-1 justify-end' }" :rows="3" :loading="loading" @submit="emit('submit')">
       <!-- <u-chat-prompt-submit variant="soft" class="rounded-full cursor-pointer" :disabled="disabled" :loading="loading" /> -->
       <template #footer>
-        <icon name="material-symbols:markdown-outline-rounded" />
+        <u-icon name="material-symbols:markdown-outline-rounded" />
         <span class="text-xs"> 支持 Markdown 语法 · 使用 Shift + Enter 换行</span>
       </template>
     </u-chat-prompt>

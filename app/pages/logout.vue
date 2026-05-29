@@ -42,9 +42,9 @@ onMounted(async () => {
   <div>
     <u-main class="flex justify-center items-center">
       <div class="">
-        <icon v-if="success == 'ok'" name="material-symbols:check-rounded" class="text-green-500" size="60px" />
-        <icon v-else-if="success == 'err'" name="material-symbols:close-rounded" class="text-red-400" size="60px" />
-        <icon v-else name="i-lucide:loader-circle" class="animate-spin" size="60px" />
+        <u-icon v-if="success == 'ok'" name="material-symbols:check-rounded" class="text-green-500" size="60px" />
+        <u-icon v-else-if="success == 'err'" name="material-symbols:close-rounded" class="text-red-400" size="60px" />
+        <u-icon v-else name="i-lucide:loader-circle" class="animate-spin" size="60px" />
       </div>
     </u-main>
   </div>

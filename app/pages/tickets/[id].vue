@@ -334,7 +334,7 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
       </div>
 
       <!-- <div class="mt-2 text-secondary ms-0.5 text-xs">
-        <icon name="material-symbols:schedule-outline-rounded" class="align-middle mb-0.5" />
+        <u-icon name="material-symbols:schedule-outline-rounded" class="align-middle mb-0.5" />
         创建于 {{ formatDate(ticket.?.state.utime_at) }}
       </div> -->
     </div>
@@ -358,7 +358,7 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
               </u-button>
               <template #content>
                 <div class="py-2 px-4 text-xs">
-                  <icon name="material-symbols:lock-open-right-outline-rounded" class="align-middle" />
+                  <u-icon name="material-symbols:lock-open-right-outline-rounded" class="align-middle" />
                   <span class="text-xs"> 确定要解锁这条消息吗？ </span>
                   <u-button :loading="unlockLoading" class="cursor-pointer" color="success" variant="soft" size="xs" @click="unlockMessage(item.data)"> 解锁 </u-button>
                 </div>
@@ -375,7 +375,7 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
               </u-button>
               <template #content>
                 <div class="py-2 px-4 text-xs">
-                  <icon name="material-symbols:lock-open-right-outline-rounded" class="align-middle" />
+                  <u-icon name="material-symbols:lock-open-right-outline-rounded" class="align-middle" />
                   <span class="text-xs"> 为该队伍免费解锁这条消息？ </span>
                   <u-button :loading="unlockLoading" class="cursor-pointer" color="success" variant="soft" size="xs" @click="unlockMessage(item.data)"> 解锁 </u-button>
                 </div>

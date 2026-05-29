@@ -46,15 +46,15 @@ const puzzleStateIcon = computed(() => {
       </div>
       <div v-if="ticket.puzzle || ticket.team" class="flex gap-3 text-muted text-sm leading-none flex-wrap">
         <div v-if="ticket.puzzle" class="flex items-center gap-1">
-          <icon name="material-symbols:extension-outline-rounded" />
+          <u-icon name="material-symbols:extension-outline-rounded" />
           {{ ticket.puzzle.title }}
         </div>
         <div v-if="ticket.puzzle" class="flex items-center gap-1">
-          <icon :name="puzzleStateIcon" />
+          <u-icon :name="puzzleStateIcon" />
           {{ puzzleStateLabel }}
         </div>
         <div v-if="ticket.team" class="flex items-center gap-1">
-          <icon name="material-symbols:groups-2-outline-rounded" />
+          <u-icon name="material-symbols:groups-2-outline-rounded" />
           {{ ticket.team.name }}
         </div>
       </div>

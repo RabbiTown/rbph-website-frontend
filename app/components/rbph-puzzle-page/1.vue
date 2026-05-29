@@ -79,7 +79,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
         {{ puzzle?.data.title }}
       </div>
       <div class="mt-2 text-secondary ms-0.5 text-xs">
-        <icon name="material-symbols:schedule-outline-rounded" class="align-middle mb-0.5" />
+        <u-icon name="material-symbols:schedule-outline-rounded" class="align-middle mb-0.5" />
         解锁于 {{ formatDate(puzzle?.state.utime_at) }}
       </div>
     </div>
