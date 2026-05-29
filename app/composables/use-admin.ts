@@ -21,6 +21,10 @@ function useGame() {
     game.value = model;
   }
 
+  function updateCurrent(model: RbGameModel) {
+    if (game.value) Object.assign(game.value, model);
+  }
+
   function selectById(id: number): RbGameModel | undefined {
     const result = gameList.value.find(x => x.id === id);
     upsert(result);
@@ -31,6 +35,7 @@ function useGame() {
     ref: game,
     gameList,
     upsert,
+    updateCurrent,
     selectById,
     updateGameList,
   };

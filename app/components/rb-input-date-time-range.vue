@@ -82,7 +82,7 @@ watch(popoverOpen, val => {
 
 <template>
   <u-popover v-model:open="popoverOpen">
-    <u-button variant="subtle" color="neutral" :icon="icon" class="cursor-pointer"> {{ `${model.start.toLocaleString()} - ${model.end.toLocaleString()} (${utcOffset})` }} </u-button>
+    <u-button variant="subtle" color="neutral" :icon="icon" class="cursor-pointer"> {{ `${model.start.toLocaleString()} — ${model.end.toLocaleString()} (${utcOffset})` }} </u-button>
     <template #content>
       <div class="p-2">
         <u-calendar v-model="dateModel" range />

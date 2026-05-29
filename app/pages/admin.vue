@@ -59,7 +59,7 @@ const userNav = computed(() => {
 });
 
 const navBottom = computed(() => {
-  return [{ label: '返回主页', icon: 'material-symbols:home-outline-rounded', to: '/' }] satisfies DropdownMenuItem[];
+  return [{ label: '返回平台', icon: 'material-symbols:home-outline-rounded', to: '/' }] satisfies DropdownMenuItem[];
 });
 
 const nav = computed(() => {

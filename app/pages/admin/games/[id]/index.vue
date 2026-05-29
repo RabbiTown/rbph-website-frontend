@@ -12,8 +12,8 @@ const state = reactive({
   is_online: false,
   date: {
     start: new Date(),
-    end: new Date()
-  }
+    end: new Date(),
+  },
 });
 
 function syncState() {
@@ -74,12 +74,12 @@ async function submitPatch() {
       },
     });
 
-    gameMgr.upsert(data.game);
+    gameMgr.updateCurrent(data.game);
     syncState();
 
     toast.add({
       title: '成功保存比赛信息',
-      description: '请等待信息更新。',
+      description: '信息即将更新。',
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
@@ -106,7 +106,7 @@ watch(
         <u-button type="submit" :loading="submitLoading" :disabled="!hasPatch || submitLoading" color="success" variant="subtle" class="cursor-pointer w-fit lg:ms-auto" icon="material-symbols:save-outline-rounded"> 保存修改 </u-button>
       </u-page-card>
       <u-page-card variant="subtle">
-        <u-form-field name="title" orientation="horizontal" label="比赛名称" required description="平台显示的名称" class="flex max-sm:flex-col justify-between items-center gap-4">
+        <u-form-field name="title" orientation="horizontal" label="比赛名称" required description="在平台上显示的名称" class="flex max-sm:flex-col justify-between items-center gap-4">
           <u-input v-model="state.title" placeholder="输入比赛名称" class="w-full" />
         </u-form-field>
         <u-separator />
