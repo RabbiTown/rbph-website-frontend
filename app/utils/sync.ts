@@ -41,7 +41,7 @@ export interface SyncMessageMap {
     action: RbJudgeAction;
     cooldown_till?: string;
     solved?: boolean;
-    unlocks?: { id: number; title: string; round_id: number }[];
+    unlocks?: { id: number; slug?: string | null; title: string; round_id: number; round_slug?: string | null }[];
   };
   [SyncMessageType.PuzzleHintUnlocked]: { sid?: string; user: { id: number; name: string }; puzzle: { id: number; title: string }; hint: { id: number; title: string; cost_id?: number; cost_amount: number } };
 }

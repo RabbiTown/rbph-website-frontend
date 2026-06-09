@@ -3,7 +3,7 @@ const props = defineProps<{
   page?: string;
 }>();
 
-const puzzle = defineModel<RbPuzzleShowData | undefined>();
+const { puzzle } = usePuzzleContext();
 
 const UEmpty = resolveComponent('u-empty');
 const USkeleton = resolveComponent('u-skeleton');
@@ -27,5 +27,5 @@ const page = computed(() => {
 </script>
 
 <template>
-  <component :is="page" v-model="puzzle" />
+  <component :is="page" />
 </template>

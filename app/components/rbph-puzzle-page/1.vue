@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { BreadcrumbItem, NavigationMenuItem } from '@nuxt/ui';
 
-const puzzle = defineModel<RbPuzzleShowData | undefined>();
+const { puzzle, puzzleRoute, roundRoute } = usePuzzleContext();
 
 const puzzleId = computed(() => puzzle.value?.data.id);
 
@@ -11,23 +11,23 @@ const navItems = computed<NavigationMenuItem[]>(() =>
         {
           label: '题目',
           icon: 'material-symbols:extension-outline-rounded',
-          to: `/puzzles/${puzzleId.value}`,
+          to: puzzleRoute(),
           exact: true,
         },
         {
           label: '提示',
           icon: 'material-symbols:lightbulb-outline-rounded',
-          to: `/puzzles/${puzzleId.value}/hints`,
+          to: puzzleRoute('hints'),
         },
         {
           label: '提交记录',
           icon: 'material-symbols:history-rounded',
-          to: `/puzzles/${puzzleId.value}/submissions`,
+          to: puzzleRoute('submissions'),
         },
         {
           label: '人工提示',
           icon: 'material-symbols:near-me-outline-rounded',
-          to: `/puzzles/${puzzleId.value}/tickets`,
+          to: puzzleRoute('tickets'),
         },
       ]
     : []
@@ -36,12 +36,12 @@ const navItems = computed<NavigationMenuItem[]>(() =>
 const breadItems = computed<BreadcrumbItem[]>(() => [
   {
     label: puzzle.value?.data.round.title,
-    to: `/rounds/${puzzle.value?.data.round.id}`,
+    to: roundRoute(),
     icon: 'material-symbols:grid-view-outline-rounded',
   },
   {
     label: puzzle.value?.data.title,
-    to: `/puzzles/${puzzleId.value}`,
+    to: puzzleRoute(),
     icon: 'material-symbols:extension-outline-rounded',
   },
 ]);

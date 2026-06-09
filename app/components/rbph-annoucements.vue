@@ -21,6 +21,11 @@ const processedData = computed(() => {
       return b.utime_at.getTime() - a.utime_at.getTime();
     });
 });
+
+function announcementPuzzleRoute(anmt: Partial<RbAnnouncementInfo>): string | undefined {
+  if (!anmt.puzzle_id) return undefined;
+  return gamePuzzleSimpleRoute(anmt.game_id, { id: anmt.puzzle_id, slug: anmt.puzzle_slug });
+}
 </script>
 
 <template>
@@ -40,7 +45,7 @@ const processedData = computed(() => {
               更新于 {{ formatDate(anmt.utime_at) }}
             </div>
           </div>
-          <u-button v-if="anmt.puzzle_id" variant="soft" size="xs" class="-my-8 mx-2" icon="material-symbols:arrow-forward-rounded" :to="`/puzzles/${anmt.puzzle_id}`">
+          <u-button v-if="announcementPuzzleRoute(anmt)" variant="soft" size="xs" class="-my-8 mx-2" icon="material-symbols:arrow-forward-rounded" :to="announcementPuzzleRoute(anmt)">
             <span class="hidden md:inline">前往题目</span>
           </u-button>
           <u-icon name="material-symbols:expand-more-rounded" class="-me-1 size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />

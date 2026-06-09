@@ -58,12 +58,12 @@ watch(
 const breadItems = computed<BreadcrumbItem[]>(() => [
   {
     label: ticket.value?.puzzle?.round.title,
-    to: `/rounds/${ticket.value?.puzzle?.round.id}`,
+    to: ticket.value?.game_id && ticket.value?.puzzle ? gameRoundSimpleRoute(ticket.value.game_id, ticket.value.puzzle.round) : undefined,
     icon: 'material-symbols:grid-view-outline-rounded',
   },
   {
     label: ticket.value?.puzzle?.title,
-    to: `/puzzles/${ticket.value?.puzzle?.id}/tickets`,
+    to: ticket.value?.game_id && ticket.value?.puzzle ? gamePuzzleSimpleRoute(ticket.value.game_id, ticket.value.puzzle, 'tickets') : undefined,
     icon: 'material-symbols:extension-outline-rounded',
   },
   {

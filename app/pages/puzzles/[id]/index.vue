@@ -8,5 +8,5 @@ useHead({
 </script>
 
 <template>
-  <rbph-puzzle-page v-model="puzzle" page="puzzle" />
+  <rbph-puzzle-page page="puzzle" />
 </template>

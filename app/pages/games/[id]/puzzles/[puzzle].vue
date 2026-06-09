@@ -10,13 +10,14 @@ const route = useRoute();
 const puzzle = usePuzzle().ref;
 providePuzzleContext(puzzle);
 
-const puzzle_id = computed(() => route.params.id as string);
+const gameId = computed(() => route.params.id as string);
+const puzzleRef = computed(() => route.params.puzzle as string);
 
 watch(
-  puzzle_id,
-  async new_id => {
+  [gameId, puzzleRef],
+  async ([newGameId, newPuzzleRef]) => {
     usePuzzle()
-      .updateState(new_id)
+      .updateStateByGameRef(newGameId, newPuzzleRef)
       .catch(e => showError({ status: 400, statusText: e }));
   },
   { immediate: true },

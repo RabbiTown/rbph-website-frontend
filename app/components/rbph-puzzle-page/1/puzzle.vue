@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const puzzle = defineModel<RbPuzzleShowData | undefined>();
+const { puzzle, puzzleRoute } = usePuzzleContext();
 
 const okSubmissionsComp = useTemplateRef('ok-submissions');
 const submitResultComp = useTemplateRef('submit-result');
@@ -73,7 +73,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
       <div class="text-lg font-bold mb-4">最近成功提交</div>
       <rbph-submissions ref="ok-submissions" :puzzle-id="puzzle.data.id" :only-ok="true" />
       <div class="flex justify-center mt-2">
-        <nuxt-link :to="`/puzzles/${puzzle.data.id}/submissions`">
+        <nuxt-link :to="puzzleRoute('submissions')">
           <u-button class="cursor-pointer" variant="ghost" color="secondary" icon="material-symbols:more-horiz" trailing-icon="material-symbols:more-horiz">查看所有提交</u-button>
         </nuxt-link>
       </div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const puzzle = defineModel<RbPuzzleShowData | undefined>();
+const { puzzle } = usePuzzleContext();
 </script>
 
 <template>

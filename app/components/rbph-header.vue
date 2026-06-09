@@ -7,6 +7,7 @@ const game = useGame().ref;
 const team = useTeam().ref;
 
 const route = useRoute();
+const currentPuzzle = usePuzzle().ref;
 
 const navItems = computed(() => {
   if (!game.value) return [];
@@ -14,6 +15,7 @@ const navItems = computed(() => {
   const result = [] as NavigationMenuItem[];
 
   result.push({
+    value: 'game-home',
     label: '主页',
     icon: 'material-symbols:home-outline-rounded',
     to: `/games/${game.value.id}`,
@@ -22,28 +24,32 @@ const navItems = computed(() => {
 
   if (game.value.rounds) {
     result.push({
+      value: 'game-puzzles',
       label: '谜题',
       icon: 'material-symbols:group-work-outline',
       children: game.value.rounds.map(x => {
         return {
+          value: `game-round-${x.id}`,
           label: x.title,
           description: '谜题区域',
           icon: 'material-symbols:grid-view-outline-rounded',
-          to: `/rounds/${x.id}`,
-          active: route.path.startsWith(`/rounds/${x.id}`) || (route.path.startsWith('/puzzles') && usePuzzle().ref.value?.data.round.id === x.id),
+          to: gameRoundSimpleRoute(game.value?.id, x),
+          active: route.path.startsWith(`/games/${game.value?.id}/rounds/${x.slug || x.id}`) || route.path.startsWith(`/rounds/${x.id}`) || currentPuzzle.value?.data.round.id === x.id,
         };
       }),
-      active: route.path.startsWith('/puzzles') || route.path.startsWith('/rounds'),
+      active: route.path.startsWith(`/games/${game.value.id}/puzzles`) || route.path.startsWith(`/games/${game.value.id}/rounds`) || route.path.startsWith('/puzzles') || route.path.startsWith('/rounds'),
     });
   }
 
   result.push({
+    value: 'game-announcements',
     label: '公告',
     icon: 'material-symbols:chat-info-outline-rounded',
     to: `/games/${game.value.id}/info`,
   });
 
   result.push({
+    value: 'game-leaderboard',
     label: '排行榜',
     icon: 'material-symbols:leaderboard-outline-rounded',
     to: `/games/${game.value.id}/leaderboard`,
@@ -110,12 +116,14 @@ const userNav = computed(() => {
     });
 
     result.push({
+      value: 'user-menu',
       label: '用户',
       icon: 'material-symbols:deployed-code-account-outline-rounded',
       children: children,
     });
   } else {
     result.push({
+      value: 'login',
       label: '登录',
       icon: 'material-symbols:login-rounded',
       to: `/login?url=/games/${game.value.id}`,
@@ -211,12 +219,12 @@ const userNavMobile = computed(() => {
     <template #title>
       {{ game?.title }}
     </template>
-    <u-navigation-menu :items="[...navItems, ...userNav]" content-orientation="vertical" />
+    <u-navigation-menu :key="`game-nav-${game?.id ?? 'none'}-${game?.rounds?.length ?? 'none'}-${user?.id ?? 'guest'}-${team?.id ?? 'none'}`" :items="[...navItems, ...userNav]" content-orientation="vertical" />
     <template #right>
       <u-color-mode-button />
     </template>
     <template #body>
-      <u-navigation-menu :items="[navItems, ...userNavMobile]" orientation="vertical" />
+      <u-navigation-menu :key="`game-nav-mobile-${game?.id ?? 'none'}-${game?.rounds?.length ?? 'none'}-${user?.id ?? 'guest'}-${team?.id ?? 'none'}`" :items="[navItems, ...userNavMobile]" orientation="vertical" />
     </template>
   </u-header>
 </template>

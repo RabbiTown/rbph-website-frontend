@@ -68,22 +68,26 @@ const nav = computed(() => {
   if (game.ref.value) {
     result.push([
       {
+        value: 'admin-game-dashboard',
         label: '仪表盘',
         icon: 'material-symbols:space-dashboard-outline-rounded',
         to: `/admin/games/${game.ref.value.id}`,
         exact: true,
       },
       {
+        value: 'admin-game-puzzles',
         label: '谜题管理',
         icon: 'material-symbols:extension-outline-rounded',
         to: `/admin/games/${game.ref.value.id}/puzzles`,
       },
       {
+        value: 'admin-game-teams',
         label: '队伍管理',
         icon: 'material-symbols:groups-2-outline-rounded',
         to: `/admin/games/${game.ref.value.id}/teams`,
       },
       {
+        value: 'admin-game-tickets',
         label: '工单管理',
         icon: 'material-symbols:mail-outline-rounded',
         to: `/admin/games/${game.ref.value.id}/tickets`,
@@ -93,16 +97,19 @@ const nav = computed(() => {
 
   result.push([
     {
+      value: 'admin-users',
       label: '用户管理',
       icon: 'material-symbols:deployed-code-account-outline-rounded',
       to: '/admin/users',
     },
     {
+      value: 'admin-logs',
       label: '系统日志',
       icon: 'material-symbols:receipt-long-outline-rounded',
       to: '/admin/users',
     },
     {
+      value: 'admin-settings',
       label: '系统设置',
       icon: 'material-symbols:settings-outline-rounded',
       to: '/admin/users',
@@ -132,7 +139,7 @@ const nav = computed(() => {
         </u-dropdown-menu>
       </template>
       <template #default="{ collapsed }">
-        <u-navigation-menu :items="nav" orientation="vertical" :collapsed="collapsed" />
+        <u-navigation-menu :key="`admin-nav-${game.ref.value?.id ?? 'none'}-${collapsed ? 'collapsed' : 'expanded'}`" :items="nav" orientation="vertical" :collapsed="collapsed" />
         <u-navigation-menu :items="navBottom" orientation="vertical" :collapsed="collapsed" class="mt-auto" />
       </template>
       <template #footer="{ collapsed }">

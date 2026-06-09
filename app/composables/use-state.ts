@@ -210,7 +210,23 @@ export function usePuzzle() {
     }
   }
 
-  return { ref: puzzle, updateState };
+  async function updateStateByGameRef(game_id: string, puzzle_ref: string) {
+    const gameId = parseInt(game_id);
+    if (isNaN(gameId)) throw 'Invalid game id';
+    if (!puzzle_ref) throw 'Invalid puzzle id';
+
+    try {
+      const { data } = await useApi().get<RbPuzzleShowData>(`/games/${gameId}/puzzles/${encodeURIComponent(puzzle_ref)}`);
+      puzzle.value = data;
+      if (data.data.game_id) {
+        updateGameState(data.data.game_id.toString());
+      }
+    } catch (error) {
+      showError(error instanceof Error ? error : String(error));
+    }
+  }
+
+  return { ref: puzzle, updateState, updateStateByGameRef };
 }
 
 export async function resetStates() {

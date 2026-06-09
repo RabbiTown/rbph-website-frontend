@@ -108,7 +108,7 @@ export default defineNuxtPlugin(() => {
             icon: 'material-symbols:arrow-forward-rounded',
             label: puzzle.title,
             variant: 'soft',
-            to: `/puzzles/${puzzle.id}`,
+            to: gamePuzzleSimpleRoute(useGame().ref.value?.id, puzzle),
           };
         }),
         color: 'success',

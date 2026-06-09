@@ -8,7 +8,8 @@ useUser().required();
 const api = useApi();
 const route = useRoute();
 
-const roundId = computed(() => route.params.id as string);
+const gameId = computed(() => route.params.id as string);
+const roundRef = computed(() => route.params.round as string);
 
 const round = ref<RbRoundUserData>();
 
@@ -23,14 +24,18 @@ const okSubmissionsComp = useTemplateRef('ok-submissions');
 const submitResultComp = useTemplateRef('submit-result');
 
 let fetchToken = 0;
-async function updateData(id: string | undefined = undefined) {
+async function updateData(id: string | undefined = undefined, ref: string | undefined = undefined) {
   const token = ++fetchToken;
 
-  const newId = id || roundId.value;
-  if (newId) {
+  const newGameId = id || gameId.value;
+  const newRoundRef = ref || roundRef.value;
+  if (newGameId && newRoundRef) {
     round.value = undefined;
     try {
-      const { data } = await api.get<RbRoundUserData>(`/rounds/${newId}`);
+      const parsedGameId = parseInt(newGameId);
+      if (isNaN(parsedGameId)) throw 'Invalid game id';
+
+      const { data } = await api.get<RbRoundUserData>(`/games/${parsedGameId}/rounds/${encodeURIComponent(newRoundRef)}`);
       if (token !== fetchToken) return;
 
       round.value = data;
@@ -44,9 +49,9 @@ async function updateData(id: string | undefined = undefined) {
 }
 
 watch(
-  roundId,
-  async newId => {
-    await updateData(newId);
+  [gameId, roundRef],
+  async ([newGameId, newRoundRef]) => {
+    await updateData(newGameId, newRoundRef);
   },
   { immediate: true },
 );

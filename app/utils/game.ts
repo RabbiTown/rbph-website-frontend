@@ -1,5 +1,5 @@
 export interface RbGame extends RbGameModel {
-  rounds?: Pick<RbRound, 'id' | 'title'>[];
+  rounds?: Pick<RbRound, 'id' | 'slug' | 'title'>[];
 }
 
 export enum RbTeamState {
@@ -39,11 +39,12 @@ export enum RbContentType {
 
 export interface RbPuzzle {
   id: number;
+  slug?: string | null;
   title: string;
   ptype: RbPuzzleType;
   content: string;
   content_type: RbContentType;
-  round: Pick<RbRound, 'id' | 'title'>;
+  round: Pick<RbRound, 'id' | 'slug' | 'title'>;
   game_id: number;
   announcements: Omit<RbAnnouncementInfo, 'is_pinned' | 'game_id' | 'puzzle_id'>[];
 }
@@ -111,7 +112,7 @@ export interface RbJudgeResponse {
   result: RbJudgeResult;
   cooldown_till?: string;
   solved?: boolean;
-  unlocks?: { id: number; title: string; round_id: number }[];
+  unlocks?: { id: number; slug?: string | null; title: string; round_id: number; round_slug?: string | null }[];
 }
 
 export interface RbSubmission {
@@ -131,6 +132,7 @@ export interface RbSubmissionPage {
 
 export interface RbRound {
   id: number;
+  slug?: string | null;
   title: string;
   content: string;
   content_type: RbContentType;
@@ -141,6 +143,7 @@ export interface RbRound {
 
 export interface RbRoundInnerPuzzleData {
   id: number;
+  slug?: string | null;
   title: string;
   state: RbTeamPuzzleState;
   answer?: string;
@@ -218,6 +221,7 @@ export interface RbAnnouncementInfo {
   is_pinned: boolean;
   game_id?: number;
   puzzle_id?: number;
+  puzzle_slug?: string | null;
   utime_at: string;
 }
 
@@ -225,7 +229,7 @@ export interface RbGameAggreInfo {
   game: RbGame;
   team?: RbTeam;
   currency?: RbTeamCurrency[];
-  rounds?: Pick<RbRound, 'id' | 'title'>[];
+  rounds?: Pick<RbRound, 'id' | 'slug' | 'title'>[];
   server_time: string;
 }
 
@@ -301,7 +305,7 @@ export interface TicketSummary {
   state: RbTicketState;
   game_id?: number;
   team?: Pick<RbTeam, 'id' | 'name' | 'state'> & { currency?: RbTeamCurrency[] };
-  puzzle?: Pick<RbPuzzle, 'id' | 'title' | 'round'> & Pick<RbPuzzleTeamData, 'state'>;
+  puzzle?: Pick<RbPuzzle, 'id' | 'slug' | 'title' | 'round'> & Pick<RbPuzzleTeamData, 'state'>;
   msg_count?: number;
   last_at: string | null;
   last_by?: RbTicketSenderType;
