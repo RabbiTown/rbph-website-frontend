@@ -18,7 +18,7 @@ const mdAst = ref<MDCParserResult>();
 let dynTimer: ReturnType<typeof setTimeout> | undefined = undefined;
 let dynSeq = 0;
 
-const mdWhitelists = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'hr', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img', 'em', 'strong'];
+const mdWhitelists = ['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'hr', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img', 'em', 'strong'];
 
 function sanitizedMdNode<T extends MDCNode | MDCRoot>(node: T): T | null {
   if (node.type === 'root') {
@@ -28,6 +28,30 @@ function sanitizedMdNode<T extends MDCNode | MDCRoot>(node: T): T | null {
     };
   } else if (node.type === 'element') {
     if (!mdWhitelists.includes(node.tag)) return null;
+
+    if (node.tag === 'div') {
+      const textAlign = node.props?.['data-text-align'];
+      return {
+        ...node,
+        props: typeof textAlign === 'string' && ['left', 'center', 'right'].includes(textAlign) ? { class: `text-${textAlign}`, 'data-text-align': textAlign } : {},
+        children: node.children.map(sanitizedMdNode).filter(Boolean),
+      };
+    }
+
+    if (node.tag === 'span') {
+      const className = node.props?.class;
+      const style = node.props?.style;
+      return {
+        ...node,
+        props:
+          typeof className === 'string' && /^text-(red|orange|yellow|green|blue|purple)-500$/.test(className)
+            ? { class: className }
+            : typeof style === 'string' && /^color:\s*#[0-9a-f]{6}$/i.test(style)
+              ? { style }
+              : {},
+        children: node.children.map(sanitizedMdNode).filter(Boolean),
+      };
+    }
 
     return {
       ...node,
@@ -42,6 +66,31 @@ function sanitizedMdNode<T extends MDCNode | MDCRoot>(node: T): T | null {
 
 function sanitizeMdAst(ast: MDCParserResult) {
   ast.body = sanitizedMdNode(ast.body) as MDCRoot;
+}
+
+function stripMarkdownHints<T extends MDCNode | MDCRoot>(node: T): T {
+  if (node.type === 'root') {
+    return {
+      ...node,
+      children: node.children.map(stripMarkdownHints),
+    };
+  }
+
+  if (node.type === 'element') {
+    return {
+      ...node,
+      children: node.children.map(stripMarkdownHints),
+    };
+  }
+
+  if (node.type === 'text') {
+    return {
+      ...node,
+      value: node.value.replaceAll('\u200B', ''),
+    };
+  }
+
+  return node;
 }
 
 watch(
@@ -61,6 +110,9 @@ watch(
       const updater = async () => {
         if (dynCur !== dynSeq) return;
         const newAst = await mdParser(content as string);
+        newAst.body = transformAlignBlocks(newAst.body);
+        newAst.body = transformColorSpans(newAst.body);
+        newAst.body = stripMarkdownHints(newAst.body);
         if (content_type === RbContentType.UnsafeMarkdown) {
           sanitizeMdAst(newAst);
         }

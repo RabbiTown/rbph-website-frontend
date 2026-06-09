@@ -7,6 +7,8 @@ const route = useRoute();
 
 const user = useUser().ref;
 const game = useAdmin().useGame();
+const selectedGame = computed(() => game.ref.value);
+const gameSwitchIcon = computed(() => (selectedGame.value ? 'material-symbols:sports-esports-outline-rounded' : 'material-symbols:remove-selection-rounded'));
 
 game
   .updateGameList()
@@ -27,7 +29,7 @@ const gameNav = computed(() => {
       game.gameList.value.map(x => {
         return {
           label: x.title,
-          icon: 'material-symbols:videogame-asset-rounded',
+          icon: 'material-symbols:sports-esports',
           to: `/admin/games/${x.id}`,
         };
       }),
@@ -79,6 +81,7 @@ const nav = computed(() => {
         label: '谜题管理',
         icon: 'material-symbols:extension-outline-rounded',
         to: `/admin/games/${game.ref.value.id}/puzzles`,
+        active: route.path.startsWith(`/admin/games/${game.ref.value.id}/puzzles`),
       },
       {
         value: 'admin-game-teams',
@@ -126,9 +129,10 @@ const nav = computed(() => {
       <template #header="{ collapsed }">
         <u-dropdown-menu :ui="{ content: collapsed ? 'w-48' : 'w-(--reka-dropdown-menu-trigger-width)' }" :items="gameNav">
           <u-button
-            :label="collapsed ? undefined : (game.ref.value?.title ?? '未选择比赛')"
+            :key="`admin-game-switch-${selectedGame?.id ?? 'none'}-${collapsed ? 'collapsed' : 'expanded'}`"
+            :label="collapsed ? undefined : (selectedGame?.title ?? '未选择比赛')"
             :trailing-icon="collapsed ? undefined : 'material-symbols:expand-all-rounded'"
-            :icon="game.ref.value ? 'material-symbols:videogame-asset-rounded' : 'material-symbols:remove-selection-rounded'"
+            :icon="gameSwitchIcon"
             color="neutral"
             variant="ghost"
             block

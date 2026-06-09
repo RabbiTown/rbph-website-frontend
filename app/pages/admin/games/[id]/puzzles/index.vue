@@ -927,7 +927,7 @@ watch(
                 </div>
               </div>
               <div class="relative rounded-md" :class="[isPuzzleOriginPlaceholderVisible(puzzle) ? 'opacity-25' : '', isRoundPuzzle(puzzle, group.round.id) ? 'overflow-hidden bg-primary/5' : '']">
-                <rbph-puzzle-card-2 :puzzle="puzzle" :is-round-puzzle="isRoundPuzzle(puzzle, group.round.id)">
+                <rbph-puzzle-card-2 :puzzle="puzzle" :is-round-puzzle="isRoundPuzzle(puzzle, group.round.id)" class="cursor-pointer" @click="navigateTo(`/admin/games/${gameId}/puzzles/${puzzle.id}`)">
                   <template v-if="!isRoundPuzzle(puzzle, group.round.id)" #actions>
                     <u-button
                       draggable="true"
@@ -939,6 +939,7 @@ watch(
                       class="cursor-grab text-muted active:cursor-grabbing"
                       title="拖动调整谜题位置"
                       aria-label="拖动调整谜题位置"
+                      @click.stop
                       @dragstart.stop="onPuzzleDragStart(puzzle, $event)"
                       @dragend="clearDragState"
                     />

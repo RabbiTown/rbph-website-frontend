@@ -1,5 +1,43 @@
 const api = useApi();
 
+export interface AdminRoundData {
+  id: number;
+  slug?: string | null;
+  title: string;
+  content: string;
+  content_type: number;
+  cover?: string | null;
+  game_id: number;
+  puzzle?: number | null;
+  sort: number;
+}
+
+export interface AdminPuzzleData {
+  id: number;
+  game_id: number;
+  slug?: string | null;
+  title: string;
+  ptype: number;
+  content: string;
+  content_type: number;
+  judge: unknown;
+  penalty: unknown;
+  max_submit?: number | null;
+  unlock_cond: string;
+  round_id: number;
+  sort: number;
+  ticket_cooldown: number;
+  ctime_at: string;
+}
+
+export interface AdminPuzzleContext {
+  puzzle: Ref<AdminPuzzleData | undefined>;
+  round: Ref<AdminRoundData | undefined>;
+  refresh: () => Promise<void>;
+}
+
+const adminPuzzleContextKey: InjectionKey<AdminPuzzleContext> = Symbol('rbph-admin-puzzle-context');
+
 function useGame() {
   const game = useState<RbGameModel | undefined>('admin.game');
 
@@ -41,8 +79,21 @@ function useGame() {
   };
 }
 
+function providePuzzleContext(context: AdminPuzzleContext) {
+  provide(adminPuzzleContextKey, context);
+  return context;
+}
+
+function usePuzzleContext(): AdminPuzzleContext {
+  const context = inject(adminPuzzleContextKey);
+  if (!context) throw new Error('Admin puzzle context is not provided');
+  return context;
+}
+
 export function useAdmin() {
   return {
     useGame,
+    providePuzzleContext,
+    usePuzzleContext,
   };
 }
