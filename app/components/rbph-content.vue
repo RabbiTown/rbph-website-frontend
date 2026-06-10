@@ -15,6 +15,10 @@ const mdParser = useMarkdownParser();
 
 const mdAst = ref<MDCParserResult>();
 
+const emit = defineEmits<{
+  rendered: [];
+}>();
+
 let dynTimer: ReturnType<typeof setTimeout> | undefined = undefined;
 let dynSeq = 0;
 
@@ -112,6 +116,7 @@ watch(
         const newAst = await mdParser(content as string);
         newAst.body = transformAlignBlocks(newAst.body);
         newAst.body = transformImageBlocks(newAst.body);
+        newAst.body = transformTableBlocks(newAst.body);
         newAst.body = transformColorSpans(newAst.body);
         newAst.body = stripMarkdownHints(newAst.body);
         if (content_type === RbContentType.UnsafeMarkdown) {
@@ -119,6 +124,9 @@ watch(
         }
         if (dynCur !== dynSeq) return;
         mdAst.value = newAst;
+        await nextTick();
+        if (dynCur !== dynSeq) return;
+        emit('rendered');
       };
 
       if (props.debounce) {
@@ -126,6 +134,9 @@ watch(
       } else {
         updater();
       }
+    } else {
+      await nextTick();
+      emit('rendered');
     }
   },
   { immediate: true },

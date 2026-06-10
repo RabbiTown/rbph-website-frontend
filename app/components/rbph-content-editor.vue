@@ -12,6 +12,16 @@ const editorSelectionVersion = ref(0);
 const contentFrame = ref<HTMLElement>();
 const sourceEditor = ref<{ focus: () => void }>();
 const retainedContentHeight = ref(0);
+let retainedContentReleaseId = 0;
+type ScrollAnchor = {
+  frameTop: number;
+};
+let retainedContentScrollAnchor: ScrollAnchor | undefined;
+const tableMenu = reactive({
+  visible: false,
+  top: 0,
+  left: 0,
+});
 
 defineProps<{
   placeholder?: string;
@@ -28,7 +38,7 @@ const previewContent = computed<RbContent>(() => ({
   content: model.value,
   content_type: RbContentType.Markdown,
 }));
-const editorExtensions = [RbphAlignBlock, RbphImageBlock, RbphTextStyle, RbphUnderline, Color, TextAlign.configure({ types: ['heading', 'paragraph', 'align'] })];
+const editorExtensions = [RbphAlignBlock, RbphImageBlock, RbphTable, RbphTableRow, RbphTableHeader, RbphTableCell, RbphTextStyle, RbphUnderline, Color, TextAlign.configure({ types: ['heading', 'paragraph', 'align'] })];
 const blockTypeItems = [
   { kind: 'paragraph', label: '段落', icon: 'material-symbols:format-paragraph-rounded' },
   { kind: 'heading', level: 1, label: '一级标题', icon: 'material-symbols:format-h1-rounded' },
@@ -90,6 +100,11 @@ const editorHandlers = {
     execute: (editor: Editor) => createRbImageBlock(editor),
     isActive: (editor: Editor) => editor.isActive('rbImage'),
   },
+  rbTable: {
+    canExecute: () => true,
+    execute: (editor: Editor) => insertRbTable(editor),
+    isActive: (editor: Editor) => editor.isActive('table'),
+  },
 };
 
 function trackEditor(editor: Editor) {
@@ -99,6 +114,38 @@ function trackEditor(editor: Editor) {
 
 function refreshEditorSelection() {
   editorSelectionVersion.value += 1;
+  updateTableMenu();
+}
+
+function findCurrentTableCell(editor: Editor) {
+  const selectedCell = editor.view.dom.querySelector('.selectedCell');
+  if (selectedCell instanceof HTMLElement) return selectedCell;
+
+  const domAtSelection = editor.view.domAtPos(editor.state.selection.from).node;
+  const element = domAtSelection instanceof Element ? domAtSelection : domAtSelection.parentElement;
+  const cell = element?.closest('td, th');
+  return cell instanceof HTMLElement ? cell : undefined;
+}
+
+function updateTableMenu() {
+  const editor = currentEditor.value;
+  const frame = contentFrame.value;
+  if (!editor || !frame || mode.value !== 'editor' || !editor.isActive('table')) {
+    tableMenu.visible = false;
+    return;
+  }
+
+  const cell = findCurrentTableCell(editor);
+  if (!cell) {
+    tableMenu.visible = false;
+    return;
+  }
+
+  const frameRect = frame.getBoundingClientRect();
+  const cellRect = cell.getBoundingClientRect();
+  tableMenu.visible = true;
+  tableMenu.top = cellRect.top - frameRect.top + frame.scrollTop - 6;
+  tableMenu.left = cellRect.right - frameRect.left + frame.scrollLeft;
 }
 
 function currentBlockType(editor: Editor) {
@@ -128,6 +175,34 @@ function syncEditorMarkdown() {
   } catch {
     model.value = currentEditor.value.getText();
   }
+}
+
+function captureScrollAnchor(): ScrollAnchor | undefined {
+  if (!contentFrame.value || !import.meta.client) return undefined;
+
+  const frameTop = contentFrame.value.getBoundingClientRect().top;
+  return {
+    frameTop: frameTop < 72 ? 72 : frameTop,
+  };
+}
+
+function restoreScrollAnchor(anchor: ScrollAnchor | undefined) {
+  if (!anchor || !contentFrame.value || !import.meta.client) return;
+
+  const currentTop = contentFrame.value.getBoundingClientRect().top;
+  const delta = currentTop - anchor.frameTop;
+  if (Math.abs(delta) < 1) return;
+
+  window.scrollBy({ top: delta, behavior: 'instant' });
+}
+
+function releaseRetainedContentHeight(releaseId = retainedContentReleaseId) {
+  if (releaseId !== retainedContentReleaseId) return;
+
+  retainedContentHeight.value = 0;
+  requestAnimationFrame(() => {
+    restoreScrollAnchor(retainedContentScrollAnchor);
+  });
 }
 
 const toolbarItems = [
@@ -174,6 +249,7 @@ const suggestionItems = [
   { kind: 'codeBlock', label: '代码块', aliases: ['code', 'codeblock'], icon: 'material-symbols:integration-instructions-rounded' },
   { kind: 'horizontalRule', label: '分割线', aliases: ['hr', 'divider', 'separator', 'rule'], icon: 'material-symbols:horizontal-rule-rounded' },
   { kind: 'rbImage', label: '图片', aliases: ['image', 'img', 'picture'], icon: 'material-symbols:image-outline-rounded' },
+  { kind: 'rbTable', label: '表格', aliases: ['table', 'grid'], icon: 'material-symbols:grid-on-outline' },
   { type: 'separator' },
   { type: 'label', label: '对齐' },
   { kind: 'rbAlign', align: 'left', label: '左对齐', aliases: ['left', 'alignleft'], icon: 'material-symbols:format-align-left-rounded' },
@@ -182,13 +258,27 @@ const suggestionItems = [
 ] satisfies EditorSuggestionMenuItem[];
 
 function setMode(value: typeof mode.value) {
-  retainedContentHeight.value = contentFrame.value?.offsetHeight ?? retainedContentHeight.value;
+  if (value === mode.value) return;
+
+  const scrollAnchor = captureScrollAnchor();
+  const previousHeight = contentFrame.value?.offsetHeight ?? 0;
+
+  retainedContentHeight.value = previousHeight;
+  retainedContentScrollAnchor = scrollAnchor;
   syncEditorMarkdown();
   mode.value = value;
+  tableMenu.visible = false;
 
+  const releaseId = ++retainedContentReleaseId;
   requestAnimationFrame(() => {
-    retainedContentHeight.value = contentFrame.value?.offsetHeight ?? 0;
+    restoreScrollAnchor(scrollAnchor);
   });
+
+  if (value !== 'preview') {
+    nextTick(() => {
+      releaseRetainedContentHeight(releaseId);
+    });
+  }
 }
 
 function setEditorTextColor(editor: Editor, color: RbTextColor) {
@@ -217,6 +307,13 @@ function unsetEditorLink(editor: Editor) {
   refreshEditorSelection();
 }
 
+function runTableAction(action: (editor: Editor) => boolean) {
+  const editor = currentEditor.value;
+  if (!editor) return;
+  action(editor);
+  nextTick(updateTableMenu);
+}
+
 function isEditorSelectionOnFirstLine(editor: Editor) {
   const { from } = editor.state.selection;
   const currentCoords = editor.view.coordsAtPos(from);
@@ -233,6 +330,19 @@ function onEditorKeydown(_view: unknown, event: KeyboardEvent) {
 
   event.preventDefault();
   emit('focusTitle');
+  return true;
+}
+
+function onEditorTailBlankMouseDown(view: { dom: HTMLElement }, event: MouseEvent) {
+  if (event.target !== view.dom) return false;
+
+  const lastBlock = Array.from(view.dom.children).at(-1);
+  if (!(lastBlock instanceof HTMLElement)) return false;
+
+  if (event.clientY <= lastBlock.getBoundingClientRect().bottom) return false;
+
+  event.preventDefault();
+  currentEditor.value?.chain().focus('end').run();
   return true;
 }
 
@@ -254,7 +364,7 @@ defineExpose({ focus });
 </script>
 
 <template>
-  <div class="relative">
+  <div class="rbph-content-editor relative">
     <div class="pointer-events-none sticky top-4 z-20 h-0">
       <div class="pointer-events-auto ms-auto flex w-max -translate-y-8 items-center gap-1 rounded-md bg-default/95 p-1 shadow-sm ring ring-default backdrop-blur">
         <u-button icon="material-symbols:edit-note-outline-rounded" color="neutral" :variant="mode === 'editor' ? 'soft' : 'ghost'" size="sm" :disabled="disabled" label="编辑器" @click="setMode('editor')" />
@@ -263,7 +373,7 @@ defineExpose({ focus });
       </div>
     </div>
 
-    <div ref="contentFrame" :style="{ minHeight: retainedContentHeight ? `${retainedContentHeight}px` : undefined }">
+    <div ref="contentFrame" class="relative" :style="{ minHeight: retainedContentHeight ? `${retainedContentHeight}px` : undefined }">
       <u-editor
         v-if="mode === 'editor'"
         v-model="model"
@@ -276,7 +386,10 @@ defineExpose({ focus });
         :extensions="editorExtensions"
         :handlers="editorHandlers"
         class="min-h-0"
-        :editor-props="{ handleKeyDown: onEditorKeydown }"
+        :editor-props="{
+          handleKeyDown: onEditorKeydown,
+          handleDOMEvents: { mousedown: onEditorTailBlankMouseDown },
+        }"
         :ui="{
           content: 'ps-3',
           base: 'py-3',
@@ -341,10 +454,73 @@ defineExpose({ focus });
         </template>
       </u-editor>
 
+      <div
+        v-if="tableMenu.visible && mode === 'editor'"
+        class="absolute z-30 flex -translate-x-full -translate-y-full items-center gap-0.5 rounded-md bg-default/95 p-1 shadow-sm ring ring-default backdrop-blur"
+        :style="{ top: `${tableMenu.top}px`, left: `${tableMenu.left}px` }"
+        @mousedown.prevent
+      >
+        <u-tooltip text="下方添加行">
+          <u-button color="neutral" variant="ghost" size="xs" square icon="material-symbols:playlist-add-rounded" :disabled="disabled" @click="runTableAction(addRbTableRow)" />
+        </u-tooltip>
+        <u-tooltip text="删除行">
+          <u-button color="neutral" variant="ghost" size="xs" square icon="material-symbols:playlist-remove-rounded" :disabled="disabled" @click="runTableAction(deleteRbTableRow)" />
+        </u-tooltip>
+        <u-separator orientation="vertical" class="mx-0.5 h-5" />
+        <u-tooltip text="右侧添加列">
+          <u-button color="neutral" variant="ghost" size="xs" square icon="material-symbols:add-column-right-outline-rounded" :disabled="disabled" @click="runTableAction(addRbTableColumn)" />
+        </u-tooltip>
+        <u-tooltip text="删除列">
+          <u-button color="neutral" variant="ghost" size="xs" square icon="material-symbols:delete-outline-rounded" :disabled="disabled" @click="runTableAction(deleteRbTableColumn)" />
+        </u-tooltip>
+        <u-separator orientation="vertical" class="mx-0.5 h-5" />
+        <u-tooltip text="删除表格">
+          <u-button color="error" variant="ghost" size="xs" square icon="material-symbols:table-rows-narrow-rounded" :disabled="disabled" @click="runTableAction(deleteRbTable)" />
+        </u-tooltip>
+      </div>
+
       <rbph-markdown-source-editor v-if="isSourceMode" ref="sourceEditor" v-model="model" v-bind="attrs" :placeholder="placeholder" :disabled="disabled" @focus-title="emit('focusTitle')" />
       <div v-else-if="isPreviewMode" class="px-4 py-3 sm:px-5">
-        <rbph-content :content="previewContent" />
+        <rbph-content :content="previewContent" @rendered="releaseRetainedContentHeight()" />
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.rbph-content-editor :deep(.ProseMirror) {
+  padding-bottom: 50vh;
+}
+
+.rbph-content-editor :deep(.ProseMirror table) {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin-block: 1rem;
+  border: 1px solid var(--ui-border, rgb(209 213 219));
+  overflow: hidden;
+}
+
+.rbph-content-editor :deep(.ProseMirror th),
+.rbph-content-editor :deep(.ProseMirror td) {
+  min-width: 6rem;
+  border: 1px solid var(--ui-border, rgb(209 213 219));
+  padding: 0.5rem 0.625rem;
+  vertical-align: top;
+  background: var(--ui-bg);
+}
+
+.rbph-content-editor :deep(.ProseMirror th) {
+  background: var(--ui-bg-elevated);
+  font-weight: 600;
+}
+
+.rbph-content-editor :deep(.ProseMirror .selectedCell::after) {
+  background: var(--ui-primary);
+  opacity: 0.12;
+}
+
+.rbph-content-editor :deep(.ProseMirror table p) {
+  margin: 0;
+}
+</style>

@@ -31,13 +31,13 @@ function escapeHtml(value: string) {
 function highlightLine(line: string) {
   let html = escapeHtml(line);
 
-  html = html.replace(/^(\s{0,3}#{1,6})(\s.*)?$/, '<span class="text-primary font-semibold">$1</span><span class="text-highlighted">$2</span>');
+  html = html.replace(/^(\s{0,3}#{1,6})(\s.*)?$/, '<span class="text-primary">$1</span><span class="text-highlighted">$2</span>');
   html = html.replace(/^(\s{0,3}&gt;)(.*)$/, '<span class="text-muted">$1</span><span class="text-info">$2</span>');
   html = html.replace(/^(\s*)([-+*]|\d+\.)(\s+)/, '$1<span class="text-warning">$2</span>$3');
   html = html.replace(/^(\s*`{3,}.*)$/, '<span class="text-success">$1</span>');
   html = html.replace(/(`[^`]+`)/g, '<span class="text-success">$1</span>');
-  html = html.replace(/(\*\*|__)(.+?)(\1)/g, '<span class="text-primary">$1</span><span class="font-semibold text-highlighted">$2</span><span class="text-primary">$3</span>');
-  html = html.replace(/(\*|_)([^*_]+?)(\1)/g, '<span class="text-primary">$1</span><span class="italic text-highlighted">$2</span><span class="text-primary">$3</span>');
+  html = html.replace(/(\*\*|__)(.+?)(\1)/g, '<span class="text-primary">$1</span><span class="text-highlighted">$2</span><span class="text-primary">$3</span>');
+  html = html.replace(/(\*|_)([^*_]+?)(\1)/g, '<span class="text-primary">$1</span><span class="text-highlighted">$2</span><span class="text-primary">$3</span>');
   html = html.replace(/(!?\[[^\]]*\]\([^)]+\))/g, '<span class="text-secondary">$1</span>');
   html = html.replace(/(::[A-Za-z][\w-]*(?:\{[^}]*\})?)/g, '<span class="text-info">$1</span>');
 
@@ -94,7 +94,7 @@ defineExpose({ focus });
       v-bind="$attrs"
       :placeholder="placeholder"
       :disabled="disabled"
-      class="absolute inset-0 block h-full w-full resize-none overflow-hidden bg-transparent py-0 ps-[4.5rem] pe-4 caret-primary outline-none selection:bg-primary/25 disabled:cursor-not-allowed disabled:opacity-75 sm:pe-5"
+      class="absolute inset-0 block h-full w-full resize-none overflow-hidden whitespace-pre-wrap break-words bg-transparent py-0 ps-[4.5rem] pe-4 caret-primary outline-none selection:bg-primary/25 disabled:cursor-not-allowed disabled:opacity-75 sm:ps-[4.75rem] sm:pe-5"
       :class="isComposing ? 'text-highlighted' : 'text-transparent'"
       spellcheck="false"
       @keydown.up="onArrowUp"
