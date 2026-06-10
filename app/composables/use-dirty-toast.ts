@@ -49,7 +49,7 @@ export function useDirtyToast() {
   onBeforeRouteLeave(() => confirmLeave());
   onBeforeRouteUpdate(() => confirmLeave());
 
-  function show(options: DirtyToastOptions) {
+  function show(options: DirtyToastOptions, forceAdd = false) {
     currentOptions = options;
 
     const toastData: Partial<Toast> = {
@@ -73,12 +73,19 @@ export function useDirtyToast() {
           icon: 'material-symbols:check-rounded',
           color: 'primary',
           variant: 'solid',
-          onClick: () => options.apply(),
+          onClick: async () => {
+            await options.apply();
+            window.setTimeout(() => {
+              if (currentOptions !== options) return;
+              current = undefined;
+              show(options, true);
+            }, 0);
+          },
         },
       ],
     };
 
-    if (current && toast.toasts.value.find(item => item.id === current?.id)) {
+    if (!forceAdd && current && toast.toasts.value.find(item => item.id === current?.id)) {
       toast.update(current.id, toastData);
     } else {
       current = toast.add(toastData);

@@ -33,6 +33,11 @@ export interface AdminPuzzleData {
 export interface AdminPuzzleContext {
   puzzle: Ref<AdminPuzzleData | undefined>;
   round: Ref<AdminRoundData | undefined>;
+  contentEditor: Ref<{ focus: () => void } | undefined>;
+  focusTitle: () => void;
+  headerDirty: ComputedRef<boolean>;
+  applyHeader: () => Promise<boolean>;
+  resetHeader: () => void;
   refresh: () => Promise<void>;
 }
 

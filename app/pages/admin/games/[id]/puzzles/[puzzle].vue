@@ -3,14 +3,90 @@ import type { NavigationMenuItem } from '@nuxt/ui';
 
 const route = useRoute();
 const api = useApi();
+const toast = useToast();
 
 const game = useAdmin().useGame().ref;
 const puzzle = ref<AdminPuzzleData>();
 const round = ref<AdminRoundData>();
 const loading = ref(false);
+const headerSaving = ref(false);
+const contentEditor = ref<{ focus: () => void }>();
+const titleInput = ref<HTMLInputElement>();
+
+const headerState = reactive({
+  slug: '',
+  title: '',
+});
 
 const gameId = computed(() => Number(route.params.id));
 const puzzleId = computed(() => Number(route.params.puzzle));
+const contentPagePath = computed(() => (Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}` : undefined));
+const isContentPage = computed(() => Boolean(contentPagePath.value && route.path.replace(/\/$/, '') === contentPagePath.value));
+const normalizedPuzzleSlug = computed(() => puzzle.value?.slug ?? '');
+const slugDirty = computed(() => Boolean(puzzle.value && headerState.slug.trim() !== normalizedPuzzleSlug.value));
+const titleDirty = computed(() => Boolean(puzzle.value && headerState.title !== puzzle.value.title));
+const headerDirty = computed(() => slugDirty.value || titleDirty.value);
+const slugInputWidth = computed(() => `${Math.max(4, headerState.slug.length || 4)}ch`);
+
+function syncHeaderFromPuzzle() {
+  headerState.slug = puzzle.value?.slug ?? '';
+  headerState.title = puzzle.value?.title ?? '';
+}
+
+function resetHeader() {
+  syncHeaderFromPuzzle();
+}
+
+function focusContentEditor() {
+  contentEditor.value?.focus();
+}
+
+function focusTitle() {
+  titleInput.value?.focus();
+  titleInput.value?.setSelectionRange(headerState.title.length, headerState.title.length);
+}
+
+async function applyHeader() {
+  if (!puzzle.value || !headerDirty.value) return true;
+  if (headerSaving.value) return false;
+
+  const body: {
+    slug?: string | null;
+    title?: string;
+  } = {};
+
+  if (slugDirty.value) body.slug = headerState.slug.trim() || null;
+  if (titleDirty.value) body.title = headerState.title;
+
+  headerSaving.value = true;
+
+  try {
+    type Response = { puzzle: AdminPuzzleData };
+    const response = await api.patch<Response>(`/admin/puzzles/${puzzle.value.id}`, body, {
+      errorHints: {
+        [-2]: '谜题标题或 slug 不合法。',
+        [-3]: '谜题 slug 不合法或已被使用。',
+        [-1]: '谜题不存在。',
+      },
+    });
+
+    puzzle.value = response.data.puzzle;
+    syncHeaderFromPuzzle();
+    await fetchData();
+
+    toast.add({
+      title: '谜题信息已保存',
+      icon: 'material-symbols:check-rounded',
+      color: 'success',
+    });
+    return true;
+  } catch (error) {
+    handleError(error, '保存谜题信息失败');
+    return false;
+  } finally {
+    headerSaving.value = false;
+  }
+}
 
 async function fetchData() {
   if (!Number.isFinite(gameId.value) || !Number.isFinite(puzzleId.value)) return;
@@ -40,9 +116,11 @@ async function fetchData() {
 
     puzzle.value = puzzleResp.data.puzzle;
     round.value = roundResp.data.round;
+    syncHeaderFromPuzzle();
   } catch (error) {
     puzzle.value = undefined;
     round.value = undefined;
+    syncHeaderFromPuzzle();
     handleError(error, '获取谜题信息失败', true);
   } finally {
     loading.value = false;
@@ -52,6 +130,11 @@ async function fetchData() {
 useAdmin().providePuzzleContext({
   puzzle,
   round,
+  contentEditor,
+  focusTitle,
+  headerDirty,
+  applyHeader,
+  resetHeader,
   refresh: fetchData,
 });
 
@@ -59,6 +142,14 @@ watch(
   [gameId, puzzleId],
   () => {
     fetchData();
+  },
+  { immediate: true },
+);
+
+watch(
+  () => puzzle.value?.id,
+  () => {
+    syncHeaderFromPuzzle();
   },
   { immediate: true },
 );
@@ -89,14 +180,51 @@ const navItems = computed<NavigationMenuItem[]>(() => [
         <aside class="hidden xl:block" />
 
         <div class="flex min-w-0 flex-col gap-2">
-          <div class="flex flex-wrap items-center gap-2">
-            <h1 class="text-3xl font-bold">
-              {{ puzzle.title }}
-            </h1>
-            <u-badge v-if="round?.puzzle === puzzle.id" variant="soft" color="primary" icon="material-symbols:grid-view-outline-rounded">区域谜题</u-badge>
-            <u-badge v-if="puzzle.slug" variant="soft" color="primary" icon="material-symbols:tag-rounded">{{ puzzle.slug }}</u-badge>
-            <u-badge variant="soft" color="neutral">#{{ puzzle.id }}</u-badge>
-          </div>
+          <u-form :state="headerState" class="space-y-2" @submit.prevent="applyHeader">
+            <div class="flex flex-wrap items-center gap-2">
+              <label v-if="isContentPage" class="flex min-w-0 flex-1 items-center gap-3 py-1.5">
+                <span class="shrink-0 text-3xl/10 font-bold text-muted">#</span>
+                <input
+                  ref="titleInput"
+                  v-model="headerState.title"
+                  class="min-w-0 flex-1 bg-transparent text-3xl/10 font-bold text-highlighted outline-none placeholder:text-dimmed"
+                  placeholder="谜题标题"
+                  aria-label="谜题标题"
+                  :disabled="headerSaving"
+                  @keydown.enter.prevent="focusContentEditor"
+                  @keydown.down.prevent="focusContentEditor"
+                >
+              </label>
+              <div v-else class="flex min-w-0 flex-1 items-center gap-3 py-1.5">
+                <span class="shrink-0 text-3xl/10 font-bold text-muted">#</span>
+                <h1 class="min-w-0 flex-1 truncate text-3xl/10 font-bold text-highlighted">
+                  {{ puzzle.title }}
+                </h1>
+              </div>
+
+              <div class="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2">
+                <u-badge v-if="round?.puzzle === puzzle.id" variant="soft" color="primary" icon="material-symbols:grid-view-outline-rounded">区域谜题</u-badge>
+                <label
+                  v-if="isContentPage || puzzle.slug"
+                  class="inline-flex w-max max-w-full items-center gap-1.5 rounded-md px-2 py-1 font-mono text-xs text-muted transition"
+                  :class="isContentPage ? 'bg-elevated ring ring-default focus-within:text-highlighted focus-within:ring-primary' : 'bg-muted/40'"
+                >
+                  <span class="shrink-0 font-semibold">#</span>
+                  <input
+                    v-if="isContentPage"
+                    v-model="headerState.slug"
+                    class="min-w-[4ch] max-w-[min(36ch,calc(100vw-8rem))] bg-transparent outline-none placeholder:text-dimmed"
+                    :style="{ width: slugInputWidth }"
+                    placeholder="slug"
+                    aria-label="谜题 slug"
+                    :disabled="headerSaving"
+                  >
+                  <span v-else>{{ puzzle.slug }}</span>
+                </label>
+                <u-badge variant="soft" color="neutral">#{{ puzzle.id }}</u-badge>
+              </div>
+            </div>
+          </u-form>
 
           <u-navigation-menu :items="navItems" class="-mx-1" />
         </div>
