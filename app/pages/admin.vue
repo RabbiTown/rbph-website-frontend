@@ -7,8 +7,10 @@ const route = useRoute();
 
 const user = useUser().ref;
 const game = useAdmin().useGame();
+const colorMode = useColorMode();
 const selectedGame = computed(() => game.ref.value);
 const gameSwitchIcon = computed(() => (selectedGame.value ? 'material-symbols:sports-esports-outline-rounded' : 'material-symbols:remove-selection-rounded'));
+const isDarkMode = computed(() => colorMode.value === 'dark');
 
 game
   .updateGameList()
@@ -60,8 +62,19 @@ const userNav = computed(() => {
   ] satisfies DropdownMenuItem[];
 });
 
+function toggleColorMode() {
+  colorMode.preference = isDarkMode.value ? 'light' : 'dark';
+}
+
 const navBottom = computed(() => {
-  return [{ label: '返回平台', icon: 'material-symbols:home-outline-rounded', to: '/' }] satisfies DropdownMenuItem[];
+  return [
+    {
+      label: isDarkMode.value ? '浅色模式' : '深色模式',
+      icon: isDarkMode.value ? 'material-symbols:light-mode-outline-rounded' : 'material-symbols:dark-mode-outline-rounded',
+      onSelect: toggleColorMode,
+    },
+    { label: '返回平台', icon: 'material-symbols:home-outline-rounded', to: '/' },
+  ] satisfies NavigationMenuItem[];
 });
 
 const nav = computed(() => {

@@ -28,7 +28,7 @@ const previewContent = computed<RbContent>(() => ({
   content: model.value,
   content_type: RbContentType.Markdown,
 }));
-const editorExtensions = [RbphAlignBlock, RbphTextStyle, Color, TextAlign.configure({ types: ['heading', 'paragraph', 'align'] })];
+const editorExtensions = [RbphAlignBlock, RbphImageBlock, RbphTextStyle, RbphUnderline, Color, TextAlign.configure({ types: ['heading', 'paragraph', 'align'] })];
 const blockTypeItems = [
   { kind: 'paragraph', label: '段落', icon: 'material-symbols:format-paragraph-rounded' },
   { kind: 'heading', level: 1, label: '一级标题', icon: 'material-symbols:format-h1-rounded' },
@@ -45,12 +45,25 @@ type AlignEditor = Pick<Editor, 'chain' | 'isActive'> & {
   };
 };
 
+function isImageNodeSelected(editor: Pick<Editor, 'state'>) {
+  const selection = editor.state.selection as { node?: { type?: { name?: string } } };
+  return selection.node?.type?.name === 'rbImage';
+}
+
 const editorHandlers = {
   rbAlign: {
     canExecute: () => true,
-    execute: (editor: AlignEditor, item: { align?: string }) => {
+    execute: (editor: AlignEditor & Editor, item: { align?: string }) => {
       const align = item.align === 'center' || item.align === 'right' ? item.align : 'left';
       const chain = editor.chain().focus();
+
+      if (isImageNodeSelected(editor)) {
+        return chain.updateAttributes('rbImage', { align });
+      }
+
+      if (editor.isActive('rbImage')) {
+        return chain.updateAttributes('rbImage', { captionAlign: align });
+      }
 
       if (align === 'left') {
         return chain.lift('align').setTextAlign('left');
@@ -62,10 +75,20 @@ const editorHandlers = {
 
       return chain.wrapIn('align', { textAlign: align }).setTextAlign(align);
     },
-    isActive: (editor: { isActive: (name: string, attrs?: Record<string, unknown>) => boolean }, item: { align?: string }) => {
+    isActive: (editor: Pick<Editor, 'getAttributes' | 'isActive'>, item: { align?: string }) => {
       const align = item.align === 'center' || item.align === 'right' ? item.align : 'left';
+      if (editor.isActive('rbImage')) {
+        const attrs = editor.getAttributes('rbImage');
+        const activeAlign = isImageNodeSelected(editor) ? attrs.align : attrs.captionAlign;
+        return align === (typeof activeAlign === 'string' ? activeAlign : 'center');
+      }
       return align === 'left' ? !editor.isActive('align') : editor.isActive('align', { textAlign: align });
     },
+  },
+  rbImage: {
+    canExecute: () => true,
+    execute: (editor: Editor) => createRbImageBlock(editor),
+    isActive: (editor: Editor) => editor.isActive('rbImage'),
   },
 };
 
@@ -118,9 +141,10 @@ const toolbarItems = [
   [
     { kind: 'mark', mark: 'bold', icon: 'material-symbols:format-bold-rounded', 'aria-label': '加粗', tooltip: { text: '加粗' } },
     { kind: 'mark', mark: 'italic', icon: 'material-symbols:format-italic-rounded', 'aria-label': '斜体', tooltip: { text: '斜体' } },
+    { kind: 'mark', mark: 'underline', icon: 'material-symbols:format-underlined-rounded', 'aria-label': '下划线', tooltip: { text: '下划线' } },
     { kind: 'mark', mark: 'strike', icon: 'material-symbols:format-strikethrough-rounded', 'aria-label': '删除线', tooltip: { text: '删除线' } },
     { kind: 'mark', mark: 'code', icon: 'material-symbols:code-rounded', 'aria-label': '行内代码', tooltip: { text: '行内代码' } },
-    { kind: 'link', icon: 'material-symbols:link-rounded', 'aria-label': '链接', tooltip: { text: '链接' } },
+    { icon: 'material-symbols:link-rounded', 'aria-label': '链接', tooltip: { text: '链接' }, slot: 'link' },
     {
       icon: 'material-symbols:format-color-text-rounded',
       'aria-label': '文字颜色',
@@ -138,23 +162,23 @@ const toolbarItems = [
 
 const suggestionItems = [
   { type: 'label', label: '基础块' },
-  { kind: 'paragraph', label: '段落', icon: 'material-symbols:format-paragraph-rounded' },
-  { kind: 'heading', level: 1, label: '一级标题', icon: 'material-symbols:title-rounded' },
-  { kind: 'heading', level: 2, label: '二级标题', icon: 'material-symbols:title-rounded' },
-  { kind: 'heading', level: 3, label: '三级标题', icon: 'material-symbols:title-rounded' },
+  { kind: 'paragraph', label: '段落', aliases: ['paragraph', 'para', 'p'], icon: 'material-symbols:format-paragraph-rounded' },
+  { kind: 'heading', level: 1, label: '一级标题', aliases: ['heading', 'heading1', 'h1'], icon: 'material-symbols:title-rounded' },
+  { kind: 'heading', level: 2, label: '二级标题', aliases: ['heading2', 'h2'], icon: 'material-symbols:title-rounded' },
+  { kind: 'heading', level: 3, label: '三级标题', aliases: ['heading3', 'h3'], icon: 'material-symbols:title-rounded' },
   { type: 'separator' },
   { type: 'label', label: '内容' },
-  { kind: 'bulletList', label: '无序列表', icon: 'material-symbols:format-list-bulleted-rounded' },
-  { kind: 'orderedList', label: '有序列表', icon: 'material-symbols:format-list-numbered-rounded' },
-  { kind: 'blockquote', label: '引用', icon: 'material-symbols:format-quote-rounded' },
-  { kind: 'codeBlock', label: '代码块', icon: 'material-symbols:integration-instructions-rounded' },
-  { kind: 'horizontalRule', label: '分割线', icon: 'material-symbols:horizontal-rule-rounded' },
-  { kind: 'image', label: '图片', icon: 'material-symbols:image-outline-rounded' },
+  { kind: 'bulletList', label: '无序列表', aliases: ['bullet', 'bulletlist', 'ul', 'list'], icon: 'material-symbols:format-list-bulleted-rounded' },
+  { kind: 'orderedList', label: '有序列表', aliases: ['ordered', 'orderedlist', 'ol', 'numberedlist'], icon: 'material-symbols:format-list-numbered-rounded' },
+  { kind: 'blockquote', label: '引用', aliases: ['quote', 'blockquote'], icon: 'material-symbols:format-quote-rounded' },
+  { kind: 'codeBlock', label: '代码块', aliases: ['code', 'codeblock'], icon: 'material-symbols:integration-instructions-rounded' },
+  { kind: 'horizontalRule', label: '分割线', aliases: ['hr', 'divider', 'separator', 'rule'], icon: 'material-symbols:horizontal-rule-rounded' },
+  { kind: 'rbImage', label: '图片', aliases: ['image', 'img', 'picture'], icon: 'material-symbols:image-outline-rounded' },
   { type: 'separator' },
   { type: 'label', label: '对齐' },
-  { kind: 'rbAlign', align: 'left', label: '左对齐', icon: 'material-symbols:format-align-left-rounded' },
-  { kind: 'rbAlign', align: 'center', label: '居中', icon: 'material-symbols:format-align-center-rounded' },
-  { kind: 'rbAlign', align: 'right', label: '右对齐', icon: 'material-symbols:format-align-right-rounded' },
+  { kind: 'rbAlign', align: 'left', label: '左对齐', aliases: ['left', 'alignleft'], icon: 'material-symbols:format-align-left-rounded' },
+  { kind: 'rbAlign', align: 'center', label: '居中', aliases: ['center', 'aligncenter'], icon: 'material-symbols:format-align-center-rounded' },
+  { kind: 'rbAlign', align: 'right', label: '右对齐', aliases: ['right', 'alignright'], icon: 'material-symbols:format-align-right-rounded' },
 ] satisfies EditorSuggestionMenuItem[];
 
 function setMode(value: typeof mode.value) {
@@ -174,6 +198,22 @@ function setEditorTextColor(editor: Editor, color: RbTextColor) {
   } else {
     chain.unsetColor().run();
   }
+  refreshEditorSelection();
+}
+
+function currentLinkHref(editor: Editor) {
+  void editorSelectionVersion.value;
+  const href = editor.getAttributes('link').href;
+  return typeof href === 'string' ? href : '';
+}
+
+function setEditorLink(editor: Editor, href: string) {
+  editor.chain().focus().extendMarkRange('link').setLink({ href }).run();
+  refreshEditorSelection();
+}
+
+function unsetEditorLink(editor: Editor) {
+  editor.chain().focus().extendMarkRange('link').unsetLink().run();
   refreshEditorSelection();
 }
 
@@ -231,6 +271,8 @@ defineExpose({ focus });
         content-type="markdown"
         :placeholder="placeholder"
         :disabled="disabled"
+        :image="false"
+        :starter-kit="{ underline: false }"
         :extensions="editorExtensions"
         :handlers="editorHandlers"
         class="min-h-0"
@@ -248,6 +290,30 @@ defineExpose({ focus });
               <u-dropdown-menu :items="[item.items.map(child => ({ ...child, active: isActive(child), disabled: isDisabled(child), onSelect: event => onClick(event, child) }))]" :modal="false" size="sm">
                 <u-button color="neutral" variant="ghost" size="sm" :icon="currentBlockType(editor).icon" :aria-label="currentBlockType(editor).label" :disabled="isDisabled(item)" @click="onClick($event, item)" />
               </u-dropdown-menu>
+            </template>
+
+            <template #link="{ item, isDisabled }">
+              <u-popover :content="{ side: 'top', align: 'center', sideOffset: 8 }" :ui="{ content: 'p-0' }">
+                <u-button color="neutral" variant="ghost" size="sm" square :active="editor.isActive('link')" :disabled="isDisabled(item)" :aria-label="item['aria-label']" icon="material-symbols:link-rounded" />
+
+                <template #content="{ close }">
+                  <rb-link-editor-panel
+                    :href="currentLinkHref(editor)"
+                    @apply="
+                      href => {
+                        setEditorLink(editor, href);
+                        close();
+                      }
+                    "
+                    @remove="
+                      () => {
+                        unsetEditorLink(editor);
+                        close();
+                      }
+                    "
+                  />
+                </template>
+              </u-popover>
             </template>
 
             <template #textColor="{ item, isActive, isDisabled }">
@@ -271,7 +337,7 @@ defineExpose({ focus });
             </template>
           </u-editor-toolbar>
           <u-editor-drag-handle v-if="mode === 'editor'" :editor="editor" />
-          <u-editor-suggestion-menu v-if="mode === 'editor'" :editor="editor" :items="suggestionItems" />
+          <u-editor-suggestion-menu v-if="mode === 'editor'" :editor="editor" :items="suggestionItems" :filter-fields="['label', 'aliases']" />
         </template>
       </u-editor>
 

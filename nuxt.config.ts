@@ -39,5 +39,8 @@ export default defineNuxtConfig({
         },
       },
     },
+    optimizeDeps: {
+      include: ['@tiptap/extension-color', '@tiptap/extension-text-align', '@tiptap/extension-text-style'],
+    },
   },
 });

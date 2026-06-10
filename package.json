@@ -15,18 +15,15 @@
   "dependencies": {
     "@iconify-json/material-symbols": "^1.2.75",
     "@internationalized/date": "^3.12.2",
-    "@nuxt/eslint": "1.10.0",
     "@nuxt/image": "2.0.0",
-    "@nuxt/ui": "4.8.1",
+    "@nuxt/ui": "4.8.2",
     "@nuxtjs/mdc": "0.22.0",
-    "@tiptap/extension-color": "3.23.6",
-    "@tiptap/extension-text-align": "3.23.6",
-    "@tiptap/extension-text-style": "3.23.6",
-    "@types/node": "^25.9.1",
-    "eslint": "^9.39.4",
+    "@tiptap/extension-color": "^3.26.0",
+    "@tiptap/extension-text-align": "^3.26.0",
+    "@tiptap/extension-text-style": "^3.26.0",
+    "@tiptap/extension-underline": "^3.26.0",
     "nuxt": "^4.4.6",
     "tailwindcss": "^4.3.0",
-    "typescript": "^6.0.3",
     "undici": "^8.3.0",
     "valibot": "^1.4.1",
     "vue": "^3.5.35",
@@ -34,7 +31,11 @@
   },
   "packageManager": "pnpm@10.24.0+sha512.01ff8ae71b4419903b65c60fb2dc9d34cf8bb6e06d03bde112ef38f7a34d6904c424ba66bea5cdcf12890230bf39f9580473140ed9c946fef328b6e5238a345a",
   "devDependencies": {
+    "@nuxt/eslint": "1.10.0",
+    "@types/node": "^25.9.1",
     "@vueuse/core": "^14.3.0",
-    "@vueuse/nuxt": "^14.3.0"
+    "@vueuse/nuxt": "^14.3.0",
+    "eslint": "^9.39.4",
+    "typescript": "^6.0.3"
   }
 }

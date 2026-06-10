@@ -18,7 +18,7 @@ const mdAst = ref<MDCParserResult>();
 let dynTimer: ReturnType<typeof setTimeout> | undefined = undefined;
 let dynSeq = 0;
 
-const mdWhitelists = ['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'hr', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img', 'em', 'strong'];
+const mdWhitelists = ['div', 'span', 'figure', 'figcaption', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'hr', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img', 'em', 'strong', 'u'];
 
 function sanitizedMdNode<T extends MDCNode | MDCRoot>(node: T): T | null {
   if (node.type === 'root') {
@@ -111,6 +111,7 @@ watch(
         if (dynCur !== dynSeq) return;
         const newAst = await mdParser(content as string);
         newAst.body = transformAlignBlocks(newAst.body);
+        newAst.body = transformImageBlocks(newAst.body);
         newAst.body = transformColorSpans(newAst.body);
         newAst.body = stripMarkdownHints(newAst.body);
         if (content_type === RbContentType.UnsafeMarkdown) {
