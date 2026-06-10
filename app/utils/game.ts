@@ -57,7 +57,8 @@ export enum RbTeamPuzzleState {
 
 export interface RbPuzzleTeamData {
   state: RbTeamPuzzleState;
-  max_submit?: number;
+  max_submit?: number | null;
+  submit_count: number;
   answers: string[];
   utime_at: string;
   cooldown_till?: string;
@@ -66,6 +67,20 @@ export interface RbPuzzleTeamData {
 export interface RbPuzzleShowData {
   data: RbPuzzle;
   state: RbPuzzleTeamData;
+}
+
+export function mergePuzzleSubmitState(
+  current: RbPuzzleTeamData,
+  next: RbPuzzleTeamData | undefined,
+  action: RbJudgeAction,
+): RbPuzzleTeamData {
+  const currentSubmitCount = current.submit_count ?? 0;
+  const fallbackSubmitCount = action === RbJudgeAction.Fail ? currentSubmitCount + 1 : currentSubmitCount;
+
+  return {
+    ...(next ?? current),
+    submit_count: Math.max(next?.submit_count ?? 0, fallbackSubmitCount),
+  };
 }
 
 export interface RbContent {
@@ -113,6 +128,9 @@ export interface RbJudgeResponse {
   cooldown_till?: string;
   solved?: boolean;
   unlocks?: { id: number; slug?: string | null; title: string; round_id: number; round_slug?: string | null }[];
+  state?: RbPuzzleTeamData;
+  currency?: RbTeamCurrency[];
+  currency_penalty?: RbCurrencyPenalty[];
 }
 
 export interface RbSubmission {
@@ -167,6 +185,24 @@ export interface RbTeamCurrency {
   amount: number;
   max_amount: number;
   utime_at: string;
+}
+
+export interface RbCurrencyPenalty {
+  currency_id: number;
+  name: string;
+  prec: number;
+  amount: number;
+}
+
+export function formatCurrencyPenaltySuffix(penalty: RbCurrencyPenalty[] | undefined): string {
+  if (!penalty?.length) return '';
+
+  return penalty
+    .map(item => {
+      const diff = -item.amount;
+      return `(${item.name} ${intPrecString(diff, item.prec, true, ' ')})`;
+    })
+    .join(' ');
 }
 
 export interface RbHint {

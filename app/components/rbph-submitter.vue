@@ -5,7 +5,8 @@ const props = defineProps<{
   puzzle?: number;
   success?: boolean;
   cooldownTill?: string;
-  maxSubmit?: number;
+  maxSubmit?: number | null;
+  submitCount?: number;
 }>();
 
 const emit = defineEmits<{
@@ -47,6 +48,10 @@ const cooldown = computed(() => {
   if (!till) return 0;
   return Math.max(till - currentTime.value, 0);
 });
+const maxSubmit = computed(() => props.maxSubmit ?? undefined);
+const submitCount = computed(() => (Number.isFinite(props.submitCount) ? props.submitCount! : 0));
+const remainSubmit = computed(() => (maxSubmit.value === undefined ? undefined : Math.max(0, maxSubmit.value - submitCount.value)));
+const submitBlocked = computed(() => cooldown.value > 0 || remainSubmit.value === 0);
 
 watch(
   () => props.cooldownTill,
@@ -78,10 +83,12 @@ async function submitAnswer(answer: string) {
     const result = data.result;
 
     const action = judgeActionConsts[result.action];
+    const currencyPenaltySuffix = formatCurrencyPenaltySuffix(data.currency_penalty);
+    const description = result.result || action.desc;
 
     const toastData = {
       title: h('span', [h('span', { class: `font-bold text-${action.color}` }, action.name), ` [${answer}]`]),
-      description: result.result || action.desc,
+      description: currencyPenaltySuffix ? `${description} ${currencyPenaltySuffix}` : description,
       icon: action.icon,
       color: action.color,
       duration: 10000,
@@ -135,7 +142,7 @@ async function submitAnswer(answer: string) {
 }
 
 function submit() {
-  if (!submitLoading.value && state.answer.trim()) {
+  if (!submitLoading.value && !submitBlocked.value && state.answer.trim()) {
     const answer = state.answer;
     emit('submit', answer);
     submitAnswer(answer)
@@ -148,24 +155,31 @@ function submit() {
 
 const inputStyle = computed(() => {
   if (cooldown.value > 0) return { placeholder: `提交冷却中：${formatTime(cooldown.value)}`, icon: 'material-symbols:schedule-outline-rounded' };
+  if (remainSubmit.value === 0) return { placeholder: `剩余提交次数：0/${maxSubmit.value}`, icon: 'material-symbols:block-rounded' };
   if (props.success) return { placeholder: `你的队伍已通过本题`, icon: 'material-symbols:check-rounded' };
   return { placeholder: `提交答案`, icon: 'material-symbols:send-outline-rounded' };
 });
+const submitHint = computed(() => (maxSubmit.value === undefined ? undefined : `剩余提交次数：${remainSubmit.value}/${maxSubmit.value}`));
 </script>
 
 <template>
-  <div class="w-full flex">
-    <u-input
-      v-model="state.answer"
-      class="flex-1"
-      variant="subtle"
-      :leading-icon="inputStyle.icon"
-      :color="color"
-      :placeholder="inputStyle.placeholder"
-      :ui="{ trailing: 'pe-0', base: 'rounded-none rounded-l-lg' }"
-      :disabled="cooldown > 0"
-      @keyup.enter="submit"
-    />
-    <u-button :loading="submitLoading" :disabled="state.answer.trim().length < 1 || cooldown > 0" :color="color" class="-ms-px justify-center cursor-pointer h-full rounded-none rounded-r-lg px-3" variant="subtle" @click="submit">提交</u-button>
+  <div class="w-full">
+    <div class="w-full flex">
+      <u-input
+        v-model="state.answer"
+        class="flex-1"
+        variant="subtle"
+        :leading-icon="inputStyle.icon"
+        :color="color"
+        :placeholder="inputStyle.placeholder"
+        :ui="{ trailing: 'pe-0', base: 'rounded-none rounded-l-lg' }"
+        :disabled="submitBlocked"
+        @keyup.enter="submit"
+      />
+      <u-button :loading="submitLoading" :disabled="state.answer.trim().length < 1 || submitBlocked" :color="color" class="-ms-px justify-center cursor-pointer h-full rounded-none rounded-r-lg px-3" variant="subtle" @click="submit">提交</u-button>
+    </div>
+    <div v-if="submitHint" class="mt-1 text-right text-xs text-muted">
+      {{ submitHint }}
+    </div>
   </div>
 </template>

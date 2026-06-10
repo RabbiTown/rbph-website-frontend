@@ -40,7 +40,7 @@ export default defineNuxtConfig({
       },
     },
     optimizeDeps: {
-      include: ['@internationalized/date', '@tiptap/extension-color', '@tiptap/extension-text-align', '@tiptap/extension-text-style'],
+      include: ['@internationalized/date', '@tiptap/extension-color', '@tiptap/extension-text-align', '@tiptap/extension-text-style', 'valibot'],
     },
   },
 });

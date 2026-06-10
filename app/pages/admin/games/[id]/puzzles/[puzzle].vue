@@ -166,7 +166,7 @@ const navItems = computed<NavigationMenuItem[]>(() => [
     exact: true,
   },
   {
-    label: '答案判定',
+    label: '评测规则',
     icon: 'material-symbols:rule-settings-rounded',
     to: Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}/judge` : undefined,
   },

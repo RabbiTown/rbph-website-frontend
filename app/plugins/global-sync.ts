@@ -68,15 +68,21 @@ export default defineNuxtPlugin(() => {
   sync.listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
     if (useSid().consume(data.sid)) return;
 
-    useCurrency().updateData();
+    if (data.currency?.length) {
+      useCurrency().setData(data.currency);
+    } else {
+      useCurrency().updateData();
+    }
 
     if (user.ref.value?.id !== data.user.id) {
       const action = judgeActionConsts[data.action];
+      const currencyPenaltySuffix = formatCurrencyPenaltySuffix(data.currency_penalty);
+      const penaltyText = currencyPenaltySuffix ? ` ${currencyPenaltySuffix}` : '';
 
       if (data.action === RbJudgeAction.FinishGame) {
         toast.add({
           title: h('span', { class: `font-bold text-${action.color}` }, '你的队伍已完赛！'),
-          description: h('span', [`队友 ${data.user.name} 向最终谜题提交正确。 [${data.answer}]`]),
+          description: h('span', [`队友 ${data.user.name} 向最终谜题提交正确。 [${data.answer}]${penaltyText}`]),
           color: 'success',
           icon: action.icon,
           duration: 10000,
@@ -85,7 +91,7 @@ export default defineNuxtPlugin(() => {
       } else if (data.solved) {
         toast.add({
           title: `队友 ${data.user.name} 解决了谜题！`,
-          description: h('span', [`【${data.puzzle.title}】提交结果：`, h('span', { class: `font-bold text-${action.color}` }, action.name), ` [${data.answer}]`]),
+          description: h('span', [`【${data.puzzle.title}】提交结果：`, h('span', { class: `font-bold text-${action.color}` }, action.name), ` [${data.answer}]${penaltyText}`]),
           color: 'success',
           icon: 'material-symbols:person-play-outline-rounded',
           duration: 10000,
@@ -93,7 +99,7 @@ export default defineNuxtPlugin(() => {
       } else {
         toast.add({
           title: `队友 ${data.user.name} 向谜题提交了答案`,
-          description: h('span', [`【${data.puzzle.title}】提交结果：`, h('span', { class: `font-bold text-${action.color}` }, action.name), ` [${data.answer}]`]),
+          description: h('span', [`【${data.puzzle.title}】提交结果：`, h('span', { class: `font-bold text-${action.color}` }, action.name), ` [${data.answer}]${penaltyText}`]),
           color: action.color,
           icon: 'material-symbols:person-play-outline-rounded',
           duration: 10000,

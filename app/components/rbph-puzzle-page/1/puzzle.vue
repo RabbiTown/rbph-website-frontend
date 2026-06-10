@@ -19,10 +19,16 @@ function onSubmitSuccess(action: RbJudgeAction) {
 
 function onSelfSubmitSuccess(resp: RbJudgeResponse, answer: string) {
   onSubmitSuccess(resp.result.action);
-  submitResultComp.value?.updateSuccess(resp.result, answer);
+  submitResultComp.value?.updateSuccess(resp.result, answer, resp.currency_penalty);
 
   if (resp.cooldown_till && puzzle.value) {
     puzzle.value.state.cooldown_till = resp.cooldown_till;
+  }
+  if (puzzle.value) {
+    puzzle.value.state = mergePuzzleSubmitState(puzzle.value.state, resp.state, resp.result.action);
+  }
+  if (resp.currency?.length) {
+    useCurrency().setData(resp.currency);
   }
 
   if (resp.solved && puzzle.value) {
@@ -42,6 +48,12 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
   if (useSid().consume(data.sid)) return;
 
   if (data.puzzle.id === puzzle.value?.data.id) {
+    if (puzzle.value) {
+      puzzle.value.state = mergePuzzleSubmitState(puzzle.value.state, data.state, data.action);
+    }
+    if (data.currency?.length) {
+      useCurrency().setData(data.currency);
+    }
     if (data.action > 0) {
       okSubmissionsComp.value?.updateData();
     }
@@ -63,6 +75,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
         :success="puzzle.state.state === RbTeamPuzzleState.Solved"
         :cooldown-till="puzzle.state.cooldown_till"
         :max-submit="puzzle.state.max_submit"
+        :submit-count="puzzle.state.submit_count"
         @submit-success="onSelfSubmitSuccess"
         @submit-fail="onSelfSubmitFailed"
       />

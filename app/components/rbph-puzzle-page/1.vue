@@ -62,6 +62,12 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
   if (useSid().consume(data.sid)) return;
 
   if (data.puzzle.id === puzzle.value?.data.id) {
+    if (puzzle.value) {
+      puzzle.value.state = mergePuzzleSubmitState(puzzle.value.state, data.state, data.action);
+    }
+    if (data.currency?.length) {
+      useCurrency().setData(data.currency);
+    }
     onSubmitSuccess(data.action);
 
     if (data.cooldown_till && puzzle.value) {

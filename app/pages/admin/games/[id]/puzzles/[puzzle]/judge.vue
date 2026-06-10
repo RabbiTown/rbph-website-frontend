@@ -119,7 +119,7 @@ const cooldownTypeItems = [
 
 const submitLimitItems = [
   { label: '不限制', value: 'none', icon: 'material-symbols:all-inclusive' },
-  { label: '限制次数', value: 'limited', icon: 'material-symbols:pin-outline-rounded' },
+  { label: '限制错误次数', value: 'limited', icon: 'material-symbols:pin-outline-rounded' },
 ] satisfies SelectItem[];
 
 const actionValueMap: Record<JudgeActionKey, RbJudgeAction> = {
@@ -658,8 +658,8 @@ watch(dirty, value => {
     <u-form :state="state" class="min-w-0 space-y-4" @submit.prevent="apply">
       <div>
         <div>
-          <h2 class="text-xl font-semibold text-highlighted">答案判定</h2>
-          <p class="mt-1 text-sm text-muted">规则按顺序匹配，提交答案会自动完成规范化。</p>
+          <h2 class="text-xl font-semibold text-highlighted">评测规则</h2>
+          <p class="mt-1 text-sm text-muted">规则按顺序匹配，提交的答案会自动完成规范化。</p>
         </div>
       </div>
 
@@ -741,7 +741,7 @@ watch(dirty, value => {
       <section class="space-y-4">
         <div>
           <h3 class="text-lg font-semibold text-highlighted">错误惩罚</h3>
-          <p class="mt-1 text-sm text-muted">仅在判定结果为回答错误时生效。</p>
+          <p class="mt-1 text-sm text-muted">在评测结果为回答错误时将生效惩罚，多种惩罚可以同时生效。</p>
         </div>
 
         <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">

@@ -69,10 +69,16 @@ function onSubmitSuccess(action: RbJudgeAction) {
 
 function onSelfSubmitSuccess(resp: RbJudgeResponse, answer: string) {
   onSubmitSuccess(resp.result.action);
-  submitResultComp.value?.updateSuccess(resp.result, answer);
+  submitResultComp.value?.updateSuccess(resp.result, answer, resp.currency_penalty);
 
   if (resp.cooldown_till && round.value?.state.puzzle) {
     round.value.state.puzzle.cooldown_till = resp.cooldown_till;
+  }
+  if (round.value?.state.puzzle) {
+    round.value.state.puzzle = mergePuzzleSubmitState(round.value.state.puzzle, resp.state, resp.result.action);
+  }
+  if (resp.currency?.length) {
+    useCurrency().setData(resp.currency);
   }
 
   if (resp.solved && round.value?.state.puzzle) {
@@ -96,6 +102,12 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
   const isSelfEcho = sidStore.consume(data.sid);
 
   if (data.puzzle.id === round.value?.data.puzzle && !isSelfEcho) {
+    if (round.value.state.puzzle) {
+      round.value.state.puzzle = mergePuzzleSubmitState(round.value.state.puzzle, data.state, data.action);
+    }
+    if (data.currency?.length) {
+      useCurrency().setData(data.currency);
+    }
     onSubmitSuccess(data.action);
 
     if (data.cooldown_till && round.value.state.puzzle) {
@@ -136,6 +148,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
           :success="round.state.puzzle.state === RbTeamPuzzleState.Solved"
           :cooldown-till="round.state.puzzle.cooldown_till"
           :max-submit="round.state.puzzle.max_submit"
+          :submit-count="round.state.puzzle.submit_count"
           @submit-success="onSelfSubmitSuccess"
           @submit-fail="onSelfSubmitFailed"
         />

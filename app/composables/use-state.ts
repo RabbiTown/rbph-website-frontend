@@ -197,16 +197,14 @@ export function usePuzzle() {
     const id = new_id ? parseInt(new_id) : puzzle.value?.data.id || NaN;
     if (isNaN(id)) throw 'Invalid puzzle id';
 
-    if (puzzle.value?.data.id !== id) {
-      try {
-        const { data } = await useApi().get<RbPuzzleShowData>(`/puzzles/${new_id}`);
-        puzzle.value = data;
-        if (data.data.game_id) {
-          updateGameState(data.data.game_id.toString());
-        }
-      } catch (error) {
-        showError(error instanceof Error ? error : String(error));
+    try {
+      const { data } = await useApi().get<RbPuzzleShowData>(`/puzzles/${id}`);
+      puzzle.value = data;
+      if (data.data.game_id) {
+        updateGameState(data.data.game_id.toString());
       }
+    } catch (error) {
+      showError(error instanceof Error ? error : String(error));
     }
   }
 

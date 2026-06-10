@@ -42,6 +42,9 @@ export interface SyncMessageMap {
     cooldown_till?: string;
     solved?: boolean;
     unlocks?: { id: number; slug?: string | null; title: string; round_id: number; round_slug?: string | null }[];
+    state?: RbPuzzleTeamData;
+    currency?: RbTeamCurrency[];
+    currency_penalty?: RbCurrencyPenalty[];
   };
   [SyncMessageType.PuzzleHintUnlocked]: { sid?: string; user: { id: number; name: string }; puzzle: { id: number; title: string }; hint: { id: number; title: string; cost_id?: number; cost_amount: number } };
 }
