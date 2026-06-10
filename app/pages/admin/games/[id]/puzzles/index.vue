@@ -64,6 +64,21 @@ interface RoundDropEntry {
   centerY: number;
 }
 
+interface PuzzleDropEntry {
+  id: number;
+  roundId: number;
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+interface PuzzleDropCandidate {
+  target?: PuzzleDropTarget;
+  emptyRoundId?: number;
+  score: number;
+}
+
 const route = useRoute();
 const api = useApi();
 const toast = useToast();
@@ -83,6 +98,7 @@ const dragOverEmptyRoundId = ref<number | null>(null);
 const roundOriginPlaceholderVisible = ref(false);
 const puzzleOriginPlaceholderVisible = ref(false);
 let roundDropEntries: RoundDropEntry[] = [];
+let puzzleDropEntries: PuzzleDropEntry[] = [];
 
 const gameId = computed(() => Number(route.params.id));
 
@@ -347,6 +363,25 @@ function cacheRoundDropEntries() {
     .sort((a, b) => a.index - b.index);
 }
 
+function cachePuzzleDropEntries() {
+  const cards = document.querySelectorAll<HTMLElement>('[data-puzzle-card-drop="true"]');
+  puzzleDropEntries = Array.from(cards)
+    .map(card => {
+      const id = Number(card.dataset.puzzleId);
+      const roundId = Number(card.dataset.roundId);
+      const rect = card.getBoundingClientRect();
+      return {
+        id,
+        roundId,
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
+      };
+    })
+    .filter(entry => Number.isFinite(entry.id) && Number.isFinite(entry.roundId));
+}
+
 function clearDragState() {
   draggingRoundId.value = null;
   draggingPuzzle.value = null;
@@ -356,6 +391,9 @@ function clearDragState() {
   roundOriginPlaceholderVisible.value = false;
   puzzleOriginPlaceholderVisible.value = false;
   roundDropEntries = [];
+  puzzleDropEntries = [];
+  window.removeEventListener('dragover', onGlobalDragOver);
+  window.removeEventListener('drop', onGlobalDrop);
 }
 
 function onRoundDragStart(roundId: number, event: DragEvent) {
@@ -364,13 +402,15 @@ function onRoundDragStart(roundId: number, event: DragEvent) {
   dragOverRound.value = null;
   roundOriginPlaceholderVisible.value = false;
   setDragTransfer(event, `round:${roundId}`);
+  window.addEventListener('dragover', onGlobalDragOver);
+  window.addEventListener('drop', onGlobalDrop);
   requestAnimationFrame(() => {
     if (draggingRoundId.value === roundId) roundOriginPlaceholderVisible.value = true;
     if (draggingRoundId.value === roundId) cacheRoundDropEntries();
   });
 }
 
-function onRoundDrop(targetRoundId: number, event: DragEvent) {
+function onRoundDrop(event: DragEvent) {
   event.preventDefault();
 
   const sourceRoundId = draggingRoundId.value;
@@ -390,13 +430,13 @@ function onRoundDrop(targetRoundId: number, event: DragEvent) {
   syncDirtyToast();
 }
 
-function onRoundSectionDrop(targetRoundId: number, event: DragEvent) {
+function onRoundSectionDrop(_targetRoundId: number, event: DragEvent) {
   if (draggingPuzzle.value) {
-    onPuzzleDropToRoundEnd(targetRoundId, event);
+    onPuzzleDrop(event);
     return;
   }
 
-  onRoundDrop(targetRoundId, event);
+  onRoundDrop(event);
 }
 
 function onRoundSectionDragOver(group: RoundGroup, event: DragEvent) {
@@ -409,34 +449,46 @@ function onRoundSectionDragOver(group: RoundGroup, event: DragEvent) {
 
   if (!draggingPuzzle.value) return;
 
-  const roundId = group.round.id;
-  const sourcePuzzleId = draggingPuzzle.value.id;
-  const targetPuzzles = group.puzzles.filter(puzzle => puzzle.id !== sourcePuzzleId);
-  const target = targetPuzzles.at(-1);
-  if (!target) {
-    setDragOverPuzzle(null);
-    setDragOverEmptyRound(draggingPuzzle.value.roundId === roundId ? null : roundId);
+  const target = getPuzzleDropTargetByPosition(event);
+  setDragOverEmptyRound(target?.emptyRoundId ?? null);
+  setDragOverPuzzle(target?.target ?? null);
+}
+
+function onGlobalDragOver(event: DragEvent) {
+  if (!draggingRoundId.value && !draggingPuzzle.value) return;
+
+  onDragOver(event);
+
+  if (draggingRoundId.value) {
+    const target = getRoundDropTarget(event);
+    setDragOverRound(target && isValidRoundDropSide(draggingRoundId.value, target.id, target.side) ? target : null);
     return;
   }
 
-  setDragOverEmptyRound(null);
-  const side: PuzzleDropTarget['side'] = 'right';
-  setDragOverPuzzle(
-    isOriginalDropTarget(draggingPuzzle.value, target, side, roundId)
-      ? null
-      : {
-          id: target.id,
-          side,
-        },
-  );
+  if (draggingPuzzle.value) {
+    const target = getPuzzleDropTargetByPosition(event);
+    setDragOverEmptyRound(target?.emptyRoundId ?? null);
+    setDragOverPuzzle(target?.target ?? null);
+  }
+}
+
+function onGlobalDrop(event: DragEvent) {
+  if (draggingRoundId.value) {
+    onRoundDrop(event);
+    return;
+  }
+
+  if (draggingPuzzle.value) {
+    onPuzzleDrop(event);
+  }
 }
 
 function onRoundSectionDragLeave(roundId: number, event: DragEvent) {
   const el = event.currentTarget instanceof HTMLElement ? event.currentTarget : undefined;
   if (el && event.relatedTarget instanceof Node && el.contains(event.relatedTarget)) return;
 
-  if (dragOverRound.value?.id === roundId) setDragOverRound(null);
-  if (dragOverEmptyRoundId.value === roundId) setDragOverEmptyRound(null);
+  if (!draggingRoundId.value && dragOverRound.value?.id === roundId) setDragOverRound(null);
+  if (!draggingPuzzle.value && dragOverEmptyRoundId.value === roundId) setDragOverEmptyRound(null);
 }
 
 function getRoundDropTarget(event: DragEvent): RoundDropTarget | null {
@@ -563,8 +615,11 @@ function onPuzzleDragStart(puzzle: AdminPuzzle, event: DragEvent) {
   draggingRoundId.value = null;
   puzzleOriginPlaceholderVisible.value = false;
   setDragTransfer(event, `puzzle:${puzzle.id}`);
+  window.addEventListener('dragover', onGlobalDragOver);
+  window.addEventListener('drop', onGlobalDrop);
   requestAnimationFrame(() => {
     if (draggingPuzzle.value?.id === puzzle.id) puzzleOriginPlaceholderVisible.value = true;
+    if (draggingPuzzle.value?.id === puzzle.id) cachePuzzleDropEntries();
   });
 }
 
@@ -573,14 +628,15 @@ function onPuzzleDragOver(puzzle: AdminPuzzle, event: DragEvent) {
 
   onDragOver(event);
   event.stopPropagation();
-  if (!draggingPuzzle.value || draggingPuzzle.value.id === puzzle.id) {
+  if (!draggingPuzzle.value) {
     setDragOverPuzzle(null);
     return;
   }
 
   setDragOverEmptyRound(null);
-  const side = getPuzzleDropSide(puzzle, event);
-  setDragOverPuzzle(canonicalPuzzleDropTarget(draggingPuzzle.value, puzzle, side, puzzle.round_id));
+  const target = getPuzzleDropTargetByPosition(event) ?? getPuzzleDropTargetFromPuzzle(puzzle, event);
+  setDragOverEmptyRound(target?.emptyRoundId ?? null);
+  setDragOverPuzzle(target?.target ?? null);
 }
 
 function onPuzzleDragLeave(puzzleId: number, event: DragEvent) {
@@ -659,6 +715,84 @@ function canonicalPuzzleDropTarget(source: DraggingPuzzle, targetPuzzle: AdminPu
   };
 }
 
+function distanceToRect(clientX: number, clientY: number, rect: Pick<PuzzleDropEntry, 'left' | 'right' | 'top' | 'bottom'>) {
+  const dx = clientX < rect.left ? rect.left - clientX : clientX > rect.right ? clientX - rect.right : 0;
+  const dy = clientY < rect.top ? rect.top - clientY : clientY > rect.bottom ? clientY - rect.bottom : 0;
+  return Math.hypot(dx, dy);
+}
+
+function candidateFromPuzzleEntry(entry: PuzzleDropEntry, event: DragEvent): PuzzleDropCandidate | null {
+  const source = draggingPuzzle.value;
+  if (!source || source.id === entry.id) return null;
+
+  const targetPuzzle = puzzles.value.find(puzzle => puzzle.id === entry.id);
+  if (!targetPuzzle) return null;
+
+  const midpoint = (entry.left + entry.right) / 2;
+  const rawSide: PuzzleDropTarget['side'] = isRoundPuzzle(targetPuzzle, entry.roundId) ? 'right' : event.clientX < midpoint ? 'left' : 'right';
+  const target = canonicalPuzzleDropTarget(source, targetPuzzle, rawSide, entry.roundId);
+  if (!target) return null;
+
+  const edgeX = rawSide === 'left' ? entry.left : entry.right;
+  const verticalDistance = event.clientY < entry.top ? entry.top - event.clientY : event.clientY > entry.bottom ? event.clientY - entry.bottom : 0;
+  const score = Math.hypot(event.clientX - edgeX, verticalDistance);
+
+  return {
+    target,
+    score,
+  };
+}
+
+function candidateFromEmptyRound(round: AdminRound, event: DragEvent): PuzzleDropCandidate | null {
+  const source = draggingPuzzle.value;
+  if (!source || source.roundId === round.id) return null;
+  if (getRoundPuzzles(round.id).filter(puzzle => puzzle.id !== source.id).length > 0) return null;
+
+  const section = document.querySelector<HTMLElement>(`[data-round-section="true"][data-round-id="${round.id}"]`);
+  if (!section) return null;
+
+  const rect = section.getBoundingClientRect();
+  return {
+    emptyRoundId: round.id,
+    score: distanceToRect(event.clientX, event.clientY, {
+      left: rect.left,
+      right: rect.right,
+      top: rect.top,
+      bottom: rect.bottom,
+    }),
+  };
+}
+
+function getPuzzleDropTargetByPosition(event: DragEvent): PuzzleDropCandidate | null {
+  if (!draggingPuzzle.value) return null;
+  if (puzzleDropEntries.length === 0) cachePuzzleDropEntries();
+
+  const candidates: PuzzleDropCandidate[] = [];
+  for (const entry of puzzleDropEntries) {
+    const candidate = candidateFromPuzzleEntry(entry, event);
+    if (candidate) candidates.push(candidate);
+  }
+
+  for (const round of rounds.value) {
+    const candidate = candidateFromEmptyRound(round, event);
+    if (candidate) candidates.push(candidate);
+  }
+
+  return candidates.sort((a, b) => a.score - b.score)[0] ?? null;
+}
+
+function getPuzzleDropTargetFromPuzzle(puzzle: AdminPuzzle, event: DragEvent): PuzzleDropCandidate | null {
+  const source = draggingPuzzle.value;
+  if (!source) return null;
+  const target = canonicalPuzzleDropTarget(source, puzzle, getPuzzleDropSide(puzzle, event), puzzle.round_id);
+  return target
+    ? {
+        target,
+        score: 0,
+      }
+    : null;
+}
+
 function isOriginalPositionActive(puzzle: AdminPuzzle) {
   return puzzleOriginPlaceholderVisible.value && draggingPuzzle.value?.id === puzzle.id && !dragOverPuzzle.value;
 }
@@ -705,14 +839,16 @@ function emptyRoundDropClass(roundId: number) {
   return isEmptyRoundDropActive(roundId) ? 'border-primary bg-primary/10 text-primary shadow-sm' : 'border-muted bg-muted/20 text-muted';
 }
 
-function onPuzzleDrop(roundId: number, targetPuzzleId: number, event: DragEvent) {
+function onPuzzleDrop(event: DragEvent) {
   const source = draggingPuzzle.value;
   if (!source) return;
 
   event.preventDefault();
   event.stopPropagation();
-  if (source.id === targetPuzzleId) {
-    clearDragState();
+
+  const emptyRoundId = dragOverEmptyRoundId.value;
+  if (emptyRoundId !== null) {
+    onPuzzleDropToRoundEnd(emptyRoundId, event);
     return;
   }
 
@@ -722,10 +858,9 @@ function onPuzzleDrop(roundId: number, targetPuzzleId: number, event: DragEvent)
     return;
   }
 
-  const targetPuzzle = puzzles.value.find(puzzle => puzzle.id === targetPuzzleId);
-  const rawSide = getPuzzleDropSide(targetPuzzle ?? sourcePuzzle, event);
-  const dropTarget = dragOverPuzzle.value ?? (targetPuzzle ? canonicalPuzzleDropTarget(source, targetPuzzle, rawSide, roundId) : null);
+  const dropTarget = dragOverPuzzle.value ?? getPuzzleDropTargetByPosition(event)?.target ?? null;
   const normalizedTargetPuzzle = dropTarget ? puzzles.value.find(puzzle => puzzle.id === dropTarget.id) : undefined;
+  const roundId = normalizedTargetPuzzle?.round_id;
   if (!normalizedTargetPuzzle || !dropTarget || !isValidPuzzleDropSide(source, normalizedTargetPuzzle, dropTarget.side, roundId)) {
     clearDragState();
     return;
@@ -915,11 +1050,14 @@ watch(
             <div
               v-for="puzzle in group.puzzles"
               :key="puzzle.id"
+              data-puzzle-card-drop="true"
+              :data-puzzle-id="puzzle.id"
+              :data-round-id="group.round.id"
               class="relative flex flex-col rounded-md transition"
               :class="[isRoundPuzzle(puzzle, group.round.id) ? 'cursor-default' : 'hover:-translate-y-0.5', puzzleDropHintClass(puzzle)]"
               @dragover="onPuzzleDragOver(puzzle, $event)"
               @dragleave="onPuzzleDragLeave(puzzle.id, $event)"
-              @drop="onPuzzleDrop(group.round.id, puzzle.id, $event)"
+              @drop="onPuzzleDrop"
             >
               <div v-if="isPuzzleOriginPlaceholderVisible(puzzle)" class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-md transition" :class="originPlaceholderClass(puzzle)">
                 <div class="flex items-center justify-center rounded-full border-2 transition-all duration-100" :class="originPlaceholderIconClass(puzzle)">

@@ -74,6 +74,11 @@ const navItems = computed<NavigationMenuItem[]>(() => [
     to: Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}` : undefined,
     exact: true,
   },
+  {
+    label: '答案判定',
+    icon: 'material-symbols:rule-settings-rounded',
+    to: Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}/judge` : undefined,
+  },
 ]);
 </script>
 
