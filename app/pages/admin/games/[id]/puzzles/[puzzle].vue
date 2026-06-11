@@ -170,6 +170,11 @@ const navItems = computed<NavigationMenuItem[]>(() => [
     icon: 'material-symbols:rule-settings-rounded',
     to: Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}/judge` : undefined,
   },
+  {
+    label: '提示编辑',
+    icon: 'material-symbols:lightbulb-outline-rounded',
+    to: Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}/hints` : undefined,
+  },
 ]);
 </script>
 

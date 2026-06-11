@@ -25,6 +25,7 @@ interface AdminPuzzle {
   unlock_cond: string;
   round_id: number;
   sort: number;
+  ticket_enabled: boolean;
   ticket_cooldown: number;
   ctime_at: string;
 }
@@ -83,6 +84,12 @@ const route = useRoute();
 const api = useApi();
 const toast = useToast();
 const dirtyToast = useDirtyToast();
+const dragAutoScroll = useDragAutoScroll({
+  onScroll: () => {
+    if (draggingRoundId.value) cacheRoundDropEntries();
+    if (draggingPuzzle.value) cachePuzzleDropEntries();
+  },
+});
 
 const loading = ref(false);
 const applyLoading = ref(false);
@@ -327,6 +334,7 @@ function setDragTransfer(event: DragEvent, value: string) {
 function onDragOver(event: DragEvent) {
   event.preventDefault();
   if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  dragAutoScroll.update(event);
 }
 
 function setDragOverRound(target: RoundDropTarget | null) {
@@ -394,6 +402,7 @@ function clearDragState() {
   puzzleDropEntries = [];
   window.removeEventListener('dragover', onGlobalDragOver);
   window.removeEventListener('drop', onGlobalDrop);
+  dragAutoScroll.stop();
 }
 
 function onRoundDragStart(roundId: number, event: DragEvent) {
@@ -402,6 +411,7 @@ function onRoundDragStart(roundId: number, event: DragEvent) {
   dragOverRound.value = null;
   roundOriginPlaceholderVisible.value = false;
   setDragTransfer(event, `round:${roundId}`);
+  dragAutoScroll.start();
   window.addEventListener('dragover', onGlobalDragOver);
   window.addEventListener('drop', onGlobalDrop);
   requestAnimationFrame(() => {
@@ -491,7 +501,7 @@ function onRoundSectionDragLeave(roundId: number, event: DragEvent) {
   if (!draggingPuzzle.value && dragOverEmptyRoundId.value === roundId) setDragOverEmptyRound(null);
 }
 
-function getRoundDropTarget(event: DragEvent): RoundDropTarget | null {
+function getRoundDropTarget(event: Pick<MouseEvent, 'clientY'>): RoundDropTarget | null {
   const sourceRoundId = draggingRoundId.value;
   if (!sourceRoundId) return null;
   if (roundDropEntries.length === 0) cacheRoundDropEntries();
@@ -615,6 +625,7 @@ function onPuzzleDragStart(puzzle: AdminPuzzle, event: DragEvent) {
   draggingRoundId.value = null;
   puzzleOriginPlaceholderVisible.value = false;
   setDragTransfer(event, `puzzle:${puzzle.id}`);
+  dragAutoScroll.start();
   window.addEventListener('dragover', onGlobalDragOver);
   window.addEventListener('drop', onGlobalDrop);
   requestAnimationFrame(() => {
@@ -721,7 +732,7 @@ function distanceToRect(clientX: number, clientY: number, rect: Pick<PuzzleDropE
   return Math.hypot(dx, dy);
 }
 
-function candidateFromPuzzleEntry(entry: PuzzleDropEntry, event: DragEvent): PuzzleDropCandidate | null {
+function candidateFromPuzzleEntry(entry: PuzzleDropEntry, event: Pick<MouseEvent, 'clientX' | 'clientY'>): PuzzleDropCandidate | null {
   const source = draggingPuzzle.value;
   if (!source || source.id === entry.id) return null;
 
@@ -743,7 +754,7 @@ function candidateFromPuzzleEntry(entry: PuzzleDropEntry, event: DragEvent): Puz
   };
 }
 
-function candidateFromEmptyRound(round: AdminRound, event: DragEvent): PuzzleDropCandidate | null {
+function candidateFromEmptyRound(round: AdminRound, event: Pick<MouseEvent, 'clientX' | 'clientY'>): PuzzleDropCandidate | null {
   const source = draggingPuzzle.value;
   if (!source || source.roundId === round.id) return null;
   if (getRoundPuzzles(round.id).filter(puzzle => puzzle.id !== source.id).length > 0) return null;
@@ -763,7 +774,7 @@ function candidateFromEmptyRound(round: AdminRound, event: DragEvent): PuzzleDro
   };
 }
 
-function getPuzzleDropTargetByPosition(event: DragEvent): PuzzleDropCandidate | null {
+function getPuzzleDropTargetByPosition(event: Pick<MouseEvent, 'clientX' | 'clientY'>): PuzzleDropCandidate | null {
   if (!draggingPuzzle.value) return null;
   if (puzzleDropEntries.length === 0) cachePuzzleDropEntries();
 

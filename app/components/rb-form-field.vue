@@ -5,12 +5,22 @@ const props = defineProps<
   FormFieldProps & {
     dirty?: boolean;
     reset?: () => void;
+    row?: boolean;
   }
 >();
 
 const attrs = useAttrs();
 
-const fieldClass = computed(() => [attrs.class, 'relative border-s-2 ps-4 transition-colors', props.dirty ? 'border-warning' : 'border-transparent']);
+const formFieldProps = computed(() => {
+  const { dirty: _dirty, reset: _reset, row: _row, ...rest } = props;
+  return props.row && !rest.orientation ? { ...rest, orientation: 'horizontal' as const } : rest;
+});
+const fieldClass = computed(() => [
+  attrs.class,
+  'relative border-s-2 ps-4 transition-colors',
+  props.row ? 'grid min-h-7 gap-2 md:grid-cols-[7rem_minmax(0,1fr)] md:items-center' : '',
+  props.dirty ? 'border-warning' : 'border-transparent',
+]);
 const labelClass = computed(() => ['inline-flex min-h-6 items-center align-middle transition-colors', props.dirty ? 'text-warning' : '']);
 const resetButtonClass = 'group relative ms-2 inline-flex h-5 w-12 items-center justify-center overflow-hidden px-0 align-middle text-[11px] cursor-pointer';
 
@@ -20,7 +30,7 @@ function onReset() {
 </script>
 
 <template>
-  <u-form-field v-bind="{ ...attrs, ...props }" :class="fieldClass">
+  <u-form-field v-bind="{ ...attrs, ...formFieldProps }" :class="fieldClass">
     <template #label="{ label }">
       <span :class="labelClass">
         <slot name="label" :label="label">

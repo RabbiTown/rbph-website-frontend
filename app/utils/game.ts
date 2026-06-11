@@ -284,6 +284,7 @@ export enum TicketOpenBlock {
   CurrentPuzzlePending = -1,
   PendingLimit = -2,
   Cooldown = -3,
+  Disabled = -4,
 }
 
 export enum RbTicketSendBlock {

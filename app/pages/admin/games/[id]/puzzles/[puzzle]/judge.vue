@@ -75,6 +75,11 @@ const api = useApi();
 const toast = useToast();
 const dirtyToast = useDirtyToast();
 const { puzzle, refresh } = useAdmin().usePuzzleContext();
+const dragAutoScroll = useDragAutoScroll({
+  onScroll: () => {
+    if (draggingRuleId.value) cacheRuleDropEntries();
+  },
+});
 const currencies = ref<AdminCurrencyData[]>([]);
 
 const state = reactive({
@@ -281,6 +286,7 @@ const judgePatch = computed(() => serializeRules(state.rules));
 const originalJudge = computed(() => normalizeRawRules(puzzle.value?.judge));
 const penaltyPatch = computed(() => serializePenalty(state.penalty));
 const originalPenalty = computed(() => normalizeRawPenalty(puzzle.value?.penalty));
+const originalPenaltyState = computed(() => normalizePenalty(puzzle.value?.penalty));
 const maxSubmitPatch = computed(() => (state.penalty.submitLimitType === 'limited' ? Math.max(0, Math.trunc(state.penalty.maxSubmit || 0)) : null));
 const originalMaxSubmit = computed(() => puzzle.value?.max_submit ?? null);
 const judgeDirty = computed(() => JSON.stringify(judgePatch.value) !== JSON.stringify(originalJudge.value));
@@ -296,6 +302,18 @@ const penaltyInvalid = computed(
     (state.penalty.currencyId !== null && (!selectedCurrency.value || state.penalty.currencyAmount <= 0)) ||
     (state.penalty.submitLimitType === 'limited' && state.penalty.maxSubmit < 0),
 );
+const cooldownPenaltyDirty = computed(
+  () =>
+    state.penalty.cooldownType !== originalPenaltyState.value.cooldownType ||
+    (state.penalty.cooldownType === 'fixed' && Math.max(0, Math.trunc(state.penalty.fixedTime || 0)) !== originalPenaltyState.value.fixedTime) ||
+    (state.penalty.cooldownType === 'linear' && Math.max(0, Math.trunc(state.penalty.linearTime || 0)) !== originalPenaltyState.value.linearTime),
+);
+const currencyPenaltyDirty = computed(
+  () =>
+    state.penalty.currencyId !== originalPenaltyState.value.currencyId ||
+    (state.penalty.currencyId !== null && Math.max(0, Math.trunc(state.penalty.currencyAmount || 0)) !== originalPenaltyState.value.currencyAmount),
+);
+const submitLimitDirty = computed(() => maxSubmitDirty.value);
 
 function syncFromPuzzle() {
   state.rules = normalizeRules(puzzle.value?.judge);
@@ -307,6 +325,22 @@ function reset() {
   dirtyToast.clear();
 }
 
+function resetCooldownPenalty() {
+  state.penalty.cooldownType = originalPenaltyState.value.cooldownType;
+  state.penalty.fixedTime = originalPenaltyState.value.fixedTime;
+  state.penalty.linearTime = originalPenaltyState.value.linearTime;
+}
+
+function resetCurrencyPenalty() {
+  state.penalty.currencyId = originalPenaltyState.value.currencyId;
+  state.penalty.currencyAmount = originalPenaltyState.value.currencyAmount;
+}
+
+function resetSubmitLimit() {
+  state.penalty.submitLimitType = originalPenaltyState.value.submitLimitType;
+  state.penalty.maxSubmit = originalPenaltyState.value.maxSubmit;
+}
+
 async function fetchCurrency(gameId: number | undefined) {
   if (!gameId) {
     currencies.value = [];
@@ -315,7 +349,7 @@ async function fetchCurrency(gameId: number | undefined) {
 
   try {
     type Response = { currencies: AdminCurrencyData[] };
-    const response = await api.get<Response>(`/admin/games/${gameId}/currency`, {
+    const response = await api.get<Response>(`/admin/games/${gameId}/currencies`, {
       errorHints: {
         [-1]: '比赛不存在。',
       },
@@ -371,6 +405,7 @@ function clearRuleDragState() {
   ruleDropEntries = [];
   window.removeEventListener('dragover', onRuleGlobalDragOver);
   window.removeEventListener('drop', onRuleGlobalDrop);
+  dragAutoScroll.stop();
 }
 
 function cacheRuleDropEntries() {
@@ -390,7 +425,7 @@ function cacheRuleDropEntries() {
     .sort((a, b) => a.index - b.index);
 }
 
-function getRuleDropTarget(event: DragEvent): RuleDropTarget | null {
+function getRuleDropTarget(event: Pick<MouseEvent, 'clientY'>): RuleDropTarget | null {
   const sourceId = draggingRuleId.value;
   if (!sourceId) return null;
   if (ruleDropEntries.length === 0) cacheRuleDropEntries();
@@ -499,6 +534,7 @@ function onRuleDragStart(rule: JudgeRuleState, event: DragEvent) {
   dragOverRule.value = null;
   ruleOriginPlaceholderVisible.value = false;
   setRuleDragTransfer(event, `judge-rule:${rule.id}`);
+  dragAutoScroll.start();
   window.addEventListener('dragover', onRuleGlobalDragOver);
   window.addEventListener('drop', onRuleGlobalDrop);
   requestAnimationFrame(() => {
@@ -510,6 +546,7 @@ function onRuleDragStart(rule: JudgeRuleState, event: DragEvent) {
 function onRuleGlobalDragOver(event: DragEvent) {
   event.preventDefault();
   if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  dragAutoScroll.update(event);
   if (!draggingRuleId.value) return;
 
   setDragOverRule(getRuleDropTarget(event));
@@ -705,17 +742,17 @@ watch(dirty, value => {
             </div>
 
             <div class="mt-3 space-y-3">
-              <div class="grid gap-2 sm:grid-cols-[5rem_10rem_minmax(0,1fr)] sm:items-start">
-                <div class="pt-2 text-sm font-medium text-muted">匹配方式</div>
+              <div class="grid gap-2 sm:grid-cols-[5rem_10rem_minmax(0,1fr)] sm:items-center">
+                <div class="text-sm font-medium text-muted">匹配方式</div>
                 <u-select v-model="rule.type" :items="ruleTypeItems" :leading-icon="selectedRuleTypeIcon(rule.type)" color="neutral" variant="subtle" class="w-full" :disabled="saving" />
                 <u-form-field :error="isRuleInvalid(rule) ? '必须填写匹配答案' : undefined">
-                  <u-input v-if="rule.type === 'exact'" v-model="rule.text" placeholder="匹配内容" class="w-full font-mono" :disabled="saving" />
+                  <u-input v-if="rule.type === 'exact'" v-model="rule.text" placeholder="匹配内容，例如 ORME SHOE" class="w-full font-mono" :disabled="saving" />
                   <u-input v-else model-value="任意答案" class="w-full" disabled />
                 </u-form-field>
               </div>
 
-              <div class="grid gap-2 lg:grid-cols-[5rem_10rem_minmax(0,1fr)_minmax(0,14rem)] lg:items-start">
-                <div class="pt-2 text-sm font-medium text-muted">匹配正确时</div>
+              <div class="grid gap-2 lg:grid-cols-[5rem_10rem_minmax(0,1fr)_minmax(0,14rem)] lg:items-center">
+                <div class="text-sm font-medium text-muted">匹配正确时</div>
                 <u-select v-model="rule.action" :items="actionItems" :leading-icon="selectedActionIcon(rule.action)" :color="selectedActionColor(rule.action)" variant="subtle" class="w-full" :disabled="saving" />
                 <u-input v-model="rule.result" placeholder="返回提示，留空则使用默认提示" class="w-full" :disabled="saving" />
                 <u-input v-model="rule.answer" placeholder="记录答案，可选" class="w-full font-mono" :disabled="saving" />
@@ -745,8 +782,7 @@ watch(dirty, value => {
         </div>
 
         <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
-          <div class="grid gap-3 md:grid-cols-[10rem_minmax(0,1fr)] md:items-center">
-            <span class="text-sm font-medium text-highlighted">冷却惩罚</span>
+          <rb-form-field row label="冷却惩罚" :dirty="cooldownPenaltyDirty" :reset="resetCooldownPenalty">
             <div class="flex flex-wrap items-center gap-2">
               <u-select v-model="state.penalty.cooldownType" :items="cooldownTypeItems" :leading-icon="selectedCooldownTypeIcon" variant="subtle" class="w-40" :disabled="saving" />
               <u-input-number
@@ -766,12 +802,11 @@ watch(dirty, value => {
                 <span class="text-sm text-muted">乘以累计错误次数</span>
               </template>
             </div>
-          </div>
+          </rb-form-field>
 
           <u-separator />
 
-          <div class="grid gap-3 md:grid-cols-[10rem_minmax(0,1fr)] md:items-center">
-            <span class="text-sm font-medium text-highlighted">扣除货币</span>
+          <rb-form-field row label="扣除货币" :dirty="currencyPenaltyDirty" :reset="resetCurrencyPenalty">
             <div class="flex flex-wrap items-center gap-2">
               <u-select v-model="state.penalty.currencyId" :items="currencyItems" :leading-icon="selectedCurrencyIcon" placeholder="选择货币" variant="subtle" class="w-40" :disabled="saving" />
               <rb-input-number
@@ -787,17 +822,16 @@ watch(dirty, value => {
                 :disabled="saving || !selectedCurrency"
               />
             </div>
-          </div>
+          </rb-form-field>
 
           <u-separator />
 
-          <div class="grid gap-3 md:grid-cols-[10rem_minmax(0,1fr)] md:items-center">
-            <span class="text-sm font-medium text-highlighted">提交次数</span>
+          <rb-form-field row label="提交次数" :dirty="submitLimitDirty" :reset="resetSubmitLimit">
             <div class="flex flex-wrap items-center gap-2">
               <u-select v-model="state.penalty.submitLimitType" :items="submitLimitItems" :leading-icon="selectedSubmitLimitIcon" variant="subtle" class="w-40" :disabled="saving" />
               <u-input-number v-if="state.penalty.submitLimitType === 'limited'" v-model="state.penalty.maxSubmit" :min="0" :step="1" orientation="vertical" trailing="次" variant="subtle" class="w-36" :disabled="saving" />
             </div>
-          </div>
+          </rb-form-field>
         </div>
       </section>
     </u-form>

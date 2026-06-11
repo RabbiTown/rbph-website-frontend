@@ -26,8 +26,30 @@ export interface AdminPuzzleData {
   unlock_cond: string;
   round_id: number;
   sort: number;
+  ticket_enabled: boolean;
   ticket_cooldown: number;
   ctime_at: string;
+}
+
+export interface AdminHintData {
+  id: number;
+  sort: number;
+  title: string;
+  content: string;
+  content_type: number;
+  cooldown: number;
+  cost_id?: number | null;
+  cost_amount: number;
+  puzzle_id: number;
+  ctime_at: string;
+}
+
+export interface AdminCurrencyData {
+  id: number;
+  name: string;
+  growth: number;
+  prec: number;
+  max_amount: number;
 }
 
 export interface AdminPuzzleContext {

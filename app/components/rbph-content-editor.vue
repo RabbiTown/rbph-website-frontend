@@ -9,7 +9,10 @@ const attrs = useAttrs();
 const mode = ref<'editor' | 'source' | 'preview'>('editor');
 const currentEditor = shallowRef<Editor>();
 const editorSelectionVersion = ref(0);
+const root = ref<HTMLElement>();
+const framedFocused = ref(false);
 const contentFrame = ref<HTMLElement>();
+const previewFrame = ref<HTMLElement>();
 const sourceEditor = ref<{ focus: () => void }>();
 const retainedContentHeight = ref(0);
 let retainedContentReleaseId = 0;
@@ -23,9 +26,10 @@ const tableMenu = reactive({
   left: 0,
 });
 
-defineProps<{
+const props = defineProps<{
   placeholder?: string;
   disabled?: boolean;
+  framed?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -39,6 +43,18 @@ const previewContent = computed<RbContent>(() => ({
   content_type: RbContentType.Markdown,
 }));
 const editorExtensions = [RbphAlignBlock, RbphImageBlock, RbphTable, RbphTableRow, RbphTableHeader, RbphTableCell, RbphTextStyle, RbphUnderline, Color, TextAlign.configure({ types: ['heading', 'paragraph', 'align'] })];
+const editorProps = {
+  handleKeyDown: onEditorKeydown,
+  handleDOMEvents: {
+    mousedown: onEditorTailBlankMouseDown,
+  },
+  attributes: {
+    autocomplete: 'on',
+    autocorrect: 'on',
+    autocapitalize: 'sentences',
+    spellcheck: 'true',
+  },
+};
 const blockTypeItems = [
   { kind: 'paragraph', label: '段落', icon: 'material-symbols:format-paragraph-rounded' },
   { kind: 'heading', level: 1, label: '一级标题', icon: 'material-symbols:format-h1-rounded' },
@@ -278,6 +294,10 @@ function setMode(value: typeof mode.value) {
     nextTick(() => {
       releaseRetainedContentHeight(releaseId);
     });
+  } else if (props.framed) {
+    nextTick(() => {
+      previewFrame.value?.focus();
+    });
   }
 }
 
@@ -360,13 +380,27 @@ async function focus() {
   currentEditor.value?.chain().focus('start').run();
 }
 
+function onRootFocusIn() {
+  if (!props.framed) return;
+  framedFocused.value = true;
+}
+
+function onRootFocusOut() {
+  if (!props.framed) return;
+
+  requestAnimationFrame(() => {
+    const active = document.activeElement;
+    framedFocused.value = Boolean(active && root.value?.contains(active));
+  });
+}
+
 defineExpose({ focus });
 </script>
 
 <template>
-  <div class="rbph-content-editor relative">
-    <div class="pointer-events-none sticky top-4 z-20 h-0">
-      <div class="pointer-events-auto ms-auto flex w-max -translate-y-8 items-center gap-1 rounded-md bg-default/95 p-1 shadow-sm ring ring-default backdrop-blur">
+  <div ref="root" class="rbph-content-editor relative" :class="{ 'rbph-content-editor-framed rounded-md border border-default bg-default shadow-xs transition focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/15': props.framed }" @focusin="onRootFocusIn" @focusout="onRootFocusOut">
+    <div v-if="!props.framed || framedFocused" class="pointer-events-none z-20 h-0" :class="props.framed ? 'absolute inset-x-0 top-0' : 'sticky top-4'">
+      <div class="pointer-events-auto ms-auto flex w-max items-center gap-1 rounded-md bg-default/95 p-1 shadow-sm ring ring-default backdrop-blur" :class="props.framed ? '-translate-y-[calc(100%+0.25rem)] me-0' : '-translate-y-8'">
         <u-button icon="material-symbols:edit-note-outline-rounded" color="neutral" :variant="mode === 'editor' ? 'soft' : 'ghost'" size="sm" :disabled="disabled" label="编辑器" @click="setMode('editor')" />
         <u-button icon="material-symbols:code-blocks-outline-rounded" color="neutral" :variant="isSourceMode ? 'soft' : 'ghost'" size="sm" :disabled="disabled" label="源代码" @click="setMode('source')" />
         <u-button icon="material-symbols:visibility-outline-rounded" color="neutral" :variant="isPreviewMode ? 'soft' : 'ghost'" size="sm" label="预览" @click="setMode('preview')" />
@@ -386,13 +420,10 @@ defineExpose({ focus });
         :extensions="editorExtensions"
         :handlers="editorHandlers"
         class="min-h-0"
-        :editor-props="{
-          handleKeyDown: onEditorKeydown,
-          handleDOMEvents: { mousedown: onEditorTailBlankMouseDown },
-        }"
+        :editor-props="editorProps"
         :ui="{
-          content: 'ps-3',
-          base: 'py-3',
+          content: props.framed ? '' : 'ps-3',
+          base: props.framed ? 'min-h-56 px-3 py-3' : 'py-3',
         }"
         :on-selection-update="refreshEditorSelection"
       >
@@ -449,7 +480,7 @@ defineExpose({ focus });
               </u-popover>
             </template>
           </u-editor-toolbar>
-          <u-editor-drag-handle v-if="mode === 'editor'" :editor="editor" />
+          <u-editor-drag-handle v-if="mode === 'editor' && !props.framed" :editor="editor" />
           <u-editor-suggestion-menu v-if="mode === 'editor'" :editor="editor" :items="suggestionItems" :filter-fields="['label', 'aliases']" />
         </template>
       </u-editor>
@@ -479,8 +510,8 @@ defineExpose({ focus });
         </u-tooltip>
       </div>
 
-      <rbph-markdown-source-editor v-if="isSourceMode" ref="sourceEditor" v-model="model" v-bind="attrs" :placeholder="placeholder" :disabled="disabled" @focus-title="emit('focusTitle')" />
-      <div v-else-if="isPreviewMode" class="px-4 py-3 sm:px-5">
+      <rbph-markdown-source-editor v-if="isSourceMode" ref="sourceEditor" v-model="model" v-bind="attrs" :placeholder="placeholder" :disabled="disabled" :framed="props.framed" :class="props.framed ? 'min-h-56' : ''" @focus-title="emit('focusTitle')" />
+      <div v-else-if="isPreviewMode" ref="previewFrame" class="px-4 py-3 sm:px-5 outline-none" :class="props.framed ? 'min-h-56' : ''" :tabindex="props.framed ? 0 : undefined">
         <rbph-content :content="previewContent" @rendered="releaseRetainedContentHeight()" />
       </div>
     </div>
@@ -490,6 +521,11 @@ defineExpose({ focus });
 <style scoped>
 .rbph-content-editor :deep(.ProseMirror) {
   padding-bottom: 50vh;
+}
+
+.rbph-content-editor-framed :deep(.ProseMirror) {
+  min-height: 14rem;
+  padding-bottom: 1rem;
 }
 
 .rbph-content-editor :deep(.ProseMirror table) {

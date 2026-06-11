@@ -123,6 +123,7 @@ const cooldown = computed(() => {
   <div>
     <div v-if="pageData" class="flex flex-col gap-4">
       <u-alert v-if="canOpenTicket" variant="subtle" title="你可以请求人工提示。" description="如果有预设提示无法解决的困惑，请询问人工提示。" icon="material-symbols:near-me-outline-rounded" color="warning" />
+      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.Disabled" variant="subtle" title="暂时不能请求人工提示。" description="本题未启用人工提示。" icon="material-symbols:near-me-disabled-outline-rounded" color="error" />
       <u-alert v-else-if="pageData.open_block === TicketOpenBlock.PendingLimit" variant="subtle" title="暂时不能请求人工提示。" icon="material-symbols:near-me-disabled-outline-rounded" color="error">
         <template #description>
           当前同时开放的人工提示已达到上限，请考虑关闭以下请求。
