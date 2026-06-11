@@ -744,7 +744,7 @@ watch(dirty, value => {
                 <div class="grid gap-2 sm:grid-cols-[5rem_10rem_minmax(0,1fr)] sm:items-center">
                   <div class="text-sm font-medium text-muted">匹配方式</div>
                   <u-select v-model="rule.type" :items="ruleTypeItems" :leading-icon="selectedRuleTypeIcon(rule.type)" color="neutral" variant="subtle" class="w-full" :disabled="saving" />
-                  <u-form-field :error="isRuleInvalid(rule) ? '必须填写匹配答案' : undefined">
+                  <u-form-field :error="isRuleInvalid(rule) ? true : undefined">
                     <u-input v-if="rule.type === 'exact'" v-model="rule.text" placeholder="匹配内容，例如 ORME SHOE" class="w-full font-mono" :disabled="saving" />
                     <u-input v-else model-value="任意答案" class="w-full" disabled />
                   </u-form-field>

@@ -4,7 +4,7 @@ import type { UnlockGateNode, UnlockPuzzleOptionData, UnlockRoundOptionData } fr
 const api = useApi();
 const toast = useToast();
 const dirtyToast = useDirtyToast();
-const { puzzle, refresh } = useAdmin().usePuzzleContext();
+const { puzzle, round, refresh } = useAdmin().usePuzzleContext();
 
 const state = reactive({
   unlock: defaultUnlockGate('default') as UnlockGateNode,
@@ -16,6 +16,14 @@ const deleteConfirmOpen = ref(false);
 const loadingOptions = ref(false);
 const rounds = ref<UnlockRoundOptionData[]>([]);
 const puzzles = ref<UnlockPuzzleOptionData[]>([]);
+const isRoundPuzzle = computed(() => round.value?.puzzle === puzzle.value?.id);
+const deleteConfirmDescription = computed(() => {
+  if (!puzzle.value) return '';
+  if (isRoundPuzzle.value && round.value) {
+    return `确认删除区域谜题「${round.value.title}」？这将不会删除区域本身，此操作不可恢复。`;
+  }
+  return `确认删除谜题「${puzzle.value.title}」？此操作不可恢复。`;
+});
 
 const unlockCondPatch = computed(() => serializeUnlockGate(state.unlock));
 const originalUnlockCond = computed(() => puzzle.value?.unlock_cond ?? 'default');
@@ -194,7 +202,7 @@ watch(dirty, value => {
         <rb-confirm-modal
           v-model:open="deleteConfirmOpen"
           title="删除谜题"
-          :description="puzzle ? `确认删除谜题「${puzzle.title}」？此操作不可恢复。` : ''"
+          :description="deleteConfirmDescription"
           confirm-label="删除谜题"
           confirm-color="error"
           confirm-icon="material-symbols:delete-outline-rounded"

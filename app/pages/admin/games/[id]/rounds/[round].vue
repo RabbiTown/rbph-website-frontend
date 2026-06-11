@@ -9,6 +9,8 @@ const game = useAdmin().useGame().ref;
 const round = ref<AdminRoundData>();
 const loading = ref(false);
 const headerSaving = ref(false);
+const creatingRoundPuzzle = ref(false);
+const createRoundPuzzleOpen = ref(false);
 const contentEditor = ref<{ focus: () => void }>();
 const titleInput = ref<HTMLInputElement>();
 
@@ -27,6 +29,7 @@ const slugDirty = computed(() => Boolean(round.value && headerState.slug.trim() 
 const titleDirty = computed(() => Boolean(round.value && headerState.title !== round.value.title));
 const headerDirty = computed(() => slugDirty.value || titleDirty.value);
 const slugInputWidth = computed(() => `${Math.max(4, headerState.slug.length || 4)}ch`);
+const roundPuzzleRoute = computed(() => (roundPuzzleId.value ? `/admin/games/${gameId.value}/puzzles/${roundPuzzleId.value}/judge` : undefined));
 
 function syncHeaderFromRound() {
   headerState.slug = round.value?.slug ?? '';
@@ -44,6 +47,69 @@ function focusContentEditor() {
 function focusTitle() {
   titleInput.value?.focus();
   titleInput.value?.setSelectionRange(headerState.title.length, headerState.title.length);
+}
+
+function openRoundPuzzle() {
+  if (roundPuzzleId.value) {
+    navigateTo(`/admin/games/${gameId.value}/puzzles/${roundPuzzleId.value}/judge`);
+    return;
+  }
+
+  createRoundPuzzleOpen.value = true;
+}
+
+async function createRoundPuzzle() {
+  if (!round.value || roundPuzzleId.value || creatingRoundPuzzle.value) return;
+
+  creatingRoundPuzzle.value = true;
+  try {
+    type PuzzleResponse = { puzzle: AdminPuzzleData };
+    const nextSort = 0;
+    const body = {
+      round_id: round.value.id,
+      title: round.value.title,
+      content: '',
+      content_type: RbContentType.Markdown,
+      ptype: RbPuzzleType.Normal,
+      judge: [],
+      penalty: [],
+      max_submit: null,
+      unlock_cond: 'default',
+      ticket_enabled: true,
+      ticket_cooldown: 0,
+      sort: nextSort,
+      slug: null,
+    };
+
+    const { data } = await api.post<PuzzleResponse>('/admin/puzzles', body, {
+      errorHints: {
+        [-2]: '谜题信息不合法。',
+        [-1]: '谜题不存在。',
+      },
+    });
+
+    type RoundResponse = { round: AdminRoundData };
+    const roundResp = await api.patch<RoundResponse>(`/admin/rounds/${round.value.id}`, { puzzle: data.puzzle.id }, {
+      errorHints: {
+        [-2]: '区域信息不合法。',
+        [-1]: '区域不存在。',
+      },
+    });
+
+    round.value = roundResp.data.round;
+    syncHeaderFromRound();
+    createRoundPuzzleOpen.value = false;
+    toast.add({
+      title: '区域谜题已创建',
+      icon: 'material-symbols:check-rounded',
+      color: 'success',
+    });
+    await navigateTo(`/admin/games/${gameId.value}/puzzles/${data.puzzle.id}/judge`, { replace: true });
+  } catch (error) {
+    handleError(error, '创建区域谜题失败');
+  } finally {
+    creatingRoundPuzzle.value = false;
+  }
 }
 
 async function applyHeader() {
@@ -157,7 +223,12 @@ const navItems = computed<NavigationMenuItem[]>(() => [
   {
     label: '区域谜题',
     icon: 'material-symbols:grid-view-outline-rounded',
-    to: roundPuzzleId.value ? `/admin/games/${gameId.value}/puzzles/${roundPuzzleId.value}/judge` : undefined,
+    to: roundPuzzleRoute.value,
+    onSelect: (event) => {
+      if (roundPuzzleId.value) return;
+      event.preventDefault();
+      openRoundPuzzle();
+    },
   },
 ]);
 </script>
@@ -182,7 +253,7 @@ const navItems = computed<NavigationMenuItem[]>(() => [
                   :disabled="headerSaving"
                   @keydown.enter.prevent="focusContentEditor"
                   @keydown.down.prevent="focusContentEditor"
-                />
+                >
               </label>
               <div v-else class="flex min-w-0 flex-1 items-center gap-3 py-1.5">
                 <span class="shrink-0 text-3xl/10 font-bold text-muted">#</span>
@@ -207,7 +278,7 @@ const navItems = computed<NavigationMenuItem[]>(() => [
                     placeholder="slug"
                     aria-label="区域 slug"
                     :disabled="headerSaving"
-                  />
+                  >
                   <span v-else>{{ round.slug }}</span>
                 </label>
                 <u-badge variant="soft" color="neutral">#{{ round.id }}</u-badge>
@@ -222,6 +293,15 @@ const navItems = computed<NavigationMenuItem[]>(() => [
       </div>
 
       <nuxt-page />
+      <rb-confirm-modal
+        v-model:open="createRoundPuzzleOpen"
+        title="创建区域谜题"
+        description="当前区域还没有区域谜题，是否现在创建？"
+        confirm-label="创建"
+        confirm-icon="material-symbols:add-circle-outline-rounded"
+        :busy="creatingRoundPuzzle"
+        @confirm="createRoundPuzzle"
+      />
     </template>
 
     <div v-else-if="loading" class="space-y-4">
