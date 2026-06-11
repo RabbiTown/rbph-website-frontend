@@ -1,4 +1,4 @@
-type Sexpr = string | Sexpr[];
+export type Sexpr = string | Sexpr[];
 
 function tokenizeSexpr(input: string) {
   return input.match(/\(|\)|[^\s()]+/g) ?? [];
@@ -22,7 +22,7 @@ function parseSexpr(tokens: string[], index = 0): [Sexpr, number] {
   return [items, next + 1];
 }
 
-function parseUnlockCondition(input: string) {
+export function parseUnlockCondition(input: string) {
   const tokens = tokenizeSexpr(input.trim());
   if (tokens.length === 0) return undefined;
 
@@ -32,6 +32,15 @@ function parseUnlockCondition(input: string) {
   } catch {
     return undefined;
   }
+}
+
+export function serializeSexpr(expr: Sexpr): string {
+  if (typeof expr === 'string') return expr;
+  return `(${expr.map(serializeSexpr).join(' ')})`;
+}
+
+export function isSimpleAtom(value: unknown): value is string {
+  return typeof value === 'string' && /^[A-Za-z0-9_-]+$/.test(value);
 }
 
 function refLabel(value: Sexpr) {

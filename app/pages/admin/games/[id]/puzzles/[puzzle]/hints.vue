@@ -474,13 +474,9 @@ async function apply() {
       if (ticketEnabledDirty.value) body.ticket_enabled = ticketEnabled.value;
       if (ticketCooldownDirty.value) body.ticket_cooldown = ticketCooldownPatch.value;
 
-      const response = await api.patch<PuzzleResponse>(
-        `/admin/puzzles/${puzzle.value.id}`,
-        body,
-        {
-          errorHints: { [-2]: '人工提示配置不合法。', [-1]: '谜题不存在。' },
-        },
-      );
+      const response = await api.patch<PuzzleResponse>(`/admin/puzzles/${puzzle.value.id}`, body, {
+        errorHints: { [-2]: '人工提示配置不合法。', [-1]: '谜题不存在。' },
+      });
       puzzle.value = response.data.puzzle;
       syncTicketCooldownFromPuzzle();
       await refresh();
@@ -594,7 +590,7 @@ onBeforeUnmount(() => {
                 <div class="flex items-center gap-3 rounded-lg bg-elevated/60 px-4 py-2 group cursor-pointer ring ring-default">
                   <div class="flex min-w-0 flex-1 items-center gap-2">
                     <u-icon name="material-symbols:lightbulb-outline-rounded" class="text-warning" />
-                    <u-input v-if="hint.open" v-model="hint.title" class="w-full" placeholder="提示标题" variant="soft" :disabled="saving || hint.deleting" @click.stop />
+                    <u-input v-if="hint.open" v-model="hint.title" class="w-full -mx-2.5 -my-1.5 font-medium" placeholder="提示标题" variant="ghost" :disabled="saving || hint.deleting" @click.stop />
                     <div v-else class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">
                       {{ hint.title || '未命名提示' }}
                     </div>

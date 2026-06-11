@@ -14,6 +14,14 @@ export default defineNuxtConfig({
   modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/ui', '@nuxtjs/mdc', '@vueuse/nuxt'],
   css: ['~/assets/css/main.css'],
   ssr: false,
+  icon: {
+    customCollections: [
+      {
+        prefix: 'tabler',
+        dir: './app/assets/icons/tabler',
+      },
+    ],
+  },
   mdc: {
     components: {
       prose: true,
