@@ -9,7 +9,7 @@ withDefaults(
   }>(),
   {
     icon: undefined,
-    placeholder: '未设定时间',
+    placeholder: '未设置时间',
     optional: false,
   },
 );

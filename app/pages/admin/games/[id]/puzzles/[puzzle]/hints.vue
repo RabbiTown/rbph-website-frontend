@@ -569,7 +569,7 @@ onBeforeUnmount(() => {
 
           <u-empty v-if="!loading && state.length === 0" icon="material-symbols:lightbulb-outline-rounded" title="暂无预设提示" description="添加一个提示后，玩家可在提示页解锁。">
             <template #actions>
-              <u-button icon="material-symbols:add-rounded" label="新增提示" :disabled="loading || saving" @click="addHint" />
+              <u-button icon="material-symbols:add-rounded" label="新建提示" :disabled="loading || saving" @click="addHint" />
             </template>
           </u-empty>
 
@@ -618,7 +618,7 @@ onBeforeUnmount(() => {
                       @dragstart.stop="onHintDragStart(hint, $event)"
                       @dragend="clearHintDragState"
                     />
-                    <u-button v-if="hint.deleting" icon="material-symbols:undo-rounded" color="neutral" variant="ghost" size="sm" :disabled="saving" @click="restoreHint(hint)">恢复</u-button>
+                    <u-button v-if="hint.deleting" icon="material-symbols:undo-rounded" color="neutral" variant="ghost" size="sm" :disabled="saving" @click="restoreHint(hint)" />
                     <u-button v-else icon="material-symbols:delete-outline-rounded" color="error" variant="ghost" size="sm" :disabled="saving" @click="removeHint(hint)" />
                   </div>
                   <u-icon name="material-symbols:expand-more-rounded" class="size-5 text-muted group-data-[state=open]:rotate-180 transition-transform duration-200" />
@@ -627,8 +627,21 @@ onBeforeUnmount(() => {
                 <template #content>
                   <div class="border-t border-default bg-elevated/40 px-4 pt-4 pb-4">
                     <div class="flex flex-col gap-4">
-                      <rb-form-field row label="解锁冷却">
-                        <u-input-number v-model="hint.cooldown" :min="0" :step="10" :step-snapping="false" orientation="vertical" :format-options="{ style: 'unit', unit: 'second' }" variant="subtle" class="w-40" :disabled="saving || hint.deleting" />
+                      <rb-form-field row label="开放时间">
+                        <div class="flex flex-wrap items-center gap-2">
+                          <span class="text-sm text-muted">谜题解锁后</span>
+                          <u-input-number
+                            v-model="hint.cooldown"
+                            :min="0"
+                            :step="10"
+                            :step-snapping="false"
+                            orientation="vertical"
+                            :format-options="{ style: 'unit', unit: 'second' }"
+                            variant="subtle"
+                            class="w-40"
+                            :disabled="saving || hint.deleting"
+                          />
+                        </div>
                       </rb-form-field>
 
                       <rb-form-field row label="解锁消耗">
@@ -646,7 +659,7 @@ onBeforeUnmount(() => {
             </div>
 
             <div class="sticky bottom-4 z-20 flex justify-end">
-              <u-button icon="material-symbols:add-rounded" label="新增提示" size="lg" class="shadow-lg shadow-primary/20" :disabled="loading || saving" @click="addHint" />
+              <u-button icon="material-symbols:add-rounded" label="新建提示" size="lg" class="shadow-lg shadow-primary/20" :disabled="loading || saving" @click="addHint" />
             </div>
           </template>
         </section>

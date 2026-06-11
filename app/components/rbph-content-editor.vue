@@ -38,6 +38,12 @@ const emit = defineEmits<{
 
 const isSourceMode = computed(() => mode.value === 'source');
 const isPreviewMode = computed(() => mode.value === 'preview');
+const editorModel = computed({
+  get: () => normalizeCjkMarkdown(model.value),
+  set: value => {
+    model.value = value;
+  },
+});
 const previewContent = computed<RbContent>(() => ({
   content: model.value,
   content_type: RbContentType.Markdown,
@@ -398,7 +404,13 @@ defineExpose({ focus });
 </script>
 
 <template>
-  <div ref="root" class="rbph-content-editor relative" :class="{ 'rbph-content-editor-framed rounded-md border border-default bg-default shadow-xs transition focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/15': props.framed }" @focusin="onRootFocusIn" @focusout="onRootFocusOut">
+  <div
+    ref="root"
+    class="rbph-content-editor relative"
+    :class="{ 'rbph-content-editor-framed rounded-md border border-default bg-default shadow-xs transition focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/15': props.framed }"
+    @focusin="onRootFocusIn"
+    @focusout="onRootFocusOut"
+  >
     <div v-if="!props.framed || framedFocused" class="pointer-events-none z-20 h-0" :class="props.framed ? 'absolute inset-x-0 top-0' : 'sticky top-4'">
       <div class="pointer-events-auto ms-auto flex w-max items-center gap-1 rounded-md bg-default/95 p-1 shadow-sm ring ring-default backdrop-blur" :class="props.framed ? '-translate-y-[calc(100%+0.25rem)] me-0' : '-translate-y-8'">
         <u-button icon="material-symbols:edit-note-outline-rounded" color="neutral" :variant="mode === 'editor' ? 'soft' : 'ghost'" size="sm" :disabled="disabled" label="编辑器" @click="setMode('editor')" />
@@ -410,7 +422,7 @@ defineExpose({ focus });
     <div ref="contentFrame" class="relative" :style="{ minHeight: retainedContentHeight ? `${retainedContentHeight}px` : undefined }">
       <u-editor
         v-if="mode === 'editor'"
-        v-model="model"
+        v-model="editorModel"
         v-bind="attrs"
         content-type="markdown"
         :placeholder="placeholder"
@@ -510,7 +522,17 @@ defineExpose({ focus });
         </u-tooltip>
       </div>
 
-      <rbph-markdown-source-editor v-if="isSourceMode" ref="sourceEditor" v-model="model" v-bind="attrs" :placeholder="placeholder" :disabled="disabled" :framed="props.framed" :class="props.framed ? 'min-h-56' : ''" @focus-title="emit('focusTitle')" />
+      <rbph-markdown-source-editor
+        v-if="isSourceMode"
+        ref="sourceEditor"
+        v-model="model"
+        v-bind="attrs"
+        :placeholder="placeholder"
+        :disabled="disabled"
+        :framed="props.framed"
+        :class="props.framed ? 'min-h-56' : ''"
+        @focus-title="emit('focusTitle')"
+      />
       <div v-else-if="isPreviewMode" ref="previewFrame" class="px-4 py-3 sm:px-5 outline-none" :class="props.framed ? 'min-h-56' : ''" :tabindex="props.framed ? 0 : undefined">
         <rbph-content :content="previewContent" @rendered="releaseRetainedContentHeight()" />
       </div>

@@ -309,9 +309,7 @@ const cooldownPenaltyDirty = computed(
     (state.penalty.cooldownType === 'linear' && Math.max(0, Math.trunc(state.penalty.linearTime || 0)) !== originalPenaltyState.value.linearTime),
 );
 const currencyPenaltyDirty = computed(
-  () =>
-    state.penalty.currencyId !== originalPenaltyState.value.currencyId ||
-    (state.penalty.currencyId !== null && Math.max(0, Math.trunc(state.penalty.currencyAmount || 0)) !== originalPenaltyState.value.currencyAmount),
+  () => state.penalty.currencyId !== originalPenaltyState.value.currencyId || (state.penalty.currencyId !== null && Math.max(0, Math.trunc(state.penalty.currencyAmount || 0)) !== originalPenaltyState.value.currencyAmount),
 );
 const submitLimitDirty = computed(() => maxSubmitDirty.value);
 
@@ -701,65 +699,70 @@ watch(dirty, value => {
       </div>
 
       <section class="relative">
-        <div v-if="state.rules.length" class="space-y-3 pb-3" @dragover="onRuleListDragOver" @drop="onRuleDrop">
-          <div
-            v-for="(rule, index) in state.rules"
-            :key="rule.id"
-            data-judge-rule-card="true"
-            :data-rule-id="rule.id"
-            class="relative rounded-lg bg-elevated/60 p-4 ring ring-default"
-            :class="[isRuleInvalid(rule) ? 'ring-error/60' : undefined, ruleDropHintClass(rule)]"
-            @dragover="onRuleDragOver"
-            @dragleave="onRuleDragLeave(rule.id, $event)"
-            @drop="onRuleDrop"
-          >
-            <div v-if="isRuleOriginPlaceholderVisible(rule)" class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-lg transition" :class="ruleOriginPlaceholderClass(rule)">
-              <div class="flex items-center justify-center rounded-full border-2 transition-all duration-100" :class="ruleOriginPlaceholderIconClass(rule)">
-                <u-icon name="material-symbols:drag-pan-rounded" class="size-5" />
-              </div>
-            </div>
-
-            <div class="flex items-center justify-between gap-3">
-              <div class="flex min-w-0 flex-wrap items-center gap-2">
-                <u-badge color="neutral" variant="soft"> #{{ index + 1 }} </u-badge>
+        <template v-if="state.rules.length">
+          <div class="space-y-3 pb-3" @dragover="onRuleListDragOver" @drop="onRuleDrop">
+            <div
+              v-for="(rule, index) in state.rules"
+              :key="rule.id"
+              data-judge-rule-card="true"
+              :data-rule-id="rule.id"
+              class="relative rounded-lg bg-elevated/60 p-4 ring ring-default"
+              :class="[isRuleInvalid(rule) ? 'ring-error/60' : undefined, ruleDropHintClass(rule)]"
+              @dragover="onRuleDragOver"
+              @dragleave="onRuleDragLeave(rule.id, $event)"
+              @drop="onRuleDrop"
+            >
+              <div v-if="isRuleOriginPlaceholderVisible(rule)" class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-lg transition" :class="ruleOriginPlaceholderClass(rule)">
+                <div class="flex items-center justify-center rounded-full border-2 transition-all duration-100" :class="ruleOriginPlaceholderIconClass(rule)">
+                  <u-icon name="material-symbols:drag-pan-rounded" class="size-5" />
+                </div>
               </div>
 
-              <div class="flex items-center gap-1">
-                <u-button
-                  color="neutral"
-                  variant="ghost"
-                  size="sm"
-                  icon="material-symbols:drag-indicator"
-                  class="cursor-grab active:cursor-grabbing"
-                  aria-label="拖动排序"
-                  draggable="true"
-                  :disabled="saving"
-                  @dragstart.stop="onRuleDragStart(rule, $event)"
-                  @dragend="clearRuleDragState"
-                />
-                <u-button color="error" variant="ghost" size="sm" icon="material-symbols:delete-outline-rounded" :disabled="saving" @click="removeRule(index)" />
-              </div>
-            </div>
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex min-w-0 flex-wrap items-center gap-2">
+                  <u-badge color="neutral" variant="soft"> #{{ index + 1 }} </u-badge>
+                </div>
 
-            <div class="mt-3 space-y-3">
-              <div class="grid gap-2 sm:grid-cols-[5rem_10rem_minmax(0,1fr)] sm:items-center">
-                <div class="text-sm font-medium text-muted">匹配方式</div>
-                <u-select v-model="rule.type" :items="ruleTypeItems" :leading-icon="selectedRuleTypeIcon(rule.type)" color="neutral" variant="subtle" class="w-full" :disabled="saving" />
-                <u-form-field :error="isRuleInvalid(rule) ? '必须填写匹配答案' : undefined">
-                  <u-input v-if="rule.type === 'exact'" v-model="rule.text" placeholder="匹配内容，例如 ORME SHOE" class="w-full font-mono" :disabled="saving" />
-                  <u-input v-else model-value="任意答案" class="w-full" disabled />
-                </u-form-field>
+                <div class="flex items-center gap-1">
+                  <u-button
+                    color="neutral"
+                    variant="ghost"
+                    size="sm"
+                    icon="material-symbols:drag-indicator"
+                    class="cursor-grab active:cursor-grabbing"
+                    aria-label="拖动排序"
+                    draggable="true"
+                    :disabled="saving"
+                    @dragstart.stop="onRuleDragStart(rule, $event)"
+                    @dragend="clearRuleDragState"
+                  />
+                  <u-button color="error" variant="ghost" size="sm" icon="material-symbols:delete-outline-rounded" :disabled="saving" @click="removeRule(index)" />
+                </div>
               </div>
 
-              <div class="grid gap-2 lg:grid-cols-[5rem_10rem_minmax(0,1fr)_minmax(0,14rem)] lg:items-center">
-                <div class="text-sm font-medium text-muted">匹配正确时</div>
-                <u-select v-model="rule.action" :items="actionItems" :leading-icon="selectedActionIcon(rule.action)" :color="selectedActionColor(rule.action)" variant="subtle" class="w-full" :disabled="saving" />
-                <u-input v-model="rule.result" placeholder="返回提示，留空则使用默认提示" class="w-full" :disabled="saving" />
-                <u-input v-model="rule.answer" placeholder="记录答案，可选" class="w-full font-mono" :disabled="saving" />
+              <div class="mt-3 space-y-3">
+                <div class="grid gap-2 sm:grid-cols-[5rem_10rem_minmax(0,1fr)] sm:items-center">
+                  <div class="text-sm font-medium text-muted">匹配方式</div>
+                  <u-select v-model="rule.type" :items="ruleTypeItems" :leading-icon="selectedRuleTypeIcon(rule.type)" color="neutral" variant="subtle" class="w-full" :disabled="saving" />
+                  <u-form-field :error="isRuleInvalid(rule) ? '必须填写匹配答案' : undefined">
+                    <u-input v-if="rule.type === 'exact'" v-model="rule.text" placeholder="匹配内容，例如 ORME SHOE" class="w-full font-mono" :disabled="saving" />
+                    <u-input v-else model-value="任意答案" class="w-full" disabled />
+                  </u-form-field>
+                </div>
+
+                <div class="grid gap-2 lg:grid-cols-[5rem_10rem_minmax(0,1fr)_minmax(0,14rem)] lg:items-center">
+                  <div class="text-sm font-medium text-muted">匹配正确时</div>
+                  <u-select v-model="rule.action" :items="actionItems" :leading-icon="selectedActionIcon(rule.action)" :color="selectedActionColor(rule.action)" variant="subtle" class="w-full" :disabled="saving" />
+                  <u-input v-model="rule.result" placeholder="返回提示，留空则使用默认提示" class="w-full" :disabled="saving" />
+                  <u-input v-model="rule.answer" placeholder="记录答案，可选" class="w-full font-mono" :disabled="saving" />
+                </div>
               </div>
             </div>
           </div>
-        </div>
+          <div class="sticky bottom-4 z-20 flex justify-end">
+            <u-button icon="material-symbols:add-rounded" label="添加规则" size="lg" class="shadow-lg shadow-primary/20" :disabled="saving" @click="addRule()" />
+          </div>
+        </template>
 
         <u-empty v-else icon="material-symbols:rule-settings-rounded" title="还没有判定规则" description="没有规则时所有提交都会判为错误。">
           <template #actions>
@@ -767,10 +770,6 @@ watch(dirty, value => {
             <u-button color="neutral" variant="soft" icon="material-symbols:keyboard-double-arrow-down-rounded" label="添加兜底规则" :disabled="saving" @click="addRule('all')" />
           </template>
         </u-empty>
-
-        <div class="sticky bottom-4 z-20 flex justify-end">
-          <u-button icon="material-symbols:add-rounded" label="添加规则" size="lg" class="shadow-lg shadow-primary/20" :disabled="saving" @click="addRule()" />
-        </div>
       </section>
 
       <u-separator class="my-6" />

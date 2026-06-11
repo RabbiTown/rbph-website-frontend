@@ -36,7 +36,7 @@ const tabs = computed(() => {
       label: '谜题管理',
       icon: 'material-symbols:extension-outline-rounded',
       to: `/admin/games/${game.value.id}/puzzles`,
-      active: route.path.startsWith(`/admin/games/${game.value.id}/puzzles`),
+      active: route.path.startsWith(`/admin/games/${game.value.id}/puzzles`) || route.path.startsWith(`/admin/games/${game.value.id}/rounds`),
     },
     {
       label: '队伍管理',

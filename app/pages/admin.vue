@@ -94,7 +94,7 @@ const nav = computed(() => {
         label: '谜题管理',
         icon: 'material-symbols:extension-outline-rounded',
         to: `/admin/games/${game.ref.value.id}/puzzles`,
-        active: route.path.startsWith(`/admin/games/${game.ref.value.id}/puzzles`),
+        active: route.path.startsWith(`/admin/games/${game.ref.value.id}/puzzles`) || route.path.startsWith(`/admin/games/${game.ref.value.id}/rounds`),
       },
       {
         value: 'admin-game-teams',

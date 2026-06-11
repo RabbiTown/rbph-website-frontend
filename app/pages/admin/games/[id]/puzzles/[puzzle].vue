@@ -22,15 +22,19 @@ const gameId = computed(() => Number(route.params.id));
 const puzzleId = computed(() => Number(route.params.puzzle));
 const contentPagePath = computed(() => (Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}` : undefined));
 const isContentPage = computed(() => Boolean(contentPagePath.value && route.path.replace(/\/$/, '') === contentPagePath.value));
-const normalizedPuzzleSlug = computed(() => puzzle.value?.slug ?? '');
-const slugDirty = computed(() => Boolean(puzzle.value && headerState.slug.trim() !== normalizedPuzzleSlug.value));
-const titleDirty = computed(() => Boolean(puzzle.value && headerState.title !== puzzle.value.title));
+const isRoundPuzzle = computed(() => round.value?.puzzle === puzzle.value?.id);
+const displayTitle = computed(() => (isRoundPuzzle.value ? (round.value?.title ?? puzzle.value?.title ?? '') : (puzzle.value?.title ?? '')));
+const displaySlug = computed(() => (isRoundPuzzle.value ? (round.value?.slug ?? '') : (puzzle.value?.slug ?? '')));
+const normalizedPuzzleSlug = computed(() => displaySlug.value);
+const normalizedPuzzleTitle = computed(() => displayTitle.value);
+const slugDirty = computed(() => Boolean(puzzle.value && !isRoundPuzzle.value && headerState.slug.trim() !== normalizedPuzzleSlug.value));
+const titleDirty = computed(() => Boolean(puzzle.value && !isRoundPuzzle.value && headerState.title !== normalizedPuzzleTitle.value));
 const headerDirty = computed(() => slugDirty.value || titleDirty.value);
 const slugInputWidth = computed(() => `${Math.max(4, headerState.slug.length || 4)}ch`);
 
 function syncHeaderFromPuzzle() {
-  headerState.slug = puzzle.value?.slug ?? '';
-  headerState.title = puzzle.value?.title ?? '';
+  headerState.slug = displaySlug.value;
+  headerState.title = displayTitle.value;
 }
 
 function resetHeader() {
@@ -47,7 +51,7 @@ function focusTitle() {
 }
 
 async function applyHeader() {
-  if (!puzzle.value || !headerDirty.value) return true;
+  if (!puzzle.value || !headerDirty.value || isRoundPuzzle.value) return true;
   if (headerSaving.value) return false;
 
   const body: {
@@ -117,6 +121,11 @@ async function fetchData() {
     puzzle.value = puzzleResp.data.puzzle;
     round.value = roundResp.data.round;
     syncHeaderFromPuzzle();
+
+    if (isContentPage.value && isRoundPuzzle.value && round.value) {
+      await navigateTo(`/admin/games/${gameId.value}/rounds/${round.value.id}`, { replace: true });
+      return;
+    }
   } catch (error) {
     puzzle.value = undefined;
     round.value = undefined;
@@ -155,14 +164,14 @@ watch(
 );
 
 useHead({
-  titleTemplate: computed(() => buildTitleParts([{ text: puzzle.value?.title }, { text: game.value?.title, sep: ' - ' }, { text: 'RBPH 管理后台', sep: ' - ' }])),
+  titleTemplate: computed(() => buildTitleParts([{ text: displayTitle.value }, { text: game.value?.title, sep: ' - ' }, { text: 'RBPH 管理后台', sep: ' - ' }])),
 });
 
 const navItems = computed<NavigationMenuItem[]>(() => [
   {
-    label: '谜题内容',
+    label: isRoundPuzzle.value ? '区域内容' : '谜题内容',
     icon: 'material-symbols:article-outline-rounded',
-    to: Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}` : undefined,
+    to: isRoundPuzzle.value && round.value ? `/admin/games/${gameId.value}/rounds/${round.value.id}` : Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}` : undefined,
     exact: true,
   },
   {
@@ -181,6 +190,8 @@ const navItems = computed<NavigationMenuItem[]>(() => [
     to: Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}/settings` : undefined,
   },
 ]);
+
+const isEditablePuzzleHeader = computed(() => isContentPage.value && !isRoundPuzzle.value);
 </script>
 
 <template>
@@ -192,7 +203,7 @@ const navItems = computed<NavigationMenuItem[]>(() => [
         <div class="flex min-w-0 flex-col gap-2">
           <u-form :state="headerState" class="space-y-2" @submit.prevent="applyHeader">
             <div class="flex flex-wrap items-center gap-2">
-              <label v-if="isContentPage" class="flex min-w-0 flex-1 items-center gap-3 py-1.5">
+              <label v-if="isEditablePuzzleHeader" class="flex min-w-0 flex-1 items-center gap-3 py-1.5">
                 <span class="shrink-0 text-3xl/10 font-bold text-muted">#</span>
                 <input
                   ref="titleInput"
@@ -203,33 +214,42 @@ const navItems = computed<NavigationMenuItem[]>(() => [
                   :disabled="headerSaving"
                   @keydown.enter.prevent="focusContentEditor"
                   @keydown.down.prevent="focusContentEditor"
-                >
+                />
               </label>
               <div v-else class="flex min-w-0 flex-1 items-center gap-3 py-1.5">
                 <span class="shrink-0 text-3xl/10 font-bold text-muted">#</span>
                 <h1 class="min-w-0 flex-1 truncate text-3xl/10 font-bold text-highlighted">
-                  {{ puzzle.title }}
+                  {{ displayTitle }}
                 </h1>
               </div>
 
               <div class="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2">
-                <u-badge v-if="round?.puzzle === puzzle.id" variant="soft" color="primary" icon="material-symbols:grid-view-outline-rounded">区域谜题</u-badge>
+                <u-badge v-if="isRoundPuzzle" variant="soft" color="primary" icon="material-symbols:grid-view-outline-rounded">区域谜题</u-badge>
                 <label
-                  v-if="isContentPage || puzzle.slug"
+                  v-if="isContentPage || displaySlug"
                   class="inline-flex w-max max-w-full items-center gap-1.5 rounded-md px-2 py-1 font-mono text-xs text-muted transition"
                   :class="isContentPage ? 'bg-elevated ring ring-default focus-within:text-highlighted focus-within:ring-primary' : 'bg-muted/40'"
                 >
                   <span class="shrink-0 font-semibold">#</span>
                   <input
-                    v-if="isContentPage"
+                    v-if="isContentPage && !isRoundPuzzle"
                     v-model="headerState.slug"
                     class="min-w-[4ch] max-w-[min(36ch,calc(100vw-8rem))] bg-transparent outline-none placeholder:text-dimmed"
                     :style="{ width: slugInputWidth }"
                     placeholder="slug"
                     aria-label="谜题 slug"
                     :disabled="headerSaving"
-                  >
-                  <span v-else>{{ puzzle.slug }}</span>
+                  />
+                  <input
+                    v-else-if="isContentPage && isRoundPuzzle"
+                    :value="displaySlug"
+                    class="min-w-[4ch] max-w-[min(36ch,calc(100vw-8rem))] bg-transparent outline-none placeholder:text-dimmed"
+                    :style="{ width: slugInputWidth }"
+                    placeholder="slug"
+                    aria-label="区域 slug"
+                    disabled
+                  />
+                  <span v-else>{{ displaySlug }}</span>
                 </label>
                 <u-badge variant="soft" color="neutral">#{{ puzzle.id }}</u-badge>
               </div>

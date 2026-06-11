@@ -11,6 +11,8 @@ const state = reactive({
 });
 
 const saving = ref(false);
+const deleting = ref(false);
+const deleteConfirmOpen = ref(false);
 const loadingOptions = ref(false);
 const rounds = ref<UnlockRoundOptionData[]>([]);
 const puzzles = ref<UnlockPuzzleOptionData[]>([]);
@@ -94,6 +96,31 @@ async function apply() {
   }
 }
 
+async function deletePuzzle() {
+  if (!puzzle.value || deleting.value) return;
+
+  deleting.value = true;
+  try {
+    await api.del(`/admin/puzzles/${puzzle.value.id}`, {
+      errorHints: {
+        [-1]: '谜题不存在。',
+      },
+    });
+
+    toast.add({
+      title: '谜题已删除',
+      icon: 'material-symbols:check-rounded',
+      color: 'success',
+    });
+    await navigateTo(`/admin/games/${puzzle.value.game_id}/puzzles`);
+  } catch (error) {
+    handleError(error, '删除谜题失败');
+  } finally {
+    deleting.value = false;
+    deleteConfirmOpen.value = false;
+  }
+}
+
 watch(
   () => puzzle.value?.id,
   () => {
@@ -148,6 +175,32 @@ watch(dirty, value => {
             <code class="block overflow-x-auto rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted">{{ unlockCondPatch || '未生成表达式' }}</code>
           </div>
         </div>
+      </section>
+
+      <u-separator class="my-2" />
+
+      <section class="space-y-4">
+        <div>
+          <h3 class="text-lg font-semibold text-highlighted">危险区域</h3>
+          <p class="mt-1 text-sm text-muted">这里的选项将会对谜题造成不可逆的后果。</p>
+        </div>
+
+        <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
+          <rb-form-field row label="删除谜题">
+            <u-button color="error" variant="soft" icon="material-symbols:delete-outline-rounded" label="删除谜题" :disabled="saving || deleting" @click="deleteConfirmOpen = true" />
+          </rb-form-field>
+        </div>
+
+        <rb-confirm-modal
+          v-model:open="deleteConfirmOpen"
+          title="删除谜题"
+          :description="puzzle ? `确认删除谜题「${puzzle.title}」？此操作不可恢复。` : ''"
+          confirm-label="删除谜题"
+          confirm-color="error"
+          confirm-icon="material-symbols:delete-outline-rounded"
+          :busy="deleting"
+          @confirm="deletePuzzle"
+        />
       </section>
     </u-form>
 

@@ -10,6 +10,8 @@ interface AdminPuzzleCardData {
 const props = defineProps<{
   puzzle: AdminPuzzleCardData;
   isRoundPuzzle?: boolean;
+  title?: string;
+  slug?: string | null;
 }>();
 
 const puzzleTypeMap: Record<number, { label: string; icon: string; color: 'primary' | 'neutral' | 'warning' }> = {
@@ -40,6 +42,8 @@ const puzzleType = computed(() =>
 );
 
 const unlockConditionText = computed(() => translateUnlockCondition(props.puzzle.unlock_cond));
+const displayedTitle = computed(() => props.title ?? props.puzzle.title);
+const displayedSlug = computed(() => props.slug ?? props.puzzle.slug);
 </script>
 
 <template>
@@ -49,12 +53,12 @@ const unlockConditionText = computed(() => translateUnlockCondition(props.puzzle
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-1.5">
             <u-badge size="sm" variant="soft" color="neutral">#{{ puzzle.id }}</u-badge>
-            <u-badge v-if="puzzle.slug" size="sm" variant="soft" color="primary" icon="material-symbols:tag-rounded">
-              {{ puzzle.slug }}
+            <u-badge v-if="displayedSlug" size="sm" variant="soft" color="primary" icon="material-symbols:tag-rounded">
+              {{ displayedSlug }}
             </u-badge>
           </div>
           <h3 class="mt-1.5 line-clamp-2 text-md font-semibold leading-snug">
-            {{ puzzle.title }}
+            {{ displayedTitle }}
           </h3>
         </div>
 

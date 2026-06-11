@@ -1,6 +1,6 @@
 import { createMarkdownParser } from '@nuxtjs/mdc/runtime';
 
-function normalizeCjkMarkdown(markdown: string) {
+export function normalizeCjkMarkdown(markdown: string) {
   return markdown
     .replace(/(\*{1,3}|_{1,3})([「『《（【“‘])/g, '$1\u200B$2')
     .replace(/([」』》）】”’：；，。！？、])(\*{1,3}|_{1,3})(?=\p{Script=Han})/gu, '$1\u200B$2')

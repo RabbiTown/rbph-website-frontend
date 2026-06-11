@@ -97,6 +97,7 @@ const rounds = ref<AdminRound[]>([]);
 const puzzles = ref<AdminPuzzle[]>([]);
 const originalRounds = ref<AdminRound[]>([]);
 const originalPuzzles = ref<AdminPuzzle[]>([]);
+const deletingRoundIds = ref<Set<number>>(new Set());
 const draggingRoundId = ref<number | null>(null);
 const draggingPuzzle = ref<DraggingPuzzle | null>(null);
 const dragOverPuzzle = ref<PuzzleDropTarget | null>(null);
@@ -104,6 +105,7 @@ const dragOverRound = ref<RoundDropTarget | null>(null);
 const dragOverEmptyRoundId = ref<number | null>(null);
 const roundOriginPlaceholderVisible = ref(false);
 const puzzleOriginPlaceholderVisible = ref(false);
+const creatingRoundId = ref<number | null>(null);
 let roundDropEntries: RoundDropEntry[] = [];
 let puzzleDropEntries: PuzzleDropEntry[] = [];
 
@@ -151,8 +153,16 @@ function reindexSort<T extends { sort: number }>(items: T[]) {
   }));
 }
 
+function isRoundDeleting(roundId: number) {
+  return deletingRoundIds.value.has(roundId);
+}
+
 function isRoundPuzzle(puzzle: AdminPuzzle, roundId: number = puzzle.round_id) {
   return rounds.value.find(round => round.id === roundId)?.puzzle === puzzle.id;
+}
+
+function hasNonRoundPuzzle(roundId: number) {
+  return puzzles.value.some(puzzle => puzzle.round_id === roundId && !isRoundPuzzle(puzzle, roundId));
 }
 
 function orderRoundPuzzles(items: AdminPuzzle[], round: AdminRound) {
@@ -225,12 +235,19 @@ function replaceRoundPuzzles(updates: Map<number, AdminPuzzle[]>) {
 }
 
 const changedRoundSortPatches = computed<SortPatch[]>(() => {
-  if (idsEqual(roundOrder(rounds.value), roundOrder(originalRounds.value))) return [];
-  return rounds.value.map(round => ({
+  const activeRounds = rounds.value.filter(round => !isRoundDeleting(round.id));
+  const originalActiveRounds = originalRounds.value.filter(round => !deletingRoundIds.value.has(round.id));
+
+  if (idsEqual(roundOrder(activeRounds), roundOrder(originalActiveRounds))) return [];
+  return activeRounds.map((round, index) => ({
     id: round.id,
-    sort: round.sort,
+    sort: index,
   }));
 });
+
+const pendingDeletedRoundIds = computed(() => [...deletingRoundIds.value]);
+
+const hasDeleteChanges = computed(() => pendingDeletedRoundIds.value.length > 0);
 
 const changedPuzzlePatches = computed<PuzzlePositionPatch[]>(() => {
   const originalById = new Map(originalPuzzles.value.map(puzzle => [puzzle.id, puzzle]));
@@ -250,32 +267,35 @@ const changedPuzzlePatches = computed<PuzzlePositionPatch[]>(() => {
 });
 
 const hasSortChanges = computed(() => changedRoundSortPatches.value.length > 0 || changedPuzzlePatches.value.length > 0);
+const hasChanges = computed(() => hasSortChanges.value || hasDeleteChanges.value);
 
 function syncDirtyToast() {
-  if (!hasSortChanges.value) {
+  if (!hasChanges.value) {
     dirtyToast.clear();
     return;
   }
 
   dirtyToast.show({
     guardOnLeave: true,
-    apply: applySortChanges,
-    reset: resetSortChanges,
+    apply: applyChanges,
+    reset: resetChanges,
   });
 }
 
-function resetSortChanges() {
+function resetChanges() {
   rounds.value = cloneRounds(originalRounds.value);
   puzzles.value = clonePuzzles(originalPuzzles.value);
+  deletingRoundIds.value = new Set();
   dirtyToast.clear();
 }
 
-async function applySortChanges() {
+async function applyChanges() {
   if (applyLoading.value) return;
 
   const roundPatches = changedRoundSortPatches.value;
   const puzzlePatches = changedPuzzlePatches.value;
-  if (roundPatches.length === 0 && puzzlePatches.length === 0) {
+  const deletedRoundIds = [...deletingRoundIds.value];
+  if (roundPatches.length === 0 && puzzlePatches.length === 0 && deletedRoundIds.length === 0) {
     dirtyToast.clear();
     return;
   }
@@ -308,11 +328,18 @@ async function applySortChanges() {
           },
         ),
       ),
+      ...deletedRoundIds.map(roundId =>
+        api.del(`/admin/rounds/${roundId}`, {
+          errorHints: {
+            [-1]: '区域不存在。',
+          },
+        }),
+      ),
     ]);
 
     dirtyToast.clear();
     toast.add({
-      title: '排序已保存',
+      title: deletedRoundIds.length > 0 ? '修改已保存' : '排序已保存',
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
@@ -459,6 +486,12 @@ function onRoundSectionDragOver(group: RoundGroup, event: DragEvent) {
 
   if (!draggingPuzzle.value) return;
 
+  if (isRoundDeleting(group.round.id)) {
+    setDragOverEmptyRound(null);
+    setDragOverPuzzle(null);
+    return;
+  }
+
   const target = getPuzzleDropTargetByPosition(event);
   setDragOverEmptyRound(target?.emptyRoundId ?? null);
   setDragOverPuzzle(target?.target ?? null);
@@ -477,7 +510,8 @@ function onGlobalDragOver(event: DragEvent) {
 
   if (draggingPuzzle.value) {
     const target = getPuzzleDropTargetByPosition(event);
-    setDragOverEmptyRound(target?.emptyRoundId ?? null);
+    const emptyRoundId = target?.emptyRoundId ?? null;
+    setDragOverEmptyRound(emptyRoundId !== null && isRoundDeleting(emptyRoundId) ? null : emptyRoundId);
     setDragOverPuzzle(target?.target ?? null);
   }
 }
@@ -646,7 +680,8 @@ function onPuzzleDragOver(puzzle: AdminPuzzle, event: DragEvent) {
 
   setDragOverEmptyRound(null);
   const target = getPuzzleDropTargetByPosition(event) ?? getPuzzleDropTargetFromPuzzle(puzzle, event);
-  setDragOverEmptyRound(target?.emptyRoundId ?? null);
+  const emptyRoundId = target?.emptyRoundId ?? null;
+  setDragOverEmptyRound(emptyRoundId !== null && isRoundDeleting(emptyRoundId) ? null : emptyRoundId);
   setDragOverPuzzle(target?.target ?? null);
 }
 
@@ -757,6 +792,7 @@ function candidateFromPuzzleEntry(entry: PuzzleDropEntry, event: Pick<MouseEvent
 function candidateFromEmptyRound(round: AdminRound, event: Pick<MouseEvent, 'clientX' | 'clientY'>): PuzzleDropCandidate | null {
   const source = draggingPuzzle.value;
   if (!source || source.roundId === round.id) return null;
+  if (isRoundDeleting(round.id)) return null;
   if (getRoundPuzzles(round.id).filter(puzzle => puzzle.id !== source.id).length > 0) return null;
 
   const section = document.querySelector<HTMLElement>(`[data-round-section="true"][data-round-id="${round.id}"]`);
@@ -820,6 +856,131 @@ function isPuzzleOriginPlaceholderVisible(puzzle: AdminPuzzle) {
   return puzzleOriginPlaceholderVisible.value && draggingPuzzle.value?.id === puzzle.id;
 }
 
+function isRoundBeingCreated(roundId: number) {
+  return creatingRoundId.value === roundId;
+}
+
+async function addRound() {
+  if (applyLoading.value) return;
+
+  const nextSort = rounds.value.reduce((max, round) => Math.max(max, round.sort), -1) + 1;
+  const title = `区域 ${rounds.value.length + 1}`;
+  const body = {
+    game_id: gameId.value,
+    title,
+    content: '',
+    content_type: RbContentType.Markdown,
+    cover: null,
+    puzzle: null,
+    sort: nextSort,
+  };
+
+  applyLoading.value = true;
+  try {
+    type Response = { round: AdminRound };
+    const { data } = await api.post<Response>('/admin/rounds', body, {
+      errorHints: {
+        [-2]: '区域信息不合法。',
+        [-1]: '区域不存在。',
+      },
+    });
+
+    rounds.value = reindexSort([...rounds.value, data.round]);
+    puzzles.value = [...puzzles.value];
+    originalRounds.value = cloneRounds(rounds.value);
+    originalPuzzles.value = clonePuzzles(puzzles.value);
+    toast.add({
+      title: '区域已创建',
+      icon: 'material-symbols:check-rounded',
+      color: 'success',
+    });
+  } catch (error) {
+    handleError(error, '创建区域失败', true);
+  } finally {
+    applyLoading.value = false;
+  }
+}
+
+async function addPuzzle(roundId: number) {
+  if (applyLoading.value || creatingRoundId.value !== null) return;
+  if (hasChanges.value) {
+    toast.add({
+      title: '请先保存修改',
+      description: '当前页面存在未保存的更改，无法新建谜题。',
+      icon: 'material-symbols:warning-rounded',
+      color: 'error',
+    });
+    return;
+  }
+
+  const title = '新建谜题';
+  const round = rounds.value.find(item => item.id === roundId);
+  if (!round) return;
+
+  const nextSort = puzzles.value.filter(puzzle => puzzle.round_id === roundId && !isRoundPuzzle(puzzle, roundId)).reduce((max, puzzle) => Math.max(max, puzzle.sort), -1) + 1;
+
+  const body = {
+    round_id: roundId,
+    title,
+    content: '',
+    content_type: RbContentType.Markdown,
+    ptype: RbPuzzleType.Normal,
+    judge: [],
+    penalty: [],
+    max_submit: null,
+    unlock_cond: 'default',
+    ticket_enabled: true,
+    ticket_cooldown: 0,
+    sort: nextSort,
+    slug: null,
+  };
+
+  applyLoading.value = true;
+  creatingRoundId.value = roundId;
+  try {
+    type Response = { puzzle: AdminPuzzle };
+    const { data } = await api.post<Response>('/admin/puzzles', body, {
+      errorHints: {
+        [-2]: '谜题信息不合法。',
+        [-1]: '谜题不存在。',
+      },
+    });
+
+    puzzles.value = reindexMovablePuzzles([...puzzles.value, data.puzzle], roundId);
+    originalRounds.value = cloneRounds(rounds.value);
+    originalPuzzles.value = clonePuzzles(puzzles.value);
+    toast.add({
+      title: '谜题已创建',
+      icon: 'material-symbols:check-rounded',
+      color: 'success',
+    });
+    await navigateTo(`/admin/games/${gameId.value}/puzzles/${data.puzzle.id}`);
+  } catch (error) {
+    handleError(error, '创建谜题失败', true);
+  } finally {
+    creatingRoundId.value = null;
+    applyLoading.value = false;
+  }
+}
+
+async function deleteRound(roundId: number) {
+  if (applyLoading.value) return;
+  if (hasNonRoundPuzzle(roundId)) return;
+  if (isRoundDeleting(roundId)) return;
+
+  deletingRoundIds.value = new Set([...deletingRoundIds.value, roundId]);
+  syncDirtyToast();
+}
+
+function restoreRound(roundId: number) {
+  if (!isRoundDeleting(roundId)) return;
+
+  const next = new Set(deletingRoundIds.value);
+  next.delete(roundId);
+  deletingRoundIds.value = next;
+  syncDirtyToast();
+}
+
 function puzzleDropHintClass(puzzle: AdminPuzzle) {
   const source = draggingPuzzle.value;
   if (!source || source.id === puzzle.id) return '';
@@ -859,6 +1020,10 @@ function onPuzzleDrop(event: DragEvent) {
 
   const emptyRoundId = dragOverEmptyRoundId.value;
   if (emptyRoundId !== null) {
+    if (isRoundDeleting(emptyRoundId)) {
+      clearDragState();
+      return;
+    }
     onPuzzleDropToRoundEnd(emptyRoundId, event);
     return;
   }
@@ -918,6 +1083,10 @@ function onPuzzleDropToRoundEnd(roundId: number, event: DragEvent) {
   event.preventDefault();
 
   const source = draggingPuzzle.value;
+  if (isRoundDeleting(roundId)) {
+    clearDragState();
+    return;
+  }
   const isEmptyRoundDrop = dragOverEmptyRoundId.value === roundId;
   clearDragState();
   if (!source) return;
@@ -976,12 +1145,14 @@ async function fetchData() {
     puzzles.value = orderAllPuzzles(sortBySortId(puzzleResp.data.puzzles));
     originalRounds.value = cloneRounds(rounds.value);
     originalPuzzles.value = clonePuzzles(puzzles.value);
+    deletingRoundIds.value = new Set();
     dirtyToast.clear();
   } catch (error) {
     rounds.value = [];
     puzzles.value = [];
     originalRounds.value = [];
     originalPuzzles.value = [];
+    deletingRoundIds.value = new Set();
     dirtyToast.clear();
     handleError(error, '获取谜题列表失败', true);
   } finally {
@@ -1012,8 +1183,9 @@ watch(
         :key="group.round.id"
         data-round-section="true"
         :data-round-id="group.round.id"
+        :data-round-deleting="isRoundDeleting(group.round.id) ? 'true' : undefined"
         class="relative flex flex-col gap-1.5 rounded-md transition"
-        :class="roundDropHintClass(group.round)"
+        :class="[isRoundDeleting(group.round.id) ? 'opacity-50' : '', roundDropHintClass(group.round)]"
         @dragover="onRoundSectionDragOver(group, $event)"
         @dragleave="onRoundSectionDragLeave(group.round.id, $event)"
         @drop="onRoundSectionDrop(group.round.id, $event)"
@@ -1037,18 +1209,55 @@ watch(
                 class="mt-0.5 shrink-0 cursor-grab text-muted active:cursor-grabbing"
                 title="拖动调整区域顺序"
                 aria-label="拖动调整区域顺序"
+                :disabled="isRoundDeleting(group.round.id)"
                 @dragstart="onRoundDragStart(group.round.id, $event)"
                 @dragend="clearDragState"
               />
               <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
-                  <h2 class="text-lg font-semibold leading-tight">
+                  <NuxtLink :to="`/admin/games/${gameId}/rounds/${group.round.id}`" class="text-lg font-semibold leading-tight text-highlighted transition hover:text-primary">
                     {{ group.round.title }}
-                  </h2>
+                  </NuxtLink>
                   <u-badge size="sm" variant="soft" color="neutral">#{{ group.round.id }}</u-badge>
                   <u-badge v-if="group.round.slug" size="sm" variant="soft" color="primary" icon="material-symbols:tag-rounded">
                     {{ group.round.slug }}
                   </u-badge>
+                  <u-tooltip text="编辑区域">
+                    <u-button
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      icon="material-symbols:edit-outline-rounded"
+                      aria-label="编辑区域"
+                      :disabled="applyLoading || isRoundDeleting(group.round.id)"
+                      @click.stop="navigateTo(`/admin/games/${gameId}/rounds/${group.round.id}`)"
+                    />
+                  </u-tooltip>
+                  <u-tooltip text="新建谜题">
+                    <u-button
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      icon="material-symbols:add-circle-outline-rounded"
+                      aria-label="新建谜题"
+                      :disabled="applyLoading || isRoundBeingCreated(group.round.id) || isRoundDeleting(group.round.id)"
+                      @click.stop="addPuzzle(group.round.id)"
+                    />
+                  </u-tooltip>
+                  <u-tooltip :text="isRoundDeleting(group.round.id) ? '恢复区域' : '删除区域'">
+                    <u-button
+                      :color="isRoundDeleting(group.round.id) ? 'neutral' : 'error'"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      :icon="isRoundDeleting(group.round.id) ? 'material-symbols:undo-rounded' : 'material-symbols:delete-outline-rounded'"
+                      :aria-label="isRoundDeleting(group.round.id) ? '恢复区域' : '删除区域'"
+                      :disabled="applyLoading || (!isRoundDeleting(group.round.id) && hasNonRoundPuzzle(group.round.id))"
+                      @click.stop="isRoundDeleting(group.round.id) ? restoreRound(group.round.id) : deleteRound(group.round.id)"
+                    />
+                  </u-tooltip>
                 </div>
                 <div class="mt-1 flex flex-wrap gap-2 text-xs text-muted">
                   <span>{{ group.puzzles.length }} 个谜题</span>
@@ -1076,7 +1285,14 @@ watch(
                 </div>
               </div>
               <div class="relative rounded-md" :class="[isPuzzleOriginPlaceholderVisible(puzzle) ? 'opacity-25' : '', isRoundPuzzle(puzzle, group.round.id) ? 'overflow-hidden bg-primary/5' : '']">
-                <rbph-puzzle-card-2 :puzzle="puzzle" :is-round-puzzle="isRoundPuzzle(puzzle, group.round.id)" class="cursor-pointer" @click="navigateTo(`/admin/games/${gameId}/puzzles/${puzzle.id}`)">
+                <rbph-puzzle-card-2
+                  :puzzle="puzzle"
+                  :is-round-puzzle="isRoundPuzzle(puzzle, group.round.id)"
+                  :title="isRoundPuzzle(puzzle, group.round.id) ? group.round.title : puzzle.title"
+                  :slug="isRoundPuzzle(puzzle, group.round.id) ? group.round.slug : puzzle.slug"
+                  class="cursor-pointer"
+                  @click="navigateTo(isRoundPuzzle(puzzle, group.round.id) ? `/admin/games/${gameId}/rounds/${group.round.id}` : `/admin/games/${gameId}/puzzles/${puzzle.id}`)"
+                >
                   <template v-if="!isRoundPuzzle(puzzle, group.round.id)" #actions>
                     <u-button
                       draggable="true"
@@ -1102,13 +1318,17 @@ watch(
           <div v-else class="flex min-h-28 items-center justify-center rounded-md border border-dashed transition-all duration-100" :class="emptyRoundDropClass(group.round.id)">
             <div class="flex flex-col items-center gap-2 text-center text-sm">
               <div class="flex size-9 items-center justify-center rounded-full border border-dashed border-current/60 bg-default/60 transition-transform" :class="isEmptyRoundDropActive(group.round.id) ? 'scale-110 border-solid' : ''">
-                <u-icon :name="isEmptyRoundDropActive(group.round.id) ? 'material-symbols:add-rounded' : 'material-symbols:extension-off-outline-rounded'" class="size-5" />
+                <u-icon :name="isRoundDeleting(group.round.id) ? 'material-symbols:delete-outline-rounded' : isEmptyRoundDropActive(group.round.id) ? 'material-symbols:add-rounded' : 'material-symbols:extension-off-outline-rounded'" class="size-5" />
               </div>
-              <span>暂无谜题</span>
+              <span>{{ isRoundDeleting(group.round.id) ? '即将删除' : '暂无谜题' }}</span>
             </div>
           </div>
         </div>
       </section>
+
+      <div class="sticky bottom-4 z-20 flex justify-start">
+        <u-button icon="material-symbols:add-rounded" label="新建区域" size="lg" class="shadow-lg shadow-primary/20" :disabled="applyLoading" @click="addRound" />
+      </div>
     </template>
   </div>
 </template>

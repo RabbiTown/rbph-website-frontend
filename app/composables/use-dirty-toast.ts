@@ -13,6 +13,7 @@ export function useDirtyToast() {
   const toast = useToast();
   let current: Toast | undefined;
   let currentOptions: DirtyToastOptions | undefined;
+  let syncingDirtyToast = false;
 
   function isGuardEnabled() {
     return Boolean(current && currentOptions?.guardOnLeave);
@@ -48,6 +49,34 @@ export function useDirtyToast() {
 
   onBeforeRouteLeave(() => confirmLeave());
   onBeforeRouteUpdate(() => confirmLeave());
+
+  watch(
+    () => toast.toasts.value.map(item => item.id),
+    () => {
+      if (syncingDirtyToast || !current || !currentOptions) return;
+
+      const index = toast.toasts.value.findIndex(item => item.id === current?.id);
+      if (index === -1) {
+        show(currentOptions, true);
+        return;
+      }
+
+      const lastIndex = toast.toasts.value.length - 1;
+      if (index === lastIndex) return;
+
+      syncingDirtyToast = true;
+      const [dirtyToast] = toast.toasts.value.splice(index, 1);
+      if (dirtyToast) {
+        toast.toasts.value = [...toast.toasts.value, dirtyToast];
+        current = dirtyToast;
+      }
+
+      nextTick(() => {
+        syncingDirtyToast = false;
+      });
+    },
+    { flush: 'post' },
+  );
 
   function show(options: DirtyToastOptions, forceAdd = false) {
     currentOptions = options;

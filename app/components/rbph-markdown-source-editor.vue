@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const model = defineModel<string>({ default: '' });
-const source = ref(model.value);
+const source = ref(normalizeCjkMarkdown(model.value));
 const isComposing = ref(false);
 const textarea = ref<HTMLTextAreaElement>();
 
@@ -48,15 +48,17 @@ function highlightLine(line: string) {
 const highlightedLines = computed(() => lines.value.map(highlightLine));
 
 watch(model, value => {
-  if (value !== source.value) {
-    source.value = value;
+  const normalized = normalizeCjkMarkdown(value);
+  if (normalized !== source.value) {
+    source.value = normalized;
   }
 });
 
 function updateSource(event: Event) {
   const value = (event.target as HTMLTextAreaElement).value;
-  source.value = value;
-  model.value = value;
+  const normalized = normalizeCjkMarkdown(value);
+  source.value = normalized;
+  model.value = normalized;
 }
 
 function focus() {
@@ -77,18 +79,10 @@ defineExpose({ focus });
 
 <template>
   <div class="relative text-sm font-mono leading-[1.625]">
-    <div
-      v-if="props.framed"
-      class="pointer-events-none grid min-h-[inherit] grid-cols-[3.5rem_minmax(0,1fr)] text-highlighted"
-      aria-hidden="true"
-    >
+    <div v-if="props.framed" class="pointer-events-none grid min-h-[inherit] grid-cols-[3.5rem_minmax(0,1fr)] text-highlighted" aria-hidden="true">
       <div class="flex h-full flex-col border-e border-default text-right text-muted">
         <div class="h-1.5 shrink-0" />
-        <div
-          v-for="(line, index) in lines"
-          :key="index"
-          class="relative select-none pe-3"
-        >
+        <div v-for="(line, index) in lines" :key="index" class="relative select-none pe-3">
           <span class="absolute -end-px top-[0.3125em] h-4 w-0.5 rounded-full" :class="lineMarkerClass(line)" />
           {{ index + 1 }}
         </div>
@@ -99,12 +93,7 @@ defineExpose({ focus });
       <div class="flex h-full min-w-0 flex-col">
         <div class="h-1.5 shrink-0" />
         <!-- eslint-disable-next-line vue/no-v-html -->
-        <div
-          v-for="(line, index) in lines"
-          :key="index"
-          class="min-w-0 whitespace-pre-wrap break-words px-3.5 text-highlighted sm:px-4.5"
-          v-html="highlightedLines[index]"
-        />
+        <div v-for="(line, index) in lines" :key="index" class="min-w-0 whitespace-pre-wrap break-words px-3.5 text-highlighted sm:px-4.5" v-html="highlightedLines[index]" />
         <div class="h-1.5 shrink-0" />
         <div class="flex-1" />
       </div>
@@ -128,10 +117,7 @@ defineExpose({ focus });
       :placeholder="placeholder"
       :disabled="disabled"
       class="absolute inset-0 block h-full w-full resize-none overflow-hidden whitespace-pre-wrap break-words bg-transparent caret-primary outline-none selection:bg-primary/25 disabled:cursor-not-allowed disabled:opacity-75"
-      :class="[
-        props.framed ? 'py-1.5 ps-[4.375rem] pe-3.5 sm:ps-[4.625rem] sm:pe-4.5' : 'py-0 ps-[4.5rem] pe-4 sm:ps-[4.75rem] sm:pe-5',
-        isComposing ? 'text-highlighted' : 'text-transparent',
-      ]"
+      :class="[props.framed ? 'py-1.5 ps-[4.375rem] pe-3.5 sm:ps-[4.625rem] sm:pe-4.5' : 'py-0 ps-[4.5rem] pe-4 sm:ps-[4.75rem] sm:pe-5', isComposing ? 'text-highlighted' : 'text-transparent']"
       spellcheck="false"
       @keydown.up="onArrowUp"
       @input="updateSource"

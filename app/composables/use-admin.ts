@@ -63,7 +63,18 @@ export interface AdminPuzzleContext {
   refresh: () => Promise<void>;
 }
 
+export interface AdminRoundContext {
+  round: Ref<AdminRoundData | undefined>;
+  contentEditor: Ref<{ focus: () => void } | undefined>;
+  focusTitle: () => void;
+  headerDirty: ComputedRef<boolean>;
+  applyHeader: () => Promise<boolean>;
+  resetHeader: () => void;
+  refresh: () => Promise<void>;
+}
+
 const adminPuzzleContextKey: InjectionKey<AdminPuzzleContext> = Symbol('rbph-admin-puzzle-context');
+const adminRoundContextKey: InjectionKey<AdminRoundContext> = Symbol('rbph-admin-round-context');
 
 function useGame() {
   const game = useState<RbGameModel | undefined>('admin.game');
@@ -111,9 +122,20 @@ function providePuzzleContext(context: AdminPuzzleContext) {
   return context;
 }
 
+function provideRoundContext(context: AdminRoundContext) {
+  provide(adminRoundContextKey, context);
+  return context;
+}
+
 function usePuzzleContext(): AdminPuzzleContext {
   const context = inject(adminPuzzleContextKey);
   if (!context) throw new Error('Admin puzzle context is not provided');
+  return context;
+}
+
+function useRoundContext(): AdminRoundContext {
+  const context = inject(adminRoundContextKey);
+  if (!context) throw new Error('Admin round context is not provided');
   return context;
 }
 
@@ -121,6 +143,8 @@ export function useAdmin() {
   return {
     useGame,
     providePuzzleContext,
+    provideRoundContext,
     usePuzzleContext,
+    useRoundContext,
   };
 }

@@ -48,7 +48,19 @@ export default defineNuxtConfig({
       },
     },
     optimizeDeps: {
-      include: ['@internationalized/date', '@tiptap/extension-color', '@tiptap/extension-text-align', '@tiptap/extension-text-style', 'valibot'],
+      include: [
+        '@internationalized/date',
+        '@tiptap/core',
+        '@tiptap/extension-color',
+        '@tiptap/extension-table',
+        '@tiptap/extension-table-cell',
+        '@tiptap/extension-table-header',
+        '@tiptap/extension-table-row',
+        '@tiptap/extension-text-align',
+        '@tiptap/extension-text-style',
+        '@tiptap/extension-underline',
+        'valibot',
+      ],
     },
   },
 });
