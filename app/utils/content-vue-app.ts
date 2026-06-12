@@ -2,20 +2,13 @@ import { Node as TiptapNode, mergeAttributes } from '@tiptap/core';
 import type { Editor, JSONContent, MarkdownParseHelpers, MarkdownRendererHelpers, MarkdownToken } from '@tiptap/core';
 import type { MDCElement, MDCNode, MDCRoot } from '@nuxtjs/mdc';
 
-type RbRawHtmlMode = 'inline' | 'file';
-
-type RbRawHtmlAttrs = {
-  mode?: RbRawHtmlMode;
-  html?: string;
+type RbVueAppAttrs = {
   src?: string;
+  props?: string;
 };
 
 function attrStringValue(value: unknown) {
   return typeof value === 'string' ? value : '';
-}
-
-function normalizeRawHtmlMode(value: unknown): RbRawHtmlMode {
-  return value === 'file' ? 'file' : 'inline';
 }
 
 function escapeMdcAttr(value: string) {
@@ -26,11 +19,11 @@ function unescapeMdcAttr(value: string) {
   return value.replace(/\\(["\\])/g, '$1');
 }
 
-function encodeRawHtml(value: unknown) {
+function encodeAttr(value: unknown) {
   return encodeURIComponent(attrStringValue(value));
 }
 
-function decodeRawHtml(value: unknown) {
+function decodeAttr(value: unknown) {
   const raw = attrStringValue(value);
   if (!raw) return '';
 
@@ -41,34 +34,31 @@ function decodeRawHtml(value: unknown) {
   }
 }
 
-function parseMdcAttrs(value = ''): RbRawHtmlAttrs {
-  const attrs: RbRawHtmlAttrs = {};
+function parseMdcAttrs(value = ''): RbVueAppAttrs {
+  const attrs: RbVueAppAttrs = {};
   const re = /([A-Za-z][\w-]*)=(?:"((?:\\.|[^"\\])*)"|'((?:\\.|[^'\\])*)'|([^\s}]+))/g;
   let match: RegExpExecArray | null;
 
   while ((match = re.exec(value))) {
     const key = match[1];
     const attrValue = unescapeMdcAttr(match[2] ?? match[3] ?? match[4] ?? '');
-    if (key === 'mode') attrs.mode = normalizeRawHtmlMode(attrValue);
     if (key === 'src') attrs.src = attrValue;
-    if (key === 'data') attrs.html = decodeRawHtml(attrValue);
+    if (key === 'props') attrs.props = decodeAttr(attrValue);
   }
 
   return attrs;
 }
 
 function renderMdcAttrs(attrs: Record<string, unknown> | undefined) {
-  const mode = normalizeRawHtmlMode(attrs?.mode);
   const entries = [
-    ['mode', mode],
-    ['src', mode === 'file' ? attrStringValue(attrs?.src) : undefined],
-    ['data', mode === 'inline' ? encodeRawHtml(attrs?.html) : undefined],
+    ['src', attrStringValue(attrs?.src)],
+    ['props', encodeAttr(attrs?.props)],
   ].filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0);
 
   return entries.length ? `{${entries.map(([key, value]) => `${key}="${escapeMdcAttr(value)}"`).join(' ')}}` : '';
 }
 
-function updateAttrs(getPos: () => number | undefined, editor: Editor, attrs: RbRawHtmlAttrs) {
+function updateAttrs(getPos: () => number | undefined, editor: Editor, attrs: RbVueAppAttrs) {
   const pos = getPos();
   if (typeof pos !== 'number') return;
   const node = editor.state.doc.nodeAt(pos);
@@ -76,79 +66,83 @@ function updateAttrs(getPos: () => number | undefined, editor: Editor, attrs: Rb
   editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, ...attrs }));
 }
 
-function createButton(label: string) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'rounded px-2 py-1 text-xs transition hover:bg-elevated hover:text-highlighted';
-  button.textContent = label;
-  return button;
+function basename(path: string) {
+  return path.split('/').filter(Boolean).at(-1) ?? path;
 }
 
-function createRawHtmlNodeView(editor: Editor, getPos: () => number | undefined, attrs: RbRawHtmlAttrs) {
+function joinAssetUrl(baseUrl: string, relativePath: string) {
+  if (!relativePath) return baseUrl;
+  return `${baseUrl.replace(/\/?$/, '/')}${relativePath.split('/').map(encodeURIComponent).join('/')}`;
+}
+
+export function resolveVueAppManifestUrl(data: RbAssetDragData | undefined) {
+  if (!data?.url) return undefined;
+
+  const cleanUrl = data.url.split(/[?#]/)[0] ?? data.url;
+  if (basename(cleanUrl) === 'rbph-vue-app.json') return data.url;
+  if (data.kind === 'file') return undefined;
+
+  const files = data.files ?? [];
+  const manifest = files.find(file => file.relativePath === 'rbph-vue-app.json') ?? files.find(file => basename(file.relativePath) === 'rbph-vue-app.json');
+  if (manifest) return joinAssetUrl(data.url, manifest.relativePath);
+
+  return undefined;
+}
+
+function createVueAppNodeView(editor: Editor, getPos: () => number | undefined, attrs: RbVueAppAttrs) {
   const dom = document.createElement('section');
   dom.className = 'not-prose my-4 overflow-hidden rounded-md border border-default bg-elevated/40';
-  dom.dataset.rbRawHtml = '';
+  dom.dataset.rbVueApp = '';
   dom.dataset.nodeViewWrapper = '';
 
   const header = document.createElement('div');
   header.className = 'flex items-center justify-between gap-2 border-b border-default px-3 py-2';
 
   const title = document.createElement('div');
-  title.className = 'flex items-center gap-2 text-sm font-medium text-highlighted';
-  title.textContent = 'Raw HTML';
+  title.className = 'text-sm font-medium text-highlighted';
+  title.textContent = 'Vue SFC';
 
-  const modeGroup = document.createElement('div');
-  modeGroup.className = 'flex shrink-0 items-center gap-1 rounded-md p-0.5';
-  const inlineButton = createButton('源码');
-  const fileButton = createButton('URL');
-  modeGroup.append(inlineButton, fileButton);
-  header.append(title, modeGroup);
+  header.append(title);
 
   const body = document.createElement('div');
-  body.className = 'p-3';
-
-  const textarea = document.createElement('textarea');
-  textarea.className = 'block min-h-48 w-full resize-y rounded-md bg-default px-3 py-2 font-mono text-sm leading-6 text-highlighted outline-none ring ring-default transition focus:ring-primary disabled:cursor-not-allowed disabled:opacity-75';
-  textarea.placeholder = '<div>...</div>';
-  textarea.spellcheck = false;
-  textarea.draggable = false;
-
-  const filePanel = document.createElement('div');
-  filePanel.className = 'space-y-2';
+  body.className = 'space-y-3 p-3';
 
   const srcInputFrame = document.createElement('div');
   srcInputFrame.className = 'relative';
 
   const srcInput = document.createElement('input');
   srcInput.className = 'block w-full rounded-md bg-default px-3 py-2 font-mono text-sm text-highlighted outline-none ring ring-default transition focus:ring-primary disabled:cursor-not-allowed disabled:opacity-75';
-  srcInput.placeholder = '/assets/.../index.html';
+  srcInput.placeholder = '拖入资产组，或填写 rbph-vue-app.json 的 URL';
   srcInput.draggable = false;
 
   const srcInputOverlay = document.createElement('div');
   srcInputOverlay.className =
     'pointer-events-none absolute inset-0 flex items-center justify-center rounded-md border border-dashed border-primary bg-primary/5 px-3 text-center text-xs font-medium text-primary opacity-0 transition duration-150 ease-out';
-  srcInputOverlay.textContent = '拖入 HTML 资产';
+  srcInputOverlay.textContent = '拖入 Vue SFC 资产组';
+
+  const propsInput = document.createElement('textarea');
+  propsInput.className = 'block min-h-28 w-full resize-y rounded-md bg-default px-3 py-2 font-mono text-sm leading-6 text-highlighted outline-none ring ring-default transition focus:ring-primary disabled:cursor-not-allowed disabled:opacity-75';
+  propsInput.placeholder = 'rbph.props (JSON)';
+  propsInput.spellcheck = false;
+  propsInput.draggable = false;
 
   srcInputFrame.append(srcInput, srcInputOverlay);
-  filePanel.append(srcInputFrame);
-  let renderedMode: RbRawHtmlMode | undefined;
+  body.append(srcInputFrame, propsInput);
   let globalAssetDragActive = false;
 
   function stopControlDrag(event: DragEvent) {
     event.stopPropagation();
   }
 
-  function setMode(mode: RbRawHtmlMode) {
-    updateAttrs(getPos, editor, { mode });
-  }
-
   function useAsset(data: RbAssetDragData | undefined) {
-    if (!data?.url) return;
-    updateAttrs(getPos, editor, { mode: 'file', src: data.url });
+    const manifestUrl = resolveVueAppManifestUrl(data);
+    if (!manifestUrl) return false;
+    updateAttrs(getPos, editor, { src: manifestUrl });
+    return true;
   }
 
   function setAssetOverlayState(active: boolean, canDrop = false) {
-    srcInputOverlay.textContent = canDrop ? '释放以使用该 HTML 资产' : '拖入 HTML 资产';
+    srcInputOverlay.textContent = canDrop ? '释放以使用该 Vue SFC 资产组' : '拖入 Vue SFC 资产组';
     srcInputOverlay.classList.toggle('opacity-0', !active);
     srcInputOverlay.classList.toggle('opacity-100', active);
     srcInputOverlay.classList.toggle('bg-primary/5', !canDrop);
@@ -181,40 +175,20 @@ function createRawHtmlNodeView(editor: Editor, getPos: () => number | undefined,
     setAssetOverlayState(false);
   }
 
-  function render(nextAttrs: RbRawHtmlAttrs) {
-    const mode = normalizeRawHtmlMode(nextAttrs.mode);
-
-    inlineButton.className = `${createButton('').className} ${mode === 'inline' ? 'bg-primary text-inverted hover:bg-primary hover:text-inverted' : ''}`;
-    fileButton.className = `${createButton('').className} ${mode === 'file' ? 'bg-primary text-inverted hover:bg-primary hover:text-inverted' : ''}`;
-
-    if (textarea.value !== attrStringValue(nextAttrs.html)) textarea.value = attrStringValue(nextAttrs.html);
+  function render(nextAttrs: RbVueAppAttrs) {
     if (srcInput.value !== attrStringValue(nextAttrs.src)) srcInput.value = attrStringValue(nextAttrs.src);
-
-    if (renderedMode !== mode) {
-      body.replaceChildren(mode === 'file' ? filePanel : textarea);
-      renderedMode = mode;
-    }
+    if (propsInput.value !== attrStringValue(nextAttrs.props)) propsInput.value = attrStringValue(nextAttrs.props);
   }
 
-  inlineButton.addEventListener('click', event => {
-    event.preventDefault();
-    setMode('inline');
-  });
-
-  fileButton.addEventListener('click', event => {
-    event.preventDefault();
-    setMode('file');
-  });
-
-  textarea.addEventListener('input', () => {
-    updateAttrs(getPos, editor, { html: textarea.value });
-  });
-  textarea.addEventListener('dragstart', stopControlDrag);
-
   srcInput.addEventListener('input', () => {
-    updateAttrs(getPos, editor, { src: srcInput.value, mode: 'file' });
+    updateAttrs(getPos, editor, { src: srcInput.value });
   });
   srcInput.addEventListener('dragstart', stopControlDrag);
+
+  propsInput.addEventListener('input', () => {
+    updateAttrs(getPos, editor, { props: propsInput.value });
+  });
+  propsInput.addEventListener('dragstart', stopControlDrag);
 
   dom.addEventListener('dragenter', event => {
     if (!hasRbAssetDragData(event)) return;
@@ -279,7 +253,7 @@ function createRawHtmlNodeView(editor: Editor, getPos: () => number | undefined,
 
   return {
     dom,
-    update(node: { attrs: RbRawHtmlAttrs }) {
+    update(node: { attrs: RbVueAppAttrs }) {
       render(node.attrs);
       return true;
     },
@@ -299,8 +273,8 @@ function createRawHtmlNodeView(editor: Editor, getPos: () => number | undefined,
   };
 }
 
-export const RbphRawHtmlBlock = TiptapNode.create({
-  name: 'rbRawHtml',
+export const RbphVueAppBlock = TiptapNode.create({
+  name: 'rbVueApp',
 
   group: 'block',
 
@@ -312,40 +286,39 @@ export const RbphRawHtmlBlock = TiptapNode.create({
 
   addAttributes() {
     return {
-      mode: { default: 'inline' },
-      html: { default: '' },
       src: { default: '' },
+      props: { default: '' },
     };
   },
 
   parseHTML() {
-    return [{ tag: 'section[data-rb-raw-html]' }];
+    return [{ tag: 'section[data-rb-vue-app]' }];
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['section', mergeAttributes({ 'data-rb-raw-html': '' }, HTMLAttributes)];
+    return ['section', mergeAttributes({ 'data-rb-vue-app': '' }, HTMLAttributes)];
   },
 
   addNodeView() {
-    return ({ editor, getPos, node }) => createRawHtmlNodeView(editor, getPos, node.attrs);
+    return ({ editor, getPos, node }) => createVueAppNodeView(editor, getPos, node.attrs);
   },
 
   parseMarkdown(token: MarkdownToken, helpers: MarkdownParseHelpers) {
-    return helpers.createNode('rbRawHtml', token.attributes);
+    return helpers.createNode('rbVueApp', token.attributes);
   },
 
   renderMarkdown(node: JSONContent, _helpers: MarkdownRendererHelpers) {
-    return `::rb-raw-html${renderMdcAttrs(node.attrs)}\n::`;
+    return `::rb-vue-app${renderMdcAttrs(node.attrs)}\n::`;
   },
 
   markdownTokenizer: {
-    name: 'rbRawHtml',
+    name: 'rbVueApp',
     level: 'block',
     start(src: string) {
-      return src.match(/^::rb-raw-html/m)?.index ?? -1;
+      return src.match(/^::rb-vue-app/m)?.index ?? -1;
     },
     tokenize(src: string) {
-      const openingMatch = src.match(/^::rb-raw-html(?:\{([^}]*)\})?\s*\n/);
+      const openingMatch = src.match(/^::rb-vue-app(?:\{([^}]*)\})?\s*\n/);
       if (!openingMatch) return undefined;
 
       const [openingTag, attrSource = ''] = openingMatch;
@@ -354,7 +327,7 @@ export const RbphRawHtmlBlock = TiptapNode.create({
       if (!closingMatch || closingMatch.index === undefined) return undefined;
 
       return {
-        type: 'rbRawHtml',
+        type: 'rbVueApp',
         raw: src.slice(0, openingTag.length + closingMatch.index + closingMatch[0].length),
         attributes: parseMdcAttrs(attrSource),
       };
@@ -362,41 +335,50 @@ export const RbphRawHtmlBlock = TiptapNode.create({
   },
 });
 
-export function createRbRawHtmlBlock(editor: Editor) {
+export function createRbVueAppBlock(editor: Editor, attrs: RbVueAppAttrs = {}) {
   return editor
     .chain()
     .focus()
     .insertContent({
-      type: 'rbRawHtml',
+      type: 'rbVueApp',
       attrs: {
-        mode: 'inline',
-        html: '<div></div>',
-        src: '',
+        src: attrs.src ?? '',
+        props: attrs.props ?? '',
       },
     });
 }
 
-export function transformRawHtmlBlocks<T extends MDCNode | MDCRoot>(node: T): T {
+export function rbVueAppContentFromAsset(data: RbAssetDragData | undefined) {
+  const src = resolveVueAppManifestUrl(data);
+  if (!src) return undefined;
+  return {
+    type: 'rbVueApp',
+    attrs: {
+      src,
+      props: '',
+    },
+  };
+}
+
+export function transformVueAppBlocks<T extends MDCNode | MDCRoot>(node: T): T {
   if (node.type === 'root') {
     return {
       ...node,
-      children: node.children.map(transformRawHtmlBlocks),
+      children: node.children.map(transformVueAppBlocks),
     };
   }
 
   if (node.type !== 'element') return node;
 
-  const children = node.children.map(transformRawHtmlBlocks);
+  const children = node.children.map(transformVueAppBlocks);
 
-  if (node.tag === 'rb-raw-html') {
-    const mode = normalizeRawHtmlMode(node.props?.mode);
+  if (node.tag === 'rb-vue-app') {
     return {
       ...node,
-      tag: 'rbph-raw-html-renderer',
+      tag: 'rbph-vue-app-renderer',
       props: {
-        mode,
-        src: mode === 'file' ? attrStringValue(node.props?.src) : '',
-        html: mode === 'inline' ? decodeRawHtml(node.props?.data) : '',
+        src: attrStringValue(node.props?.src),
+        props: decodeAttr(node.props?.props),
       },
       children: [],
     } as MDCElement as T;

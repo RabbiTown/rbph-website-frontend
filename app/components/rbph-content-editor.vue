@@ -49,19 +49,13 @@ const previewContent = computed<RbContent>(() => ({
   content: model.value,
   content_type: RbContentType.Markdown,
 }));
-const editorExtensions = [RbphAlignBlock, RbphImageBlock, RbphRawHtmlBlock, RbphTable, RbphTableRow, RbphTableHeader, RbphTableCell, RbphTextStyle, RbphUnderline, Color, TextAlign.configure({ types: ['heading', 'paragraph', 'align'] })];
+const editorExtensions = [RbphAlignBlock, RbphImageBlock, RbphRawHtmlBlock, RbphVueAppBlock, RbphTable, RbphTableRow, RbphTableHeader, RbphTableCell, RbphTextStyle, RbphUnderline, Color, TextAlign.configure({ types: ['heading', 'paragraph', 'align'] })];
 const editorProps = {
   handleKeyDown: onEditorKeydown,
   handleDOMEvents: {
     mousedown: onEditorTailBlankMouseDown,
     drop: onEditorDrop,
     dragover: onEditorDragOver,
-  },
-  attributes: {
-    autocomplete: 'on',
-    autocorrect: 'on',
-    autocapitalize: 'sentences',
-    spellcheck: 'true',
   },
 };
 const blockTypeItems = [
@@ -134,6 +128,11 @@ const editorHandlers = {
     canExecute: () => true,
     execute: (editor: Editor) => createRbRawHtmlBlock(editor),
     isActive: (editor: Editor) => editor.isActive('rbRawHtml'),
+  },
+  rbVueApp: {
+    canExecute: () => true,
+    execute: (editor: Editor) => createRbVueAppBlock(editor),
+    isActive: (editor: Editor) => editor.isActive('rbVueApp'),
   },
 };
 
@@ -300,6 +299,7 @@ const suggestionItems = [
   { type: 'separator' },
   { type: 'label', label: '高级' },
   { kind: 'rbRawHtml', label: 'HTML', aliases: ['html', 'raw', 'script', 'style', 'iframe'], icon: 'material-symbols:html-rounded' },
+  { kind: 'rbVueApp', label: 'Vue SFC', aliases: ['vue', 'sfc', 'component', 'app'], icon: 'material-symbols:deployed-code-outline-rounded' },
 ] satisfies EditorSuggestionMenuItem[];
 
 function setMode(value: typeof mode.value) {
@@ -416,6 +416,12 @@ function onEditorDrop(view: { dom: HTMLElement }, event: DragEvent) {
   }
 
   const dropPos = editor.view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos ?? editor.state.selection.from;
+  const vueAppContent = rbVueAppContentFromAsset(data);
+  if (vueAppContent) {
+    editor.chain().focus().insertContentAt(dropPos, vueAppContent).run();
+    return true;
+  }
+
   editor.chain().focus().insertContentAt(dropPos, data.url).run();
   return true;
 }
@@ -640,5 +646,13 @@ defineExpose({ focus });
 
 .rbph-content-editor :deep(.ProseMirror table p) {
   margin: 0;
+}
+
+.rbph-content-editor :deep(.ProseMirror-selectednode[data-rb-raw-html]),
+.rbph-content-editor :deep(.ProseMirror-selectednode[data-rb-vue-app]) {
+  border-color: var(--ui-primary);
+  background-color: transparent;
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ui-primary) 22%, transparent);
 }
 </style>

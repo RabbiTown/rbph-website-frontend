@@ -205,6 +205,14 @@ function onAssetDragStart(event: DragEvent, item: AdminAssetGroupItem) {
     mimeType: assetMimeType(item),
     originalName: assetOriginalName(item),
     assetId: isSingleAsset(item) ? primaryFile(item)?.id : undefined,
+    groupId: item.group.id,
+    objectKey: item.group.object_key,
+    kind: isSingleAsset(item) ? 'file' : 'group',
+    files: item.files.map(file => ({
+      relativePath: file.relative_path,
+      mimeType: file.mime_type,
+      size: file.size,
+    })),
   });
 }
 

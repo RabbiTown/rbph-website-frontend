@@ -22,6 +22,7 @@ function lineMarkerClass(line: string) {
   if (/^\s*([-+*]|\d+\.)\s+/.test(line)) return 'bg-warning';
   if (/^\s*`{3,}/.test(line)) return 'bg-success';
   if (/^\s*::rb-raw-html(?:\{[^}]*\})?\s*$/.test(line)) return 'bg-error';
+  if (/^\s*::rb-vue-app(?:\{[^}]*\})?\s*$/.test(line)) return 'bg-primary';
   if (/^\s*::[A-Za-z][\w-]*(?:\{[^}]*\})?\s*$/.test(line)) return 'bg-secondary';
   return 'bg-transparent';
 }
@@ -42,7 +43,8 @@ function highlightLine(line: string) {
   html = html.replace(/(\*|_)([^*_]+?)(\1)/g, '<span class="text-primary">$1</span><span class="text-highlighted">$2</span><span class="text-primary">$3</span>');
   html = html.replace(/(!?\[[^\]]*\]\([^)]+\))/g, '<span class="text-secondary">$1</span>');
   html = html.replace(/(::rb-raw-html(?:\{[^}]*\})?)/g, '<span class="text-error">$1</span>');
-  html = html.replace(/(::(?!rb-raw-html\b)[A-Za-z][\w-]*(?:\{[^}]*\})?)/g, '<span class="text-info">$1</span>');
+  html = html.replace(/(::rb-vue-app(?:\{[^}]*\})?)/g, '<span class="text-primary">$1</span>');
+  html = html.replace(/(::(?!rb-raw-html\b|rb-vue-app\b)[A-Za-z][\w-]*(?:\{[^}]*\})?)/g, '<span class="text-info">$1</span>');
 
   return html || '&nbsp;';
 }

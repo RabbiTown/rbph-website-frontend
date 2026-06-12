@@ -3,9 +3,21 @@ export interface RbAssetDragData {
   mimeType?: string;
   originalName?: string;
   assetId?: number;
+  groupId?: number;
+  objectKey?: string;
+  kind?: 'file' | 'group';
+  files?: {
+    relativePath: string;
+    mimeType?: string;
+    size?: number;
+  }[];
 }
 
 const assetDragMime = 'application/x-rbph-asset+json';
+
+export function hasRbAssetDragData(event: DragEvent) {
+  return Array.from(event.dataTransfer?.types ?? []).includes(assetDragMime);
+}
 
 export function setRbAssetDragData(event: DragEvent, data: RbAssetDragData) {
   const transfer = event.dataTransfer;
@@ -36,4 +48,3 @@ export function getRbAssetDragData(event: DragEvent): RbAssetDragData | undefine
 
   return { url };
 }
-
