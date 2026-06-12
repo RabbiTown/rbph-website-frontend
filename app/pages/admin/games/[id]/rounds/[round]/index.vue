@@ -102,7 +102,7 @@ watch(dirty, value => {
     <aside class="hidden xl:block" />
 
     <u-form :state="state" class="w-full min-w-0" @submit.prevent="apply">
-      <rbph-content-editor ref="contentEditor" v-model="state.content" placeholder="请输入内容" aria-label="区域正文" :disabled="saving" @focus-title="focusTitle" />
+      <rbph-content-editor ref="contentEditor" v-model="state.content" placeholder="请输入内容" aria-label="区域正文" :disabled="saving" @focus-title="focusTitle" @save="apply" />
     </u-form>
 
     <aside class="hidden xl:block" />

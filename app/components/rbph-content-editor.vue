@@ -34,6 +34,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   focusTitle: [];
+  save: [];
 }>();
 
 const isSourceMode = computed(() => mode.value === 'source');
@@ -201,6 +202,23 @@ function syncEditorMarkdown() {
   }
 }
 
+function isSaveShortcut(event: KeyboardEvent) {
+  return (event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 's';
+}
+
+function saveFromEditorShortcut(event: KeyboardEvent) {
+  if (!isSaveShortcut(event)) return false;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  if (event.repeat || props.disabled) return true;
+
+  syncEditorMarkdown();
+  emit('save');
+  return true;
+}
+
 function captureScrollAnchor(): ScrollAnchor | undefined {
   if (!contentFrame.value || !import.meta.client) return undefined;
 
@@ -287,11 +305,11 @@ function setMode(value: typeof mode.value) {
   const scrollAnchor = captureScrollAnchor();
   const previousHeight = contentFrame.value?.offsetHeight ?? 0;
 
+  tableMenu.visible = false;
   retainedContentHeight.value = previousHeight;
   retainedContentScrollAnchor = scrollAnchor;
   syncEditorMarkdown();
   mode.value = value;
-  tableMenu.visible = false;
 
   const releaseId = ++retainedContentReleaseId;
   requestAnimationFrame(() => {
@@ -352,6 +370,10 @@ function isEditorSelectionOnFirstLine(editor: Editor) {
 }
 
 function onEditorKeydown(_view: unknown, event: KeyboardEvent) {
+  if (saveFromEditorShortcut(event)) {
+    return true;
+  }
+
   if (event.key !== 'ArrowUp' || !currentEditor.value || !isEditorSelectionOnFirstLine(currentEditor.value)) {
     return false;
   }
@@ -440,6 +462,7 @@ defineExpose({ focus });
     ref="root"
     class="rbph-content-editor relative"
     :class="{ 'rbph-content-editor-framed rounded-md border border-default bg-default shadow-xs transition focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/15': props.framed }"
+    @keydown.capture="saveFromEditorShortcut"
     @focusin="onRootFocusIn"
     @focusout="onRootFocusOut"
   >
@@ -454,6 +477,7 @@ defineExpose({ focus });
     <div ref="contentFrame" class="relative" :style="{ minHeight: retainedContentHeight ? `${retainedContentHeight}px` : undefined }">
       <u-editor
         v-if="mode === 'editor'"
+        key="editor"
         v-model="editorModel"
         v-bind="attrs"
         content-type="markdown"
@@ -556,6 +580,7 @@ defineExpose({ focus });
 
       <rbph-markdown-source-editor
         v-if="isSourceMode"
+        key="source"
         ref="sourceEditor"
         v-model="model"
         v-bind="attrs"
@@ -565,7 +590,7 @@ defineExpose({ focus });
         :class="props.framed ? 'min-h-56' : ''"
         @focus-title="emit('focusTitle')"
       />
-      <div v-else-if="isPreviewMode" ref="previewFrame" class="px-4 py-3 sm:px-5 outline-none" :class="props.framed ? 'min-h-56' : ''" :tabindex="props.framed ? 0 : undefined">
+      <div v-else-if="isPreviewMode" key="preview" ref="previewFrame" class="px-4 py-3 sm:px-5 outline-none" :class="props.framed ? 'min-h-56' : ''" :tabindex="props.framed ? 0 : undefined">
         <rbph-content :content="previewContent" @rendered="releaseRetainedContentHeight()" />
       </div>
     </div>

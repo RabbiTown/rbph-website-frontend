@@ -651,7 +651,7 @@ onBeforeUnmount(() => {
                         </div>
                       </rb-form-field>
 
-                      <rbph-content-editor v-model="hint.content" framed placeholder="提示内容" :disabled="saving || hint.deleting" />
+                      <rbph-content-editor v-model="hint.content" framed placeholder="提示内容" :disabled="saving || hint.deleting" @save="apply" />
                     </div>
                   </div>
                 </template>

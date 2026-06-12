@@ -9,6 +9,9 @@ const state = reactive({
 });
 
 const saving = ref(false);
+const assetManagerShell = ref<HTMLElement>();
+const assetManagerHeight = ref('calc(100vh - 3rem)');
+let assetManagerHeightFrame: number | null = null;
 
 const contentDirty = computed(() => Boolean(puzzle.value && state.content !== puzzle.value.content));
 const dirty = computed(() => headerDirty.value || contentDirty.value);
@@ -21,6 +24,28 @@ function reset() {
   resetHeader();
   syncFromPuzzle();
   dirtyToast.clear();
+}
+
+function updateAssetManagerHeight() {
+  if (!import.meta.client) return;
+
+  const element = assetManagerShell.value;
+  if (!element) return;
+
+  const rect = element.getBoundingClientRect();
+  const bottomGap = 24;
+  const minHeight = 320;
+  const height = Math.max(minHeight, window.innerHeight - rect.top - bottomGap);
+  assetManagerHeight.value = `${height}px`;
+}
+
+function scheduleAssetManagerHeightUpdate() {
+  if (!import.meta.client || assetManagerHeightFrame !== null) return;
+
+  assetManagerHeightFrame = window.requestAnimationFrame(() => {
+    assetManagerHeightFrame = null;
+    updateAssetManagerHeight();
+  });
 }
 
 async function apply() {
@@ -95,19 +120,42 @@ watch(dirty, value => {
     dirtyToast.clear();
   }
 });
+
+onMounted(() => {
+  nextTick(updateAssetManagerHeight);
+  window.addEventListener('resize', scheduleAssetManagerHeightUpdate);
+  document.addEventListener('scroll', scheduleAssetManagerHeightUpdate, true);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', scheduleAssetManagerHeightUpdate);
+  document.removeEventListener('scroll', scheduleAssetManagerHeightUpdate, true);
+
+  if (assetManagerHeightFrame !== null) {
+    window.cancelAnimationFrame(assetManagerHeightFrame);
+    assetManagerHeightFrame = null;
+  }
+});
+
+watch(
+  () => puzzle.value?.id,
+  () => {
+    nextTick(updateAssetManagerHeight);
+  },
+);
 </script>
 
 <template>
-  <div v-if="puzzle" class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,64rem)_minmax(18rem,22rem)]">
+  <div v-if="puzzle" class="grid min-h-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,64rem)_minmax(18rem,22rem)]">
     <aside class="hidden xl:block" />
 
-    <u-form :state="state" class="w-full min-w-0" @submit.prevent="apply">
-      <rbph-content-editor ref="contentEditor" v-model="state.content" placeholder="请输入内容" aria-label="谜题正文" :disabled="saving" @focus-title="focusTitle" />
+    <u-form :state="state" class="w-full min-w-0 min-h-0" @submit.prevent="apply">
+      <rbph-content-editor ref="contentEditor" v-model="state.content" placeholder="请输入内容" aria-label="谜题正文" :disabled="saving" @focus-title="focusTitle" @save="apply" />
     </u-form>
 
-    <aside class="hidden xl:block min-h-0">
-      <div class="sticky top-6 min-h-0 min-w-0">
-        <rbph-puzzle-asset-manager class="h-full min-w-0" />
+    <aside class="hidden min-h-0 xl:block">
+      <div ref="assetManagerShell" class="sticky top-6 flex min-h-0 min-w-0 overflow-hidden" :style="{ height: assetManagerHeight }">
+        <rbph-puzzle-asset-manager class="h-full max-h-full min-w-0" />
       </div>
     </aside>
   </div>
