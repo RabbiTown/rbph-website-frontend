@@ -298,8 +298,8 @@ const suggestionItems = [
   { kind: 'rbTable', label: '表格', aliases: ['table', 'grid'], icon: 'material-symbols:grid-on-outline' },
   { type: 'separator' },
   { type: 'label', label: '高级' },
-  { kind: 'rbRawHtml', label: 'HTML', aliases: ['html', 'raw', 'script', 'style', 'iframe'], icon: 'material-symbols:html-rounded' },
-  { kind: 'rbVueApp', label: 'Vue SFC', aliases: ['vue', 'sfc', 'component', 'app'], icon: 'material-symbols:deployed-code-outline-rounded' },
+  { kind: 'rbRawHtml', label: 'HTML', aliases: ['html', 'raw', 'script', 'style', 'iframe'], icon: 'material-symbols:web-asset' },
+  { kind: 'rbVueApp', label: 'Vue SFC', aliases: ['vue', 'sfc', 'component', 'app'], icon: 'material-symbols:deployed-code-outline' },
 ] satisfies EditorSuggestionMenuItem[];
 
 function setMode(value: typeof mode.value) {
@@ -410,8 +410,9 @@ function onEditorDrop(view: { dom: HTMLElement }, event: DragEvent) {
   if (!editor) return true;
 
   const target = event.target as HTMLElement | null;
+  const imageContent = rbImageContentFromAsset(data);
   if (target?.closest('figure[data-rb-image]')) {
-    setRbImageSrc(editor, data.url, data.originalName ?? '');
+    setRbImageSrc(editor, imageContent?.attrs.src ?? data.url, imageContent?.attrs.alt ?? data.originalName ?? '');
     return true;
   }
 
@@ -419,6 +420,11 @@ function onEditorDrop(view: { dom: HTMLElement }, event: DragEvent) {
   const vueAppContent = rbVueAppContentFromAsset(data);
   if (vueAppContent) {
     editor.chain().focus().insertContentAt(dropPos, vueAppContent).run();
+    return true;
+  }
+
+  if (imageContent) {
+    editor.chain().focus().insertContentAt(dropPos, imageContent).run();
     return true;
   }
 

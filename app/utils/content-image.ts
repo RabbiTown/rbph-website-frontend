@@ -17,6 +17,37 @@ function attrStringValue(value: unknown) {
   return typeof value === 'string' ? value : '';
 }
 
+function joinAssetUrl(baseUrl: string, relativePath: string) {
+  if (!relativePath) return baseUrl;
+  return `${baseUrl.replace(/\/?$/, '/')}${relativePath.split('/').map(encodeURIComponent).join('/')}`;
+}
+
+function isImageMimeType(value: unknown) {
+  return typeof value === 'string' && value.toLowerCase().startsWith('image/');
+}
+
+function imageAssetInfo(data: RbAssetDragData | undefined) {
+  if (!data) return undefined;
+  const files = data.files ?? [];
+
+  if (data.kind === 'file') {
+    if (!isImageMimeType(data.mimeType)) return undefined;
+    return {
+      src: data.url,
+      alt: data.originalName ?? files[0]?.relativePath ?? '',
+    };
+  }
+
+  if (data.kind !== 'group' || files.length !== 1) return undefined;
+  const file = files[0];
+  if (!file || !isImageMimeType(file.mimeType)) return undefined;
+
+  return {
+    src: joinAssetUrl(data.url, file.relativePath),
+    alt: file.relativePath,
+  };
+}
+
 function normalizeImageWidth(value: unknown) {
   const number = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(number)) return 100;
@@ -441,6 +472,22 @@ export function setRbImageSrc(editor: Editor, src: string, alt = '') {
       captionAlign: 'center',
     },
   });
+}
+
+export function rbImageContentFromAsset(data: RbAssetDragData | undefined) {
+  const image = imageAssetInfo(data);
+  if (!image) return undefined;
+
+  return {
+    type: 'rbImage',
+    attrs: {
+      src: image.src,
+      alt: image.alt,
+      width: 100,
+      align: 'center',
+      captionAlign: 'center',
+    },
+  };
 }
 
 export function transformImageBlocks<T extends MDCNode | MDCRoot>(node: T): T {

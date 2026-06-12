@@ -112,7 +112,7 @@ function createVueAppNodeView(editor: Editor, getPos: () => number | undefined, 
 
   const srcInput = document.createElement('input');
   srcInput.className = 'block w-full rounded-md bg-default px-3 py-2 font-mono text-sm text-highlighted outline-none ring ring-default transition focus:ring-primary disabled:cursor-not-allowed disabled:opacity-75';
-  srcInput.placeholder = '拖入资产组，或填写 rbph-vue-app.json 的 URL';
+  srcInput.placeholder = '/assets/.../rbph-vue-app.json';
   srcInput.draggable = false;
 
   const srcInputOverlay = document.createElement('div');
