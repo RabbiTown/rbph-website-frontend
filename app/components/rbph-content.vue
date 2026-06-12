@@ -117,6 +117,7 @@ watch(
         newAst.body = transformAlignBlocks(newAst.body);
         newAst.body = transformImageBlocks(newAst.body);
         newAst.body = transformTableBlocks(newAst.body);
+        newAst.body = transformRawHtmlBlocks(newAst.body);
         newAst.body = transformColorSpans(newAst.body);
         newAst.body = stripMarkdownHints(newAst.body);
         if (content_type === RbContentType.UnsafeMarkdown) {

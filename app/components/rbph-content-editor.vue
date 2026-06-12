@@ -49,7 +49,7 @@ const previewContent = computed<RbContent>(() => ({
   content: model.value,
   content_type: RbContentType.Markdown,
 }));
-const editorExtensions = [RbphAlignBlock, RbphImageBlock, RbphTable, RbphTableRow, RbphTableHeader, RbphTableCell, RbphTextStyle, RbphUnderline, Color, TextAlign.configure({ types: ['heading', 'paragraph', 'align'] })];
+const editorExtensions = [RbphAlignBlock, RbphImageBlock, RbphRawHtmlBlock, RbphTable, RbphTableRow, RbphTableHeader, RbphTableCell, RbphTextStyle, RbphUnderline, Color, TextAlign.configure({ types: ['heading', 'paragraph', 'align'] })];
 const editorProps = {
   handleKeyDown: onEditorKeydown,
   handleDOMEvents: {
@@ -129,6 +129,11 @@ const editorHandlers = {
     canExecute: () => true,
     execute: (editor: Editor) => insertRbTable(editor),
     isActive: (editor: Editor) => editor.isActive('table'),
+  },
+  rbRawHtml: {
+    canExecute: () => true,
+    execute: (editor: Editor) => createRbRawHtmlBlock(editor),
+    isActive: (editor: Editor) => editor.isActive('rbRawHtml'),
   },
 };
 
@@ -293,10 +298,8 @@ const suggestionItems = [
   { kind: 'rbImage', label: '图片', aliases: ['image', 'img', 'picture'], icon: 'material-symbols:image-outline-rounded' },
   { kind: 'rbTable', label: '表格', aliases: ['table', 'grid'], icon: 'material-symbols:grid-on-outline' },
   { type: 'separator' },
-  { type: 'label', label: '对齐' },
-  { kind: 'rbAlign', align: 'left', label: '左对齐', aliases: ['left', 'alignleft'], icon: 'material-symbols:format-align-left-rounded' },
-  { kind: 'rbAlign', align: 'center', label: '居中', aliases: ['center', 'aligncenter'], icon: 'material-symbols:format-align-center-rounded' },
-  { kind: 'rbAlign', align: 'right', label: '右对齐', aliases: ['right', 'alignright'], icon: 'material-symbols:format-align-right-rounded' },
+  { type: 'label', label: '高级' },
+  { kind: 'rbRawHtml', label: 'HTML', aliases: ['html', 'raw', 'script', 'style', 'iframe'], icon: 'material-symbols:html-rounded' },
 ] satisfies EditorSuggestionMenuItem[];
 
 function setMode(value: typeof mode.value) {
