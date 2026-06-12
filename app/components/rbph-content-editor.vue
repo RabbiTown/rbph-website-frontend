@@ -53,6 +53,8 @@ const editorProps = {
   handleKeyDown: onEditorKeydown,
   handleDOMEvents: {
     mousedown: onEditorTailBlankMouseDown,
+    drop: onEditorDrop,
+    dragover: onEditorDragOver,
   },
   attributes: {
     autocomplete: 'on',
@@ -369,6 +371,36 @@ function onEditorTailBlankMouseDown(view: { dom: HTMLElement }, event: MouseEven
 
   event.preventDefault();
   currentEditor.value?.chain().focus('end').run();
+  return true;
+}
+
+function onEditorDrop(view: { dom: HTMLElement }, event: DragEvent) {
+  const data = getRbAssetDragData(event);
+  if (!data) return false;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const editor = currentEditor.value;
+  if (!editor) return true;
+
+  const target = event.target as HTMLElement | null;
+  if (target?.closest('figure[data-rb-image]')) {
+    setRbImageSrc(editor, data.url, data.originalName ?? '');
+    return true;
+  }
+
+  const dropPos = editor.view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos ?? editor.state.selection.from;
+  editor.chain().focus().insertContentAt(dropPos, data.url).run();
+  return true;
+}
+
+function onEditorDragOver(_view: { dom: HTMLElement }, event: DragEvent) {
+  const data = getRbAssetDragData(event);
+  if (!data) return false;
+
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
   return true;
 }
 

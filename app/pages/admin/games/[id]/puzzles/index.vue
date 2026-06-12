@@ -161,8 +161,8 @@ function isRoundPuzzle(puzzle: AdminPuzzle, roundId: number = puzzle.round_id) {
   return rounds.value.find(round => round.id === roundId)?.puzzle === puzzle.id;
 }
 
-function hasNonRoundPuzzle(roundId: number) {
-  return puzzles.value.some(puzzle => puzzle.round_id === roundId && !isRoundPuzzle(puzzle, roundId));
+function hasAnyPuzzle(roundId: number) {
+  return puzzles.value.some(puzzle => puzzle.round_id === roundId);
 }
 
 function orderRoundPuzzles(items: AdminPuzzle[], round: AdminRound) {
@@ -965,7 +965,7 @@ async function addPuzzle(roundId: number) {
 
 async function deleteRound(roundId: number) {
   if (applyLoading.value) return;
-  if (hasNonRoundPuzzle(roundId)) return;
+  if (hasAnyPuzzle(roundId)) return;
   if (isRoundDeleting(roundId)) return;
 
   deletingRoundIds.value = new Set([...deletingRoundIds.value, roundId]);
@@ -1254,7 +1254,7 @@ watch(
                       square
                       :icon="isRoundDeleting(group.round.id) ? 'material-symbols:undo-rounded' : 'material-symbols:delete-outline-rounded'"
                       :aria-label="isRoundDeleting(group.round.id) ? '恢复区域' : '删除区域'"
-                      :disabled="applyLoading || (!isRoundDeleting(group.round.id) && hasNonRoundPuzzle(group.round.id))"
+                      :disabled="applyLoading || (!isRoundDeleting(group.round.id) && hasAnyPuzzle(group.round.id))"
                       @click.stop="isRoundDeleting(group.round.id) ? restoreRound(group.round.id) : deleteRound(group.round.id)"
                     />
                   </u-tooltip>

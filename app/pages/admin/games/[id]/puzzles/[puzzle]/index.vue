@@ -98,13 +98,17 @@ watch(dirty, value => {
 </script>
 
 <template>
-  <div v-if="puzzle" class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,64rem)_minmax(0,1fr)]">
+  <div v-if="puzzle" class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,64rem)_minmax(18rem,22rem)]">
     <aside class="hidden xl:block" />
 
     <u-form :state="state" class="w-full min-w-0" @submit.prevent="apply">
       <rbph-content-editor ref="contentEditor" v-model="state.content" placeholder="请输入内容" aria-label="谜题正文" :disabled="saving" @focus-title="focusTitle" />
     </u-form>
 
-    <aside class="hidden xl:block" />
+    <aside class="hidden xl:block min-h-0">
+      <div class="sticky top-6 min-h-0 min-w-0">
+        <rbph-puzzle-asset-manager class="h-full min-w-0" />
+      </div>
+    </aside>
   </div>
 </template>

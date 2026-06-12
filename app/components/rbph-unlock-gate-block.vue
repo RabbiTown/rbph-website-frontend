@@ -35,7 +35,7 @@ const gateTypeItems = [
 
 const compareOpItems = [
   { label: '大于或等于', value: 'ge', icon: 'tabler:math-equal-greater' },
-  { label: '大于', value: 'gt', icon: 'tabler:math-equal-greater' },
+  { label: '大于', value: 'gt', icon: 'tabler:math-greater' },
   { label: '小于或等于', value: 'le', icon: 'tabler:math-equal-lower' },
   { label: '小于', value: 'lt', icon: 'tabler:math-lower' },
   { label: '等于', value: 'eq', icon: 'tabler:equal' },

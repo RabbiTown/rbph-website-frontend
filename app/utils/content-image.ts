@@ -174,6 +174,10 @@ function createImageNodeView(editor: Editor, getPos: () => number | undefined, a
     return types.includes('Files');
   }
 
+  function dragHasAssetData(event: DragEvent) {
+    return Boolean(getRbAssetDragData(event));
+  }
+
   function render(nextAttrs: RbImageAttrs) {
     const src = attrStringValue(nextAttrs.src);
     const align = normalizeImageAlign(nextAttrs.align);
@@ -223,23 +227,38 @@ function createImageNodeView(editor: Editor, getPos: () => number | undefined, a
     });
   }
 
+  function useAsset(data: RbAssetDragData | undefined) {
+    if (!data?.url) return;
+    const currentPos = getPos();
+    const currentNode = typeof currentPos === 'number' ? editor.state.doc.nodeAt(currentPos) : undefined;
+    updateAttrs(getPos, editor, {
+      src: data.url,
+      alt: attrStringValue(currentNode?.attrs.alt) || data.originalName || '',
+    });
+  }
+
   dom.addEventListener('dragover', event => {
-    if (!dragHasImageFile(event)) return;
+    if (!dragHasImageFile(event) && !dragHasAssetData(event)) return;
     event.preventDefault();
     showImageDropTarget();
   });
 
   dom.addEventListener('dragleave', event => {
-    if (!dragHasImageFile(event)) return;
+    if (!dragHasImageFile(event) && !dragHasAssetData(event)) return;
     if (!dom.contains(event.relatedTarget as globalThis.Node | null)) {
       hideImageDropTarget();
     }
   });
 
   dom.addEventListener('drop', event => {
-    if (!dragHasImageFile(event)) return;
+    const asset = getRbAssetDragData(event);
+    if (!dragHasImageFile(event) && !asset) return;
     event.preventDefault();
     hideImageDropTarget();
+    if (asset) {
+      useAsset(asset);
+      return;
+    }
     void useFile(event.dataTransfer?.files.item(0) ?? undefined);
   });
 
@@ -313,7 +332,7 @@ function createImageNodeView(editor: Editor, getPos: () => number | undefined, a
       const target = event.target as globalThis.Node | null;
       if (!target || !dom.contains(target)) return false;
       if (resizeHandle.contains(target)) return true;
-      if (event instanceof DragEvent && dragHasImageFile(event)) return true;
+      if (event instanceof DragEvent && (dragHasImageFile(event) || dragHasAssetData(event))) return true;
       return false;
     },
     ignoreMutation: mutation => !caption.contains(mutation.target),
@@ -404,6 +423,24 @@ export const RbphImageBlock = TiptapNode.create({
 
 export function createRbImageBlock(editor: Editor) {
   return editor.chain().focus().insertContent({ type: 'rbImage', attrs: { src: '', alt: '', width: 100, align: 'center', captionAlign: 'center' } });
+}
+
+export function setRbImageSrc(editor: Editor, src: string, alt = '') {
+  if (editor.isActive('rbImage')) {
+    const attrs = editor.getAttributes('rbImage') as RbImageAttrs;
+    return editor.chain().focus().updateAttributes('rbImage', { src, alt: alt || attrStringValue(attrs.alt) });
+  }
+
+  return editor.chain().focus().insertContent({
+    type: 'rbImage',
+    attrs: {
+      src,
+      alt,
+      width: 100,
+      align: 'center',
+      captionAlign: 'center',
+    },
+  });
 }
 
 export function transformImageBlocks<T extends MDCNode | MDCRoot>(node: T): T {
