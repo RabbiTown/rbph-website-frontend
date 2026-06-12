@@ -12,11 +12,23 @@ const state = reactive({
 
 const saving = ref(false);
 const deleting = ref(false);
+const checkingUnlock = ref(false);
+const clearingStates = ref(false);
 const deleteConfirmOpen = ref(false);
+const unlockCheckConfirmOpen = ref(false);
+const clearStatesConfirmOpen = ref(false);
 const loadingOptions = ref(false);
 const rounds = ref<UnlockRoundOptionData[]>([]);
 const puzzles = ref<UnlockPuzzleOptionData[]>([]);
 const isRoundPuzzle = computed(() => round.value?.puzzle === puzzle.value?.id);
+const unlockCheckConfirmDescription = computed(() => {
+  if (!puzzle.value) return '';
+  return `确认对所有未解锁队伍重新判定谜题「${puzzle.value.title}」的解锁条件？符合条件的队伍将会解锁该谜题。`;
+});
+const clearStatesConfirmDescription = computed(() => {
+  if (!puzzle.value) return '';
+  return `确认重置所有队伍对谜题「${puzzle.value.title}」的状态？这会重置解锁状态、提交记录、提示状态和该题人工提示记录，此操作不可恢复。`;
+});
 const deleteConfirmDescription = computed(() => {
   if (!puzzle.value) return '';
   if (isRoundPuzzle.value && round.value) {
@@ -129,6 +141,73 @@ async function deletePuzzle() {
   }
 }
 
+async function runUnlockCheck() {
+  if (!puzzle.value || checkingUnlock.value || unlockCondDirty.value) return;
+
+  checkingUnlock.value = true;
+  try {
+    type Response = { unlocked: number };
+    const { data } = await api.post<Response>(
+      `/admin/puzzles/${puzzle.value.id}/unlock-check`,
+      {},
+      {
+        errorHints: {
+          [-1]: '谜题不存在。',
+        },
+      },
+    );
+
+    toast.add({
+      title: '解锁判定已执行',
+      description: `本次解锁 ${data.unlocked} 个队伍。`,
+      icon: 'material-symbols:lock-open-right-outline-rounded',
+      color: 'success',
+    });
+  } catch (error) {
+    handleError(error, '执行解锁判定失败');
+  } finally {
+    checkingUnlock.value = false;
+    unlockCheckConfirmOpen.value = false;
+  }
+}
+
+async function clearPuzzleStates() {
+  if (!puzzle.value || clearingStates.value) return;
+
+  clearingStates.value = true;
+  try {
+    type Response = {
+      result: {
+        team_count: number;
+        submissions: number;
+        hints: number;
+        tickets: number;
+      };
+    };
+    const { data } = await api.post<Response>(
+      `/admin/puzzles/${puzzle.value.id}/clear-states`,
+      {},
+      {
+        errorHints: {
+          [-1]: '谜题不存在。',
+        },
+      },
+    );
+
+    toast.add({
+      title: '队伍状态已重置',
+      description: `影响 ${data.result.team_count} 个队伍，删除 ${data.result.submissions} 条提交、${data.result.hints} 条提示状态、${data.result.tickets} 个人工提示。`,
+      icon: 'material-symbols:restart-alt-rounded',
+      color: 'success',
+    });
+  } catch (error) {
+    handleError(error, '重置队伍状态失败');
+  } finally {
+    clearingStates.value = false;
+    clearStatesConfirmOpen.value = false;
+  }
+}
+
 watch(
   () => puzzle.value?.id,
   () => {
@@ -194,10 +273,54 @@ watch(dirty, value => {
         </div>
 
         <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
+          <rb-form-field row label="执行解锁判定">
+            <u-button
+              color="warning"
+              variant="soft"
+              icon="material-symbols:lock-open-right-outline-rounded"
+              label="执行解锁判定"
+              :disabled="saving || deleting || checkingUnlock || clearingStates || unlockCondDirty"
+              :loading="checkingUnlock"
+              @click="unlockCheckConfirmOpen = true"
+            />
+            <div class="text-muted mt-1.5">重新判定所有未解锁队伍的解锁条件，为符合条件的队伍解锁该谜题。</div>
+          </rb-form-field>
+
+          <u-separator />
+
+          <rb-form-field row label="重置队伍状态">
+            <u-button color="error" variant="soft" icon="material-symbols:restart-alt-rounded" label="重置队伍状态" :disabled="saving || deleting || checkingUnlock || clearingStates" :loading="clearingStates" @click="clearStatesConfirmOpen = true" />
+            <div class="text-muted mt-1.5">清除所有队伍在此题上的解锁、提交、提示和人工提示记录。</div>
+          </rb-form-field>
+
+          <u-separator />
+
           <rb-form-field row label="删除谜题">
-            <u-button color="error" variant="soft" icon="material-symbols:delete-outline-rounded" label="删除谜题" :disabled="saving || deleting" @click="deleteConfirmOpen = true" />
+            <u-button color="error" variant="soft" icon="material-symbols:delete-outline-rounded" label="删除谜题" :disabled="saving || deleting || checkingUnlock || clearingStates" @click="deleteConfirmOpen = true" />
           </rb-form-field>
         </div>
+
+        <rb-confirm-modal
+          v-model:open="unlockCheckConfirmOpen"
+          title="执行解锁判定"
+          :description="unlockCheckConfirmDescription"
+          confirm-label="执行判定"
+          confirm-color="warning"
+          confirm-icon="material-symbols:lock-open-right-outline-rounded"
+          :busy="checkingUnlock"
+          @confirm="runUnlockCheck"
+        />
+
+        <rb-confirm-modal
+          v-model:open="clearStatesConfirmOpen"
+          title="重置队伍状态"
+          :description="clearStatesConfirmDescription"
+          confirm-label="重置状态"
+          confirm-color="error"
+          confirm-icon="material-symbols:restart-alt-rounded"
+          :busy="clearingStates"
+          @confirm="clearPuzzleStates"
+        />
 
         <rb-confirm-modal
           v-model:open="deleteConfirmOpen"
