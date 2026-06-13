@@ -7,6 +7,7 @@ const toast = useToast();
 
 const game = useAdmin().useGame().ref;
 const puzzle = ref<AdminPuzzleData>();
+const backend = ref<AdminPuzzleBackendData>();
 const round = ref<AdminRoundData>();
 const loading = ref(false);
 const headerSaving = ref(false);
@@ -100,6 +101,7 @@ async function fetchData() {
   try {
     type PuzzleResponse = { puzzle: AdminPuzzleData };
     type RoundResponse = { round: AdminRoundData };
+    type BackendResponse = { backend: AdminPuzzleBackendData | null };
 
     const puzzleResp = await api.get<PuzzleResponse>(`/admin/puzzles/${puzzleId.value}`, {
       errorHints: {
@@ -117,9 +119,15 @@ async function fetchData() {
         [-1]: '区域不存在。',
       },
     });
+    const backendResp = await api.get<BackendResponse>(`/admin/puzzles/${puzzleId.value}/backend`, {
+      errorHints: {
+        [-1]: '后端脚本不存在。',
+      },
+    });
 
     puzzle.value = puzzleResp.data.puzzle;
     round.value = roundResp.data.round;
+    backend.value = backendResp.data.backend ?? undefined;
     syncHeaderFromPuzzle();
 
     if (isContentPage.value && isRoundPuzzle.value && round.value) {
@@ -128,6 +136,7 @@ async function fetchData() {
     }
   } catch (error) {
     puzzle.value = undefined;
+    backend.value = undefined;
     round.value = undefined;
     syncHeaderFromPuzzle();
     handleError(error, '获取谜题信息失败', true);
@@ -138,6 +147,7 @@ async function fetchData() {
 
 useAdmin().providePuzzleContext({
   puzzle,
+  backend,
   round,
   contentEditor,
   focusTitle,
@@ -185,6 +195,11 @@ const navItems = computed<NavigationMenuItem[]>(() => [
     to: Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}/hints` : undefined,
   },
   {
+    label: '后端功能',
+    icon: 'material-symbols:code-rounded',
+    to: Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}/backend` : undefined,
+  },
+  {
     label: '额外设置',
     icon: 'material-symbols:tune-rounded',
     to: Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}/settings` : undefined,
@@ -214,7 +229,7 @@ const isEditablePuzzleHeader = computed(() => isContentPage.value && !isRoundPuz
                   :disabled="headerSaving"
                   @keydown.enter.prevent="focusContentEditor"
                   @keydown.down.prevent="focusContentEditor"
-                />
+                >
               </label>
               <div v-else class="flex min-w-0 flex-1 items-center gap-3 py-1.5">
                 <span class="shrink-0 text-3xl/10 font-bold text-muted">#</span>
@@ -239,7 +254,7 @@ const isEditablePuzzleHeader = computed(() => isContentPage.value && !isRoundPuz
                     placeholder="slug"
                     aria-label="谜题 slug"
                     :disabled="headerSaving"
-                  />
+                  >
                   <input
                     v-else-if="isContentPage && isRoundPuzzle"
                     :value="displaySlug"
@@ -248,7 +263,7 @@ const isEditablePuzzleHeader = computed(() => isContentPage.value && !isRoundPuz
                     placeholder="slug"
                     aria-label="区域 slug"
                     disabled
-                  />
+                  >
                   <span v-else>{{ displaySlug }}</span>
                 </label>
                 <u-badge variant="soft" color="neutral">#{{ puzzle.id }}</u-badge>

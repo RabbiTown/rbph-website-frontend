@@ -31,6 +31,14 @@ export interface AdminPuzzleData {
   ctime_at: string;
 }
 
+export interface AdminPuzzleBackendData {
+  puzzle_id: number;
+  enabled: boolean;
+  source: string;
+  ctime_at: string;
+  utime_at: string;
+}
+
 export interface AdminHintData {
   id: number;
   sort: number;
@@ -54,6 +62,7 @@ export interface AdminCurrencyData {
 
 export interface AdminPuzzleContext {
   puzzle: Ref<AdminPuzzleData | undefined>;
+  backend: Ref<AdminPuzzleBackendData | undefined>;
   round: Ref<AdminRoundData | undefined>;
   contentEditor: Ref<{ focus: () => void } | undefined>;
   focusTitle: () => void;

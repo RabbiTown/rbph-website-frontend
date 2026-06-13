@@ -244,19 +244,14 @@ watch(dirty, value => {
         </div>
 
         <div class="space-y-4 rounded-lg bg-elevated/60 p-4 ring ring-default">
-          <div class="space-y-2">
-            <div class="flex min-h-8 items-center justify-between gap-3">
-              <span class="text-sm font-medium text-highlighted">条件编辑器</span>
-              <u-button v-if="unlockCondDirty" size="xs" variant="soft" color="warning" icon="material-symbols:restart-alt-rounded" label="重置" @click="resetUnlockCond" />
-            </div>
-            <rbph-unlock-condition-editor v-model="state.unlock" :puzzles="puzzles" :rounds="rounds" :disabled="saving" :loading="loadingOptions" />
-          </div>
+          <rbph-unlock-condition-editor v-model="state.unlock" :puzzles="puzzles" :rounds="rounds" :disabled="saving" :loading="loadingOptions" />
 
           <u-separator />
 
           <div class="space-y-2">
             <div class="flex flex-wrap items-center gap-2 text-sm">
-              <u-badge variant="soft" icon="material-symbols:visibility-outline-rounded">预览</u-badge>
+              <u-button v-if="unlockCondDirty" size="xs" variant="soft" color="warning" icon="material-symbols:restart-alt-rounded" label="重置" @click="resetUnlockCond" />
+              <u-badge v-else variant="soft" icon="material-symbols:visibility-outline-rounded">预览</u-badge>
               <span class="text-highlighted">{{ previewText }}</span>
             </div>
             <code class="block overflow-x-auto rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted">{{ unlockCondPatch || '未生成表达式' }}</code>

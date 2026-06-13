@@ -42,6 +42,8 @@ const compareOpItems = [
   { label: '不等于', value: 'ne', icon: 'tabler:equal-not' },
 ] satisfies SelectItem[];
 
+const puzzleSearch = ref('');
+
 function selectedIcon(items: SelectItem[], value: string | number | null | undefined) {
   return items.find(item => item.value === value)?.icon;
 }
@@ -75,7 +77,21 @@ function removeChild(index: number) {
       <u-select :model-value="node.type" :items="gateTypeItems" :leading-icon="selectedIcon(gateTypeItems.flat(), node.type)" variant="subtle" class="w-44" :disabled="disabled" @update:model-value="value => setType(String(value))" />
 
       <template v-if="node.type === 'solved'">
-        <u-select v-model="node.ref" :items="puzzleItems" :leading-icon="selectedIcon(puzzleItems, node.ref)" variant="subtle" class="min-w-72 flex-1" :loading="loading" :disabled="disabled" @update:model-value="emit('change')" />
+        <u-select-menu
+          v-model="node.ref"
+          v-model:search-term="puzzleSearch"
+          :items="puzzleItems"
+          value-key="value"
+          :filter-fields="['label']"
+          :leading-icon="selectedIcon(puzzleItems, node.ref)"
+          placeholder="输入关键字过滤谜题"
+          search-input
+          variant="subtle"
+          class="min-w-72 flex-1"
+          :loading="loading"
+          :disabled="disabled"
+          @update:model-value="emit('change')"
+        />
       </template>
 
       <template v-else-if="node.type === 'all-solved' || node.type === 'any-solved'">

@@ -674,7 +674,7 @@ onBeforeUnmount(() => {
 
           <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
             <rb-form-field row label="启用状态" :dirty="ticketEnabledDirty" :reset="resetTicketEnabled">
-              <u-switch v-model="ticketEnabled" label="启用人工提示" :disabled="saving" />
+              <u-switch v-model="ticketEnabled" class="mt-1.5" label="启用人工提示" :disabled="saving" />
             </rb-form-field>
 
             <u-separator v-if="ticketEnabled" />

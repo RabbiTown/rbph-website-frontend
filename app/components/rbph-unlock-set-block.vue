@@ -15,6 +15,9 @@ defineProps<{
 
 const emit = defineEmits<{ change: [] }>();
 
+const puzzleSearch = ref('');
+const roundSearch = ref('');
+
 const setTypeItems = [
   { label: '指定谜题', value: 'puzzles', icon: 'material-symbols:extension-outline-rounded' },
   { label: '区域所有谜题', value: 'round', icon: 'material-symbols:grid-view-outline-rounded' },
@@ -36,12 +39,17 @@ function setType(type: string) {
   <div class="inline-flex min-w-0 flex-wrap items-center gap-2 rounded-md bg-elevated px-2 py-1 ring ring-default">
     <u-select :model-value="node.type" :items="setTypeItems" :leading-icon="setTypeItems.find(item => item.value === node.type)?.icon" variant="subtle" class="w-40" :disabled="disabled" @update:model-value="value => setType(String(value))" />
 
-    <u-select
+    <u-select-menu
       v-if="node.type === 'puzzles'"
       v-model="node.refs"
+      v-model:search-term="puzzleSearch"
       multiple
       :items="puzzleItems"
+      value-key="value"
+      :filter-fields="['label']"
       leading-icon="material-symbols:extension-outline-rounded"
+      placeholder="选择或输入关键字过滤谜题"
+      search-input
       variant="subtle"
       class="min-w-72"
       :loading="loading"
@@ -55,6 +63,21 @@ function setType(type: string) {
       <u-input-number v-model="node.end" :min="1" :step="1" orientation="vertical" variant="subtle" class="w-28" :disabled="disabled" @update:model-value="emit('change')" />
     </template>
 
-    <u-select v-else v-model="node.ref" :items="roundItems" leading-icon="material-symbols:grid-view-outline-rounded" variant="subtle" class="min-w-72" :loading="loading" :disabled="disabled" @update:model-value="emit('change')" />
+    <u-select-menu
+      v-else
+      v-model="node.ref"
+      v-model:search-term="roundSearch"
+      :items="roundItems"
+      value-key="value"
+      :filter-fields="['label']"
+      leading-icon="material-symbols:grid-view-outline-rounded"
+      placeholder="选择或输入关键字过滤区域"
+      search-input
+      variant="subtle"
+      class="min-w-72"
+      :loading="loading"
+      :disabled="disabled"
+      @update:model-value="emit('change')"
+    />
   </div>
 </template>

@@ -14,6 +14,11 @@ type RbphVueAppContext = {
     get<T = unknown>(path: string, query?: Record<string, unknown>): Promise<{ code: number; data: T }>;
     post<T = unknown>(path: string, body?: unknown): Promise<{ code: number; data: T }>;
   };
+  backend: {
+    call<T = unknown>(name: string, body?: unknown): Promise<{ code: number; data: T }>;
+    get<T = unknown>(name: string, query?: Record<string, unknown>): Promise<{ code: number; data: T }>;
+    post<T = unknown>(name: string, body?: unknown): Promise<{ code: number; data: T }>;
+  };
   route: {
     gameId?: number;
     puzzleId?: number;
@@ -122,9 +127,15 @@ function currentNumericRouteParam(name: string) {
   return Number.isFinite(value) ? value : undefined;
 }
 
+function backendPath(puzzleId: number | undefined, name: string) {
+  if (!puzzleId) throw new Error('Missing puzzle id');
+  return `/puzzles/${puzzleId}/backend/${encodeURIComponent(name)}`;
+}
+
 function createContext(manifestUrl: string): RbphVueAppContext {
   const baseUrl = manifestBaseUrl(manifestUrl);
   const parsedProps = parseJsonProps(props.props);
+  const puzzleId = puzzleState.value?.data.id ?? currentNumericRouteParam('puzzle');
 
   return {
     version: 1,
@@ -134,9 +145,14 @@ function createContext(manifestUrl: string): RbphVueAppContext {
       get: (path, query) => api.get(path, { query }),
       post: (path, body) => api.post(path, body),
     },
+    backend: {
+      call: (name, body) => api.post(backendPath(puzzleId, name), body),
+      get: (name, query) => api.get(backendPath(puzzleId, name), { query }),
+      post: (name, body) => api.post(backendPath(puzzleId, name), body),
+    },
     route: {
       gameId: game.value?.id ?? currentNumericRouteParam('id'),
-      puzzleId: puzzleState.value?.data.id ?? currentNumericRouteParam('puzzle'),
+      puzzleId,
     },
     state: {
       getGame: () => game.value,
