@@ -84,7 +84,7 @@ const nav = computed(() => {
     result.push([
       {
         value: 'admin-game-dashboard',
-        label: '仪表盘',
+        label: '基本设置',
         icon: 'material-symbols:space-dashboard-outline-rounded',
         to: `/admin/games/${game.ref.value.id}`,
         exact: true,

@@ -6,7 +6,7 @@ const actual = computed(() => props.currency ?? useCurrency().getAllCurrent().va
 </script>
 
 <template>
-  <div>
+  <div class="space-x-2">
     <u-badge v-for="x in actual" :key="x.id" variant="subtle" icon="material-symbols:emoji-objects-outline-rounded">
       <span>{{ x.name }}：{{ intPrecString(x.current, x.prec) }}</span>
       <span v-if="x.growth">（ {{ intPrecString(x.growth, x.prec, true, ' ') }} / min）</span>

@@ -1,16 +1,24 @@
 <script setup lang="ts">
+import type { SelectItem } from '@nuxt/ui';
+import { parseBackendExportFunctions } from '~/utils/content-backend';
 import type { UnlockGateNode, UnlockPuzzleOptionData, UnlockRoundOptionData } from '~/utils/unlock-condition';
 
 const api = useApi();
 const toast = useToast();
 const dirtyToast = useDirtyToast();
-const { puzzle, round, refresh } = useAdmin().usePuzzleContext();
+const { puzzle, backend, round } = useAdmin().usePuzzleContext();
 
 const state = reactive({
   unlock: defaultUnlockGate('default') as UnlockGateNode,
+  backend: {
+    enabled: false,
+    source: '',
+    functions: [] as string[],
+  },
 });
 
 const saving = ref(false);
+const backendLoaded = ref(false);
 const deleting = ref(false);
 const checkingUnlock = ref(false);
 const clearingStates = ref(false);
@@ -20,7 +28,16 @@ const clearStatesConfirmOpen = ref(false);
 const loadingOptions = ref(false);
 const rounds = ref<UnlockRoundOptionData[]>([]);
 const puzzles = ref<UnlockPuzzleOptionData[]>([]);
+const scriptEditorHeight = '32rem';
+const scriptEditor = ref<{ focus: () => void }>();
 const isRoundPuzzle = computed(() => round.value?.puzzle === puzzle.value?.id);
+const functionItems = computed<SelectItem[]>(() =>
+  parseBackendExportFunctions(state.backend.source).map(name => ({
+    label: name,
+    value: name,
+    icon: 'material-symbols:function-rounded',
+  })),
+);
 const unlockCheckConfirmDescription = computed(() => {
   if (!puzzle.value) return '';
   return `确认对所有未解锁队伍重新判定谜题「${puzzle.value.title}」的解锁条件？符合条件的队伍将会解锁该谜题。`;
@@ -40,7 +57,12 @@ const deleteConfirmDescription = computed(() => {
 const unlockCondPatch = computed(() => serializeUnlockGate(state.unlock));
 const originalUnlockCond = computed(() => puzzle.value?.unlock_cond ?? 'default');
 const unlockCondDirty = computed(() => Boolean(puzzle.value && unlockCondPatch.value !== originalUnlockCond.value));
-const dirty = computed(() => unlockCondDirty.value);
+const backendEnabled = computed(() => state.backend.enabled);
+const backendEnabledDirty = computed(() => Boolean(puzzle.value && backendLoaded.value && backendEnabled.value !== (backend.value?.enabled ?? false)));
+const backendSourceDirty = computed(() => Boolean(puzzle.value && backendLoaded.value && state.backend.source !== (backend.value?.source ?? '')));
+const backendFunctionsDirty = computed(() => Boolean(puzzle.value && backendLoaded.value && JSON.stringify([...state.backend.functions].sort()) !== JSON.stringify([...(backend.value?.functions ?? [])].sort())));
+const backendDirty = computed(() => backendEnabledDirty.value || backendSourceDirty.value || backendFunctionsDirty.value);
+const dirty = computed(() => unlockCondDirty.value || backendDirty.value);
 const previewText = computed(() => translateUnlockCondition(unlockCondPatch.value || ''));
 const invalid = computed(() => !unlockCondPatch.value);
 
@@ -48,12 +70,31 @@ function syncFromPuzzle() {
   state.unlock = parseUnlockGate(originalUnlockCond.value);
 }
 
+function syncFromBackend() {
+  state.backend.enabled = backend.value?.enabled ?? false;
+  state.backend.source = backend.value?.source ?? '';
+  state.backend.functions = [...(backend.value?.functions ?? [])];
+}
+
 function resetUnlockCond() {
   syncFromPuzzle();
 }
 
+function resetBackendEnabled() {
+  state.backend.enabled = backend.value?.enabled ?? false;
+}
+
+function resetBackendSource() {
+  state.backend.source = backend.value?.source ?? '';
+}
+
+function resetBackendFunctions() {
+  state.backend.functions = [...(backend.value?.functions ?? [])];
+}
+
 function reset() {
   resetUnlockCond();
+  syncFromBackend();
   dirtyToast.clear();
 }
 
@@ -73,8 +114,8 @@ async function fetchOptions() {
   }
 }
 
-async function apply() {
-  if (!puzzle.value || !dirty.value || saving.value) return;
+async function applyUnlockCond() {
+  if (!puzzle.value || !unlockCondDirty.value) return true;
   if (invalid.value) {
     toast.add({
       title: '解锁条件不完整',
@@ -82,10 +123,9 @@ async function apply() {
       icon: 'material-symbols:error-med-outline-rounded',
       color: 'error',
     });
-    return;
+    return false;
   }
 
-  saving.value = true;
   try {
     type Response = { puzzle: AdminPuzzleData };
     const response = await api.patch<Response>(
@@ -101,16 +141,76 @@ async function apply() {
 
     puzzle.value = response.data.puzzle;
     syncFromPuzzle();
-    dirtyToast.clear();
-    await refresh();
 
     toast.add({
       title: '解锁条件已保存',
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
+    return true;
   } catch (error) {
     handleError(error, '保存解锁条件失败');
+    return false;
+  }
+}
+
+async function applyBackend() {
+  if (!puzzle.value || !backendDirty.value) return true;
+
+  try {
+    type Response = { backend: AdminPuzzleBackendData | null };
+    const { data } = await api.put<Response>(
+      `/admin/puzzles/${puzzle.value.id}/backend`,
+      {
+        enabled: state.backend.enabled,
+        source: state.backend.source,
+        functions: state.backend.functions,
+      },
+      {
+        errorHints: {
+          [-2]: '后端脚本不合法。',
+          [-1]: '谜题不存在。',
+        },
+      },
+    );
+
+    backend.value = data.backend ?? undefined;
+    backendLoaded.value = true;
+    syncFromBackend();
+
+    toast.add({
+      title: '后端脚本已保存',
+      icon: 'material-symbols:check-rounded',
+      color: 'success',
+    });
+    return true;
+  } catch (error) {
+    handleError(error, '保存后端脚本失败');
+    return false;
+  }
+}
+
+async function apply() {
+  if (!puzzle.value || !dirty.value || saving.value) return;
+
+  saving.value = true;
+  try {
+    const unlockSaved = await applyUnlockCond();
+    if (!unlockSaved) return;
+    await applyBackend();
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function saveBackendSection() {
+  if (!puzzle.value || !backendLoaded.value || !backendDirty.value || saving.value) return;
+
+  saving.value = true;
+  try {
+    await applyBackend();
+    await nextTick();
+    scriptEditor.value?.focus();
   } finally {
     saving.value = false;
   }
@@ -218,10 +318,19 @@ watch(
   { immediate: true },
 );
 
+watch(
+  () => backend.value,
+  () => {
+    backendLoaded.value = true;
+    syncFromBackend();
+  },
+  { immediate: true },
+);
+
 watch(dirty, value => {
   if (value) {
     dirtyToast.show({
-      description: '解锁条件修改尚未保存。',
+      description: '额外设置修改尚未保存。',
       guardOnLeave: true,
       apply,
       reset,
@@ -242,8 +351,7 @@ watch(dirty, value => {
           <h2 class="text-xl font-semibold text-highlighted">解锁条件</h2>
           <p class="mt-1 text-sm text-muted">玩家满足下述条件时，谜题将会自动解锁。</p>
         </div>
-
-        <div class="space-y-4 rounded-lg bg-elevated/60 p-4 ring ring-default">
+        <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
           <rbph-unlock-condition-editor v-model="state.unlock" :puzzles="puzzles" :rounds="rounds" :disabled="saving" :loading="loadingOptions" />
 
           <u-separator />
@@ -262,8 +370,45 @@ watch(dirty, value => {
       <u-separator class="my-2" />
 
       <section class="space-y-4">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-semibold text-highlighted">后端脚本</h2>
+            <p class="mt-1 text-sm text-muted">自定义题目后端，可以用于特殊题目逻辑和答案判定。</p>
+          </div>
+          <u-badge variant="soft" color="neutral">JavaScript</u-badge>
+        </div>
+
+        <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
+          <rb-form-field name="backend_enabled" row label="启用状态" :dirty="backendEnabledDirty" :reset="resetBackendEnabled">
+            <u-switch v-model="state.backend.enabled" class="mt-1.5" label="启用后端" :disabled="saving" />
+          </rb-form-field>
+          <u-separator v-if="state.backend.enabled" />
+          <rb-form-field v-if="state.backend.enabled" name="backend_functions" row label="导出函数" :dirty="backendFunctionsDirty" :reset="resetBackendFunctions">
+            <div class="w-full min-w-0">
+              <u-select-menu
+                v-model="state.backend.functions"
+                :items="functionItems"
+                value-key="value"
+                multiple
+                search-input
+                placeholder="选择可对外调用的导出函数"
+                class="w-full sm:min-w-48"
+                :disabled="saving"
+              />
+            </div>
+          </rb-form-field>
+          <u-separator v-if="state.backend.enabled" />
+          <rb-form-field v-if="state.backend.enabled" name="backend_source" label="脚本源码" class="space-y-3" :dirty="backendSourceDirty" :reset="resetBackendSource">
+            <rb-code-editor ref="scriptEditor" v-model="state.backend.source" language="javascript" :indent="2" aria-label="后端脚本源码" :disabled="saving" :min-height="scriptEditorHeight" :max-height="scriptEditorHeight" :on-save="saveBackendSection" />
+          </rb-form-field>
+        </div>
+      </section>
+
+      <u-separator class="my-2" />
+
+      <section class="space-y-4">
         <div>
-          <h3 class="text-lg font-semibold text-highlighted">危险区域</h3>
+          <h2 class="text-xl font-semibold text-highlighted">危险区域</h2>
           <p class="mt-1 text-sm text-muted">这里的选项将会对谜题造成不可逆的后果。</p>
         </div>
 

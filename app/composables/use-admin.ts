@@ -35,6 +35,7 @@ export interface AdminPuzzleBackendData {
   puzzle_id: number;
   enabled: boolean;
   source: string;
+  functions: string[];
   ctime_at: string;
   utime_at: string;
 }
@@ -55,7 +56,9 @@ export interface AdminHintData {
 export interface AdminCurrencyData {
   id: number;
   name: string;
+  slug: string;
   growth: number;
+  init_amount: number;
   prec: number;
   max_amount: number;
 }

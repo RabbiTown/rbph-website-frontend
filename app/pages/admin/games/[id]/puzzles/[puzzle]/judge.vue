@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { SelectItem } from '@nuxt/ui';
+import { parseBackendExportFunctions } from '~/utils/content-backend';
 
-type JudgeRuleType = 'exact' | 'all';
+type JudgeRuleType = 'exact' | 'all' | 'custom';
 type JudgeActionKey = 'fail' | 'correct' | 'milestone' | 'start_game' | 'easter_egg' | 'finish_game' | 'pending';
 type PenaltyType = 1 | 2 | 3;
 type CooldownPenaltyType = 'none' | 'fixed' | 'linear';
@@ -13,6 +14,8 @@ interface RawJudgeRule {
   action?: unknown;
   result?: unknown;
   answer?: unknown;
+  function?: unknown;
+  backend?: unknown;
 }
 
 interface JudgeRuleState {
@@ -22,6 +25,7 @@ interface JudgeRuleState {
   action: JudgeActionKey;
   result: string;
   answer: string;
+  function: string;
 }
 
 interface SerializedJudgeRule {
@@ -30,6 +34,7 @@ interface SerializedJudgeRule {
   action: JudgeActionKey;
   result?: string;
   answer?: string;
+  function?: string;
 }
 
 interface RawPenaltyRule {
@@ -56,6 +61,7 @@ interface AdminCurrencyData {
   id: number;
   name: string;
   growth: number;
+  init_amount: number;
   prec: number;
   max_amount: number;
 }
@@ -74,7 +80,7 @@ interface RuleDropEntry {
 const api = useApi();
 const toast = useToast();
 const dirtyToast = useDirtyToast();
-const { puzzle, refresh } = useAdmin().usePuzzleContext();
+const { puzzle, backend, refresh } = useAdmin().usePuzzleContext();
 const dragAutoScroll = useDragAutoScroll({
   onScroll: () => {
     if (draggingRuleId.value) cacheRuleDropEntries();
@@ -105,6 +111,7 @@ let ruleDropEntries: RuleDropEntry[] = [];
 const ruleTypeItems = [
   { label: '精确匹配', value: 'exact', icon: 'material-symbols:match-case-rounded' },
   { label: '兜底规则', value: 'all', icon: 'material-symbols:keyboard-double-arrow-down-rounded' },
+  { label: '评测函数', value: 'custom', icon: 'material-symbols:function-rounded' },
 ] satisfies SelectItem[];
 
 const actionItems = [
@@ -137,6 +144,14 @@ const actionValueMap: Record<JudgeActionKey, RbJudgeAction> = {
   pending: RbJudgeAction.Pending,
 };
 
+const backendFunctionItems = computed<SelectItem[]>(() =>
+  parseBackendExportFunctions(backend.value?.source ?? '').map(name => ({
+    label: name,
+    value: name,
+    icon: 'material-symbols:function-rounded',
+  })),
+);
+
 const currencyItems = computed<SelectItem[]>(() => [
   { label: '不扣除', value: null, icon: 'material-symbols:money-off-outline-rounded' },
   ...currencies.value.map(currency => ({
@@ -160,7 +175,7 @@ function actionValue(value: unknown): JudgeActionKey {
 }
 
 function ruleTypeValue(value: unknown): JudgeRuleType {
-  return value === 'all' ? 'all' : 'exact';
+  return value === 'all' || value === 'custom' ? value : 'exact';
 }
 
 function makeRule(data: Partial<RawJudgeRule> = {}): JudgeRuleState {
@@ -171,16 +186,18 @@ function makeRule(data: Partial<RawJudgeRule> = {}): JudgeRuleState {
     action: actionValue(data.action),
     result: stringValue(data.result),
     answer: stringValue(data.answer),
+    function: stringValue(data.function ?? data.backend),
   };
 }
 
-function serializeRule(rule: Pick<JudgeRuleState, 'type' | 'text' | 'action' | 'result' | 'answer'>): SerializedJudgeRule {
+function serializeRule(rule: JudgeRuleState): SerializedJudgeRule {
   const result: SerializedJudgeRule = {
     type: rule.type,
     action: rule.action,
   };
 
   if (rule.type === 'exact') result.text = rule.text.trim();
+  if (rule.type === 'custom' && rule.function.trim()) result.function = rule.function.trim();
   if (rule.result.trim()) result.result = rule.result.trim();
   if (rule.answer.trim()) result.answer = rule.answer.trim();
 
@@ -194,6 +211,7 @@ function normalizeRawRule(rule: RawJudgeRule): SerializedJudgeRule {
     action: actionValue(rule.action),
     result: stringValue(rule.result),
     answer: stringValue(rule.answer),
+    function: stringValue(rule.function ?? rule.backend),
   });
 }
 
@@ -293,7 +311,7 @@ const judgeDirty = computed(() => JSON.stringify(judgePatch.value) !== JSON.stri
 const penaltyDirty = computed(() => JSON.stringify(penaltyPatch.value) !== JSON.stringify(originalPenalty.value));
 const maxSubmitDirty = computed(() => maxSubmitPatch.value !== originalMaxSubmit.value);
 const dirty = computed(() => judgeDirty.value || penaltyDirty.value || maxSubmitDirty.value);
-const invalidRules = computed(() => state.rules.filter(rule => (rule.type === 'exact' && !rule.text.trim()) || rule.action === 'pending').map(rule => rule.id));
+const invalidRules = computed(() => state.rules.filter(rule => (rule.type === 'exact' && !rule.text.trim()) || (rule.type === 'custom' && !rule.function.trim()) || rule.action === 'pending').map(rule => rule.id));
 const hasInvalidRules = computed(() => invalidRules.value.length > 0);
 const penaltyInvalid = computed(
   () =>
@@ -600,7 +618,7 @@ async function apply() {
   if (hasInvalidRules.value) {
     toast.add({
       title: '答案判定规则不完整',
-      description: '精确匹配规则需要填写匹配答案。',
+      description: '精确匹配规则需要填写匹配答案，自定义评测函数需要选择函数名。',
       icon: 'material-symbols:error-med-outline-rounded',
       color: 'error',
     });
@@ -691,14 +709,11 @@ watch(dirty, value => {
     <aside class="hidden xl:block" />
 
     <u-form :state="state" class="min-w-0 space-y-4" @submit.prevent="apply">
-      <div>
+      <section class="relative space-y-4">
         <div>
           <h2 class="text-xl font-semibold text-highlighted">评测规则</h2>
           <p class="mt-1 text-sm text-muted">规则按顺序匹配，提交的答案会自动完成规范化。</p>
         </div>
-      </div>
-
-      <section class="relative">
         <template v-if="state.rules.length">
           <div class="space-y-3 pb-3" @dragover="onRuleListDragOver" @drop="onRuleDrop">
             <div
@@ -746,11 +761,22 @@ watch(dirty, value => {
                   <u-select v-model="rule.type" :items="ruleTypeItems" :leading-icon="selectedRuleTypeIcon(rule.type)" color="neutral" variant="subtle" class="w-full" :disabled="saving" />
                   <u-form-field :error="isRuleInvalid(rule) ? true : undefined">
                     <u-input v-if="rule.type === 'exact'" v-model="rule.text" placeholder="匹配内容，例如 ORME SHOE" class="w-full font-mono" :disabled="saving" />
+                    <u-select-menu
+                      v-else-if="rule.type === 'custom'"
+                      v-model="rule.function"
+                      :items="backendFunctionItems"
+                      value-key="value"
+                      :filter-fields="['label']"
+                      search-input
+                      placeholder="选择后端脚本导出函数"
+                      class="w-full"
+                      :disabled="saving"
+                    />
                     <u-input v-else model-value="任意答案" class="w-full" disabled />
                   </u-form-field>
                 </div>
 
-                <div class="grid gap-2 lg:grid-cols-[5rem_10rem_minmax(0,1fr)_minmax(0,14rem)] lg:items-center">
+                <div v-if="rule.type !== 'custom'" class="grid gap-2 lg:grid-cols-[5rem_10rem_minmax(0,1fr)_minmax(0,14rem)] lg:items-center">
                   <div class="text-sm font-medium text-muted">匹配正确时</div>
                   <u-select v-model="rule.action" :items="actionItems" :leading-icon="selectedActionIcon(rule.action)" :color="selectedActionColor(rule.action)" variant="subtle" class="w-full" :disabled="saving" />
                   <u-input v-model="rule.result" placeholder="返回提示，留空则使用默认提示" class="w-full" :disabled="saving" />

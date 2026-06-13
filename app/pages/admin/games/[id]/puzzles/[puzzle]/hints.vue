@@ -560,11 +560,9 @@ onBeforeUnmount(() => {
     <div class="flex min-w-0 flex-col gap-4">
       <u-form :state="{ hints: state, ticketCooldown }" class="flex flex-col gap-4" @submit.prevent="apply" @dragover="onHintListDragOver" @drop="onHintDrop">
         <section class="flex flex-col gap-4">
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <h2 class="text-xl font-semibold text-highlighted">预设提示</h2>
-              <p class="mt-1 text-sm text-muted">所有玩家都能解锁并查看预设提示。</p>
-            </div>
+          <div>
+            <h2 class="text-xl font-semibold text-highlighted">预设提示</h2>
+            <p class="mt-1 text-sm text-muted">所有玩家都能解锁并查看预设提示。</p>
           </div>
 
           <u-empty v-if="!loading && state.length === 0" icon="material-symbols:lightbulb-outline-rounded" title="暂无预设提示" description="添加一个提示后，玩家可在提示页解锁。">

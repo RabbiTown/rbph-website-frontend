@@ -185,7 +185,7 @@ const navItems = computed<NavigationMenuItem[]>(() => [
     exact: true,
   },
   {
-    label: '评测规则',
+    label: '答案提交',
     icon: 'material-symbols:rule-settings-rounded',
     to: Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}/judge` : undefined,
   },
@@ -193,11 +193,6 @@ const navItems = computed<NavigationMenuItem[]>(() => [
     label: '提示编辑',
     icon: 'material-symbols:lightbulb-outline-rounded',
     to: Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}/hints` : undefined,
-  },
-  {
-    label: '后端功能',
-    icon: 'material-symbols:code-rounded',
-    to: Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}/backend` : undefined,
   },
   {
     label: '额外设置',

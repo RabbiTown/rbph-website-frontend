@@ -179,6 +179,7 @@ export interface RbRoundUserData {
 
 export interface RbTeamCurrency {
   id: number;
+  slug: string;
   name: string;
   growth: number;
   prec: number;

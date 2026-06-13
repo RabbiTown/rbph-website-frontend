@@ -27,7 +27,7 @@ const tabs = computed(() => {
 
   return [
     {
-      label: '仪表盘',
+      label: '基本设置',
       icon: 'material-symbols:space-dashboard-outline-rounded',
       to: `/admin/games/${game.value.id}`,
       exact: true,
