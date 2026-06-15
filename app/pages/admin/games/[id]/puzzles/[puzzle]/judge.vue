@@ -14,7 +14,6 @@ interface RawJudgeRule {
   result?: unknown;
   answer?: unknown;
   function?: unknown;
-  backend?: unknown;
 }
 
 interface JudgeRuleState {
@@ -185,7 +184,7 @@ function makeRule(data: Partial<RawJudgeRule> = {}): JudgeRuleState {
     action: actionValue(data.action),
     result: stringValue(data.result),
     answer: stringValue(data.answer),
-    function: stringValue(data.function ?? data.backend),
+    function: stringValue(data.function),
   };
 }
 
@@ -210,7 +209,7 @@ function normalizeRawRule(rule: RawJudgeRule): SerializedJudgeRule {
     action: actionValue(rule.action),
     result: stringValue(rule.result),
     answer: stringValue(rule.answer),
-    function: stringValue(rule.function ?? rule.backend),
+    function: stringValue(rule.function),
   });
 }
 

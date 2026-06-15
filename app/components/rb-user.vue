@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { UserProps } from '@nuxt/ui';
-import { buildCravatarUrl } from '~/utils/cravatar';
 
 const props = withDefaults(defineProps<UserProps & { email?: string }>(), {
   email: '',

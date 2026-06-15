@@ -593,7 +593,7 @@ watch(user, () => syncUserState(), { immediate: true });
               <div class="hidden team-profile-desktop-grid gap-6 lg:flex" :class="teamProfileGridMode === 'join' ? 'team-profile-desktop-grid-join' : 'team-profile-desktop-grid-create'">
                 <div class="team-profile-slot team-profile-slot-left">
                   <transition name="team-profile-morph">
-                    <u-card v-if="teamProfileMode === 'join'" key="join-form" variant="subtle" class="team-profile-morph-panel h-full w-full lg:min-h-104">
+                    <u-card v-if="teamProfileMode === 'join'" key="join-form" variant="subtle" class="team-profile-morph-panel h-full w-full lg:min-h-108">
                       <div class="mb-6 flex items-center gap-3">
                         <u-icon name="material-symbols:login-rounded" class="size-6 text-primary" />
                         <div>
@@ -637,7 +637,7 @@ watch(user, () => syncUserState(), { immediate: true });
                       </span>
                     </u-button>
 
-                    <u-card v-else key="create-form" variant="subtle" class="team-profile-morph-panel h-full w-full lg:min-h-104">
+                    <u-card v-else key="create-form" variant="subtle" class="team-profile-morph-panel h-full w-full lg:min-h-108">
                       <div class="mb-6 flex items-center gap-3">
                         <u-icon name="material-symbols:add-circle-outline-rounded" class="size-6 text-primary" />
                         <div>
