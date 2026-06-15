@@ -3,6 +3,7 @@ interface HintState {
   id: number | null;
   sort: number;
   title: string;
+  title_hidden: boolean;
   content: string;
   content_type: RbContentType;
   cooldown: number;
@@ -15,6 +16,7 @@ interface HintState {
 interface HintPatch {
   sort: number;
   title: string;
+  title_hidden: boolean;
   content: string;
   content_type: RbContentType;
   cooldown: number;
@@ -111,6 +113,7 @@ function hintToState(hint: AdminHintData): HintState {
     id: hint.id,
     sort: hint.sort,
     title: hint.title,
+    title_hidden: hint.title_hidden,
     content: hint.content,
     content_type: hint.content_type,
     cooldown: hint.cooldown,
@@ -124,6 +127,7 @@ function stateToPatch(hint: HintState): HintPatch {
   return {
     sort: Math.trunc(hint.sort || 0),
     title: hint.title.trim(),
+    title_hidden: hint.title_hidden,
     content: hint.content,
     content_type: RbContentType.Markdown,
     cooldown: Math.max(0, Math.trunc(hint.cooldown || 0)),
@@ -137,6 +141,7 @@ function stateToDirtySnapshot(hint: HintState) {
   const patch = stateToPatch(hint);
   return {
     title: patch.title,
+    title_hidden: patch.title_hidden,
     content: patch.content,
     content_type: patch.content_type,
     cooldown: patch.cooldown,
@@ -178,6 +183,7 @@ function addHint() {
     id: nextDraftId--,
     sort: nextSort,
     title: '',
+    title_hidden: false,
     content: '',
     content_type: RbContentType.Markdown,
     cooldown: 0,
@@ -625,22 +631,30 @@ onBeforeUnmount(() => {
                 <template #content>
                   <div class="border-t border-default bg-elevated/40 px-4 pt-4 pb-4">
                     <div class="flex flex-col gap-4">
-                      <rb-form-field row label="开放时间">
-                        <div class="flex flex-wrap items-center gap-2">
-                          <span class="text-sm text-muted">谜题解锁后</span>
-                          <u-input-number
-                            v-model="hint.cooldown"
-                            :min="0"
-                            :step="10"
-                            :step-snapping="false"
-                            orientation="vertical"
-                            :format-options="{ style: 'unit', unit: 'second' }"
-                            variant="subtle"
-                            class="w-40"
-                            :disabled="saving || hint.deleting"
-                          />
-                        </div>
-                      </rb-form-field>
+                      <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
+                        <rb-form-field row class="flex-1" label="开放时间">
+                          <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-sm text-muted">谜题解锁后</span>
+                            <u-input-number
+                              v-model="hint.cooldown"
+                              :min="0"
+                              :step="10"
+                              :step-snapping="false"
+                              orientation="vertical"
+                              :format-options="{ style: 'unit', unit: 'second' }"
+                              variant="subtle"
+                              class="w-40"
+                              :disabled="saving || hint.deleting"
+                            />
+                          </div>
+                        </rb-form-field>
+
+                        <rb-form-field row class="flex-1" label="未开放时">
+                          <div class="flex flex-wrap items-center gap-2">
+                            <u-switch v-model="hint.title_hidden" class="mt-1.5" label="隐藏标题" :disabled="saving || hint.deleting" />
+                          </div>
+                        </rb-form-field>
+                      </div>
 
                       <rb-form-field row label="解锁消耗">
                         <div class="flex flex-wrap items-center gap-2">

@@ -208,14 +208,16 @@ export function formatCurrencyPenaltySuffix(penalty: RbCurrencyPenalty[] | undef
 
 export interface RbHint {
   id: number;
-  title: string;
+  title?: string | null;
+  title_hidden: boolean;
   cooldown: number;
-  cost_id: number;
+  cost_id?: number | null;
   cost_amount: number;
 }
 
 export interface RbHintTeamState {
   id: number;
+  title: string;
   content: string;
   content_type: number;
 }

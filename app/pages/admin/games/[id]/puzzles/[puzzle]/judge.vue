@@ -767,7 +767,8 @@ watch(dirty, value => {
                       :filter-fields="['label']"
                       search-input
                       placeholder="选择后端脚本导出函数"
-                      class="w-full"
+                      class="w-full font-mono"
+                      icon="material-symbols:function-rounded"
                       :disabled="saving"
                     />
                     <u-input v-else model-value="任意答案" class="w-full" disabled />

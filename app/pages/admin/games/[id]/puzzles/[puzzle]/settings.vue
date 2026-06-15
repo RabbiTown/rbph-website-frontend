@@ -390,14 +390,25 @@ watch(dirty, value => {
                 multiple
                 search-input
                 placeholder="选择可对外调用的导出函数"
-                class="w-full sm:min-w-48"
+                class="w-full sm:min-w-48 font-mono"
+                icon="material-symbols:function-rounded"
                 :disabled="saving"
               />
             </div>
           </rb-form-field>
           <u-separator v-if="state.backend.enabled" />
           <rb-form-field v-if="state.backend.enabled" name="backend_source" label="脚本源码" class="space-y-3" :dirty="backendSourceDirty" :reset="resetBackendSource">
-            <rb-code-editor ref="scriptEditor" v-model="state.backend.source" language="javascript" :indent="2" aria-label="后端脚本源码" :disabled="saving" :min-height="scriptEditorHeight" :max-height="scriptEditorHeight" :on-save="saveBackendSection" />
+            <rb-code-editor
+              ref="scriptEditor"
+              v-model="state.backend.source"
+              language="javascript"
+              :indent="2"
+              aria-label="后端脚本源码"
+              :disabled="saving"
+              :min-height="scriptEditorHeight"
+              :max-height="scriptEditorHeight"
+              :on-save="saveBackendSection"
+            />
           </rb-form-field>
         </div>
       </section>
