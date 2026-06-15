@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { Toast } from '@nuxt/ui/runtime/composables/useToast.js';
-
 const props = defineProps<{
   puzzle?: number;
   success?: boolean;

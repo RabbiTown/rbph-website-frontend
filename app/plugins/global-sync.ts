@@ -1,5 +1,3 @@
-import type { Toast } from '@nuxt/ui/runtime/composables/useToast.js';
-
 export default defineNuxtPlugin(() => {
   const sync = useSync();
   const user = useUser(false);
@@ -27,7 +25,7 @@ export default defineNuxtPlugin(() => {
         sync.disconnect();
       }
     },
-    { immediate: true }
+    { immediate: true },
   );
 
   watch([user.ref, team.ref], (newVal, oldVal) => {

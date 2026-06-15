@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { AdminCurrencyData } from '~/composables/use-admin';
-
 const gameMgr = useAdmin().useGame();
 const game = gameMgr.ref;
 

@@ -1,5 +1,3 @@
-import type { Toast } from '@nuxt/ui/runtime/composables/useToast.js';
-
 interface DirtyToastOptions {
   title?: string;
   description?: string;

@@ -8,6 +8,7 @@ const team = useTeam().ref;
 
 const route = useRoute();
 const currentPuzzle = usePuzzle().ref;
+const RBUser = resolveComponent('rb-user');
 
 const navItems = computed(() => {
   if (!game.value) return [];
@@ -22,7 +23,7 @@ const navItems = computed(() => {
     exact: true,
   });
 
-  if (game.value.rounds) {
+  if (team.value && game.value.rounds) {
     result.push({
       value: 'game-puzzles',
       label: '谜题',
@@ -38,6 +39,14 @@ const navItems = computed(() => {
         };
       }),
       active: route.path.startsWith(`/games/${game.value.id}/puzzles`) || route.path.startsWith(`/games/${game.value.id}/rounds`) || route.path.startsWith('/puzzles') || route.path.startsWith('/rounds'),
+    });
+  } else if (!team.value) {
+    result.push({
+      value: 'game-profile',
+      label: '参与比赛',
+      icon: 'material-symbols:how-to-reg-outline-rounded',
+      to: `/games/${game.value.id}/profile`,
+      active: route.path.startsWith(`/games/${game.value.id}/profile`),
     });
   }
 
@@ -67,19 +76,13 @@ const userNav = computed(() => {
     const children = [] as NavigationMenuChildItem[];
 
     children.push({
-      label: user.value.nickname,
-      description: '用户信息',
+      label: user.value.nickname + (team.value ? ` @ ${team.value?.name}` : ''),
+      description: '用户/队伍信息',
       icon: 'material-symbols:person-2-outline-rounded',
+      to: `/games/${game.value.id}/profile`,
     });
 
     if (team.value) {
-      children.push({
-        label: team.value.name,
-        description: '队伍信息',
-        icon: 'material-symbols:groups-2-outline-rounded',
-        to: `/games/${game.value.id}/team`,
-      });
-
       children.push({
         label: '队伍动态',
         icon: 'material-symbols:dynamic-form-outline-rounded',
@@ -89,13 +92,6 @@ const userNav = computed(() => {
         label: '站内信',
         icon: 'material-symbols:mail-outline-rounded',
         to: `/games/${game.value.id}/ticket`,
-      });
-    } else {
-      children.push({
-        label: '队伍管理',
-        description: '加入或创建队伍',
-        icon: 'material-symbols:groups-2-outline-rounded',
-        to: `/games/${game.value.id}/team`,
       });
     }
 
@@ -119,6 +115,7 @@ const userNav = computed(() => {
       value: 'user-menu',
       label: '用户',
       icon: 'material-symbols:deployed-code-account-outline-rounded',
+      avatar: { src: buildCravatarUrl(user.value.email) },
       children: children,
     });
   } else {
@@ -139,27 +136,22 @@ const userNavMobile = computed(() => {
   const result = [] as NavigationMenuItem[][];
 
   if (user.value) {
-    result.push([
-      {
-        label: user.value.nickname,
-        type: 'label',
-      },
-      {
-        label: '用户信息',
-        icon: 'material-symbols:person-2-outline-rounded',
-      },
-    ]);
+    const userSpecial = [] as NavigationMenuItem[];
+    userSpecial.push({
+      label: user.value.nickname,
+      type: 'label',
+    });
 
     if (team.value) {
-      result.push([
+      userSpecial.push(
         {
           label: team.value.name,
           type: 'label',
         },
         {
-          label: '队伍信息',
+          label: '用户/队伍信息',
           icon: 'material-symbols:groups-2-outline-rounded',
-          to: `/games/${game.value.id}/team`,
+          to: `/games/${game.value.id}/profile`,
         },
         {
           label: '队伍动态',
@@ -170,16 +162,16 @@ const userNavMobile = computed(() => {
           icon: 'material-symbols:mail-outline-rounded',
           to: `/games/${game.value.id}/ticket`,
         },
-      ]);
+      );
     } else {
-      result.push([
-        {
-          label: '队伍管理',
-          icon: 'material-symbols:groups-2-outline-rounded',
-          to: `/games/${game.value.id}/team`,
-        },
-      ]);
+      userSpecial.push({
+        label: '用户/队伍信息',
+        icon: 'material-symbols:person-2-outline-rounded',
+        to: `/games/${game.value.id}/profile`,
+      });
     }
+
+    result.push(userSpecial);
 
     const lastSpecial = [] as NavigationMenuItem[];
 

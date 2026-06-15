@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { SelectItem } from '@nuxt/ui';
-import type { UnlockPuzzleOptionData, UnlockRoundOptionData, UnlockValueNode } from '~/utils/unlock-condition';
 
 const node = defineModel<UnlockValueNode>({ required: true });
 

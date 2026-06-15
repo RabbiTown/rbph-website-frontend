@@ -1,5 +1,3 @@
-import type { Toast } from '@nuxt/ui/runtime/composables/useToast.js';
-
 export function getRbErrorCode(error: unknown) {
   const my = error as { data?: { code?: number; hint?: string; message?: string } };
   return my.data?.code;

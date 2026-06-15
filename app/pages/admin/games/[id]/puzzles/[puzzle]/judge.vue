@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { SelectItem } from '@nuxt/ui';
-import { parseBackendExportFunctions } from '~/utils/content-backend';
 
 type JudgeRuleType = 'exact' | 'all' | 'custom';
 type JudgeActionKey = 'fail' | 'correct' | 'milestone' | 'start_game' | 'easter_egg' | 'finish_game' | 'pending';

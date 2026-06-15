@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import type { SelectItem } from '@nuxt/ui';
-import { parseBackendExportFunctions } from '~/utils/content-backend';
-import type { UnlockGateNode, UnlockPuzzleOptionData, UnlockRoundOptionData } from '~/utils/unlock-condition';
 
 const api = useApi();
 const toast = useToast();
