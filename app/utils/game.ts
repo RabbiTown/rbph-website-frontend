@@ -1,3 +1,5 @@
+import type { ActivityLogPayload } from './activity-log';
+
 export interface RbGame extends RbGameModel {
   rounds?: Pick<RbRound, 'id' | 'slug' | 'title'>[];
 }
@@ -182,10 +184,31 @@ export interface RbTeamCurrency {
   slug: string;
   name: string;
   growth: number;
+  init_amount: number;
   prec: number;
   amount: number;
   max_amount: number;
   utime_at: string;
+}
+
+export interface RbTeamActivity {
+  id: number;
+  type: string;
+  scope: number;
+  severity: number;
+  game_id?: number | null;
+  team_id?: number | null;
+  user_id?: number | null;
+  target_user_id?: number | null;
+  puzzle_id?: number | null;
+  round_id?: number | null;
+  hint_id?: number | null;
+  ticket_id?: number | null;
+  submission_id?: number | null;
+  currency_id?: number | null;
+  delta_amount?: number | null;
+  data: ActivityLogPayload;
+  ctime_at: string;
 }
 
 export interface RbCurrencyPenalty {

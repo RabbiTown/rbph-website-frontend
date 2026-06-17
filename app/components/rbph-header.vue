@@ -86,6 +86,7 @@ const userNav = computed(() => {
       children.push({
         label: '队伍动态',
         icon: 'material-symbols:dynamic-form-outline-rounded',
+        to: `/games/${game.value.id}/activity`,
       });
 
       children.push({
@@ -156,6 +157,7 @@ const userNavMobile = computed(() => {
         {
           label: '队伍动态',
           icon: 'material-symbols:dynamic-form-outline-rounded',
+          to: `/games/${game.value.id}/activity`,
         },
         {
           label: '站内信',

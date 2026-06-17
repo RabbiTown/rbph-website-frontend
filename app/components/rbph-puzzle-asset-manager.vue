@@ -3,6 +3,7 @@ interface AdminAssetGroupData {
   id: number;
   game_id: number;
   puzzle_id?: number | null;
+  round_id?: number | null;
   backend: string;
   object_key: string;
   original_name: string;
@@ -36,9 +37,15 @@ interface AssetTreeItem {
   children?: AssetTreeItem[];
 }
 
+const props = defineProps<{
+  gameId?: number | null;
+  puzzleId?: number | null;
+  roundId?: number | null;
+}>();
+
 const api = useApi();
 const toast = useToast();
-const { puzzle } = useAdmin().usePuzzleContext();
+const puzzleContext = useAdmin().useOptionalPuzzleContext();
 
 const loading = ref(false);
 const uploading = ref(false);
@@ -65,8 +72,10 @@ const folderRenameState = reactive({
 
 const accept = '*';
 
-const gameId = computed(() => puzzle.value?.game_id ?? null);
-const puzzleId = computed(() => puzzle.value?.id ?? null);
+const gameId = computed(() => props.gameId ?? puzzleContext?.puzzle.value?.game_id ?? null);
+const roundId = computed(() => props.roundId ?? null);
+const puzzleId = computed(() => props.puzzleId ?? (roundId.value ? null : puzzleContext?.puzzle.value?.id ?? null));
+const hasScope = computed(() => Boolean(gameId.value) && !(puzzleId.value && roundId.value));
 const infoDirty = computed(() => Boolean(infoTarget.value && infoState.originalName.trim() !== infoTarget.value.group.original_name));
 const infoFileTree = computed(() => (infoTarget.value ? buildAssetFileTree(infoTarget.value.files) : []));
 const infoFileTreeKey = computed(() => infoTarget.value?.files.map(file => `${file.id}:${file.relative_path}`).join('|') ?? 'empty');
@@ -217,21 +226,24 @@ function onAssetDragStart(event: DragEvent, item: AdminAssetGroupItem) {
 }
 
 function refreshAssets() {
-  if (!gameId.value || !puzzleId.value) {
+  if (!gameId.value || !hasScope.value) {
     groups.value = [];
     return Promise.resolve();
   }
 
   loading.value = true;
+  const query: Record<string, number> = {
+    game_id: gameId.value,
+  };
+  if (puzzleId.value) query.puzzle_id = puzzleId.value;
+  if (roundId.value) query.round_id = roundId.value;
 
   return api
     .get<{ groups: AdminAssetGroupItem[] }>('/admin/assets', {
-      query: {
-        game_id: gameId.value,
-        puzzle_id: puzzleId.value,
-      },
+      query,
       errorHints: {
-        [-1]: '资产不存在。',
+        [-2]: '资产作用域不合法。',
+        [-1]: '资产作用域不存在。',
       },
     })
     .then(({ data }) => {
@@ -472,21 +484,22 @@ async function deleteAsset(item: AdminAssetGroupItem) {
 
 async function uploadFiles() {
   const value = files.value;
-  if (!value || !gameId.value || !puzzleId.value || uploading.value) return;
+  if (!value || !gameId.value || !hasScope.value || uploading.value) return;
 
   uploading.value = true;
 
   try {
     const form = new FormData();
     form.append('game_id', String(gameId.value));
-    form.append('puzzle_id', String(puzzleId.value));
+    if (puzzleId.value) form.append('puzzle_id', String(puzzleId.value));
+    if (roundId.value) form.append('round_id', String(roundId.value));
     form.append('mode', uploadChoice.value);
     form.append('file', value, value.name);
 
     await api.post('/admin/assets', form, {
       errorHints: {
         [-2]: '上传文件不合法。',
-        [-1]: '谜题不存在。',
+        [-1]: '资产作用域不存在。',
       },
     });
 
@@ -540,7 +553,7 @@ function clearUpload() {
 }
 
 watch(
-  puzzle,
+  () => [gameId.value, puzzleId.value, roundId.value] as const,
   () => {
     void refreshAssets();
   },
@@ -553,7 +566,7 @@ watch(
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">
         <h2 class="truncate text-md font-semibold text-highlighted">资产管理器</h2>
-        <p class="text-sm text-muted">用于上传和管理谜题需要的静态资产。</p>
+        <p class="text-sm text-muted">用于上传和管理当前页面需要的静态资产。</p>
       </div>
       <u-button color="neutral" variant="ghost" size="xs" icon="material-symbols:refresh-rounded" :loading="loading" @click="refreshAssets" />
     </div>
@@ -566,7 +579,7 @@ watch(
       icon="material-symbols:upload-file-outline-rounded"
       label="上传文件"
       description="拖入文件或点击选择"
-      :disabled="uploading || !gameId || !puzzleId"
+      :disabled="uploading || !gameId || !hasScope"
       @change="onUploadChange"
     />
 

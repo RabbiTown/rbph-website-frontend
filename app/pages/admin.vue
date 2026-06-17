@@ -100,13 +100,13 @@ const nav = computed(() => {
         value: 'admin-game-teams',
         label: '队伍管理',
         icon: 'material-symbols:groups-2-outline-rounded',
-        to: `/admin/games/${game.ref.value.id}/teams`,
+        // to: `/admin/games/${game.ref.value.id}/teams`,
       },
       {
         value: 'admin-game-tickets',
         label: '工单管理',
         icon: 'material-symbols:mail-outline-rounded',
-        to: `/admin/games/${game.ref.value.id}/tickets`,
+        // to: `/admin/games/${game.ref.value.id}/tickets`,
       },
     ]);
   }
@@ -116,19 +116,19 @@ const nav = computed(() => {
       value: 'admin-users',
       label: '用户管理',
       icon: 'material-symbols:deployed-code-account-outline-rounded',
-      to: '/admin/users',
+      // to: '/admin/users',
     },
     {
       value: 'admin-logs',
       label: '系统日志',
       icon: 'material-symbols:receipt-long-outline-rounded',
-      to: '/admin/users',
+      to: '/admin/logs',
     },
     {
       value: 'admin-settings',
       label: '系统设置',
       icon: 'material-symbols:settings-outline-rounded',
-      to: '/admin/users',
+      // to: '/admin/users',
     },
   ]);
 

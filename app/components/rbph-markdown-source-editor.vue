@@ -82,12 +82,12 @@ defineExpose({ focus });
 </script>
 
 <template>
-  <div class="relative text-sm font-mono leading-[1.625]">
+  <div class="relative text-sm font-mono leading-relaxed">
     <div v-if="props.framed" class="pointer-events-none grid min-h-[inherit] grid-cols-[3.5rem_minmax(0,1fr)] text-highlighted" aria-hidden="true">
       <div class="flex h-full flex-col border-e border-default text-right text-muted">
         <div class="h-1.5 shrink-0" />
         <div v-for="(line, index) in lines" :key="index" class="relative select-none pe-3">
-          <span class="absolute -end-px top-[0.3125em] h-4 w-0.5 rounded-full" :class="lineMarkerClass(line)" />
+          <span class="absolute -inset-e-px top-[0.3125em] h-4 w-0.5 rounded-full" :class="lineMarkerClass(line)" />
           {{ index + 1 }}
         </div>
         <div class="h-1.5 shrink-0" />
@@ -97,7 +97,7 @@ defineExpose({ focus });
       <div class="flex h-full min-w-0 flex-col">
         <div class="h-1.5 shrink-0" />
         <!-- eslint-disable-next-line vue/no-v-html -->
-        <div v-for="(line, index) in lines" :key="index" class="min-w-0 whitespace-pre-wrap break-words px-3.5 text-highlighted sm:px-4.5" v-html="highlightedLines[index]" />
+        <div v-for="(line, index) in lines" :key="index" class="min-w-0 whitespace-pre-wrap wrap-break-word px-3.5 text-highlighted sm:px-4.5" v-html="highlightedLines[index]" />
         <div class="h-1.5 shrink-0" />
         <div class="flex-1" />
       </div>
@@ -105,12 +105,12 @@ defineExpose({ focus });
     <div v-else class="pointer-events-none flex min-h-[inherit] flex-col text-highlighted" aria-hidden="true">
       <div v-for="(line, index) in lines" :key="index" class="grid grid-cols-[3.5rem_minmax(0,1fr)]">
         <div class="relative select-none border-e border-default pe-3 text-right text-muted">
-          <span class="absolute -end-px top-[0.3125em] h-4 w-0.5 rounded-full" :class="lineMarkerClass(line)" />
+          <span class="absolute -inset-e-px top-[0.3125em] h-4 w-0.5 rounded-full" :class="lineMarkerClass(line)" />
           {{ index + 1 }}
         </div>
 
         <!-- eslint-disable-next-line vue/no-v-html -->
-        <div class="min-w-0 whitespace-pre-wrap break-words px-4 text-highlighted sm:px-5" v-html="highlightedLines[index]" />
+        <div class="min-w-0 whitespace-pre-wrap wrap-break-word px-4 text-highlighted sm:px-5" v-html="highlightedLines[index]" />
       </div>
     </div>
 
@@ -120,8 +120,8 @@ defineExpose({ focus });
       v-bind="$attrs"
       :placeholder="placeholder"
       :disabled="disabled"
-      class="absolute inset-0 block h-full w-full resize-none overflow-hidden whitespace-pre-wrap break-words bg-transparent caret-primary outline-none selection:bg-primary/25 disabled:cursor-not-allowed disabled:opacity-75"
-      :class="[props.framed ? 'py-1.5 ps-[4.375rem] pe-3.5 sm:ps-[4.625rem] sm:pe-4.5' : 'py-0 ps-[4.5rem] pe-4 sm:ps-[4.75rem] sm:pe-5', isComposing ? 'text-highlighted' : 'text-transparent']"
+      class="absolute inset-0 block h-full w-full resize-none overflow-hidden whitespace-pre-wrap wrap-break-word bg-transparent caret-primary outline-none selection:bg-primary/25 disabled:cursor-not-allowed disabled:opacity-75"
+      :class="[props.framed ? 'py-1.5 ps-17.5 pe-3.5 sm:ps-18.5 sm:pe-4.5' : 'py-0 ps-18 pe-4 sm:ps-19 sm:pe-5', isComposing ? 'text-highlighted' : 'text-transparent']"
       spellcheck="false"
       @keydown.up="onArrowUp"
       @input="updateSource"

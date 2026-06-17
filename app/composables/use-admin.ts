@@ -146,6 +146,10 @@ function usePuzzleContext(): AdminPuzzleContext {
   return context;
 }
 
+function useOptionalPuzzleContext(): AdminPuzzleContext | undefined {
+  return inject(adminPuzzleContextKey);
+}
+
 function useRoundContext(): AdminRoundContext {
   const context = inject(adminRoundContextKey);
   if (!context) throw new Error('Admin round context is not provided');
@@ -158,6 +162,7 @@ export function useAdmin() {
     providePuzzleContext,
     provideRoundContext,
     usePuzzleContext,
+    useOptionalPuzzleContext,
     useRoundContext,
   };
 }

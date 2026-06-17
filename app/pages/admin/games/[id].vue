@@ -41,12 +41,12 @@ const tabs = computed(() => {
     {
       label: '队伍管理',
       icon: 'material-symbols:groups-2-outline-rounded',
-      to: `/admin/games/${game.value.id}/teams`,
+      // to: `/admin/games/${game.value.id}/teams`,
     },
     {
       label: '工单管理',
       icon: 'material-symbols:mail-outline-rounded',
-      to: `/admin/games/${game.value.id}/tickets`,
+      // to: `/admin/games/${game.value.id}/tickets`,
     },
   ] satisfies NavigationMenuItem[];
 });
