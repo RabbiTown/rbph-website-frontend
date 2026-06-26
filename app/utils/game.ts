@@ -184,6 +184,7 @@ export interface RbTeamCurrency {
   prec: number;
   amount: number;
   max_amount: number;
+  hidden?: boolean;
   utime_at: string;
 }
 

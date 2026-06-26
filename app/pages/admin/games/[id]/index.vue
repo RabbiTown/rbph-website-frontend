@@ -11,7 +11,7 @@ const currencySubmitting = ref(false);
 const currencies = ref<CurrencyItem[]>([]);
 const currencyDeletePending = reactive<Record<number, boolean>>({});
 
-type CurrencyDraft = Pick<AdminCurrencyData, 'name' | 'slug' | 'growth' | 'init_amount' | 'prec' | 'max_amount'>;
+type CurrencyDraft = Pick<AdminCurrencyData, 'name' | 'slug' | 'growth' | 'init_amount' | 'init_hidden' | 'prec' | 'max_amount'>;
 type CurrencyItem = AdminCurrencyData & { local?: boolean };
 type CurrencyEditItem = {
   currency: CurrencyItem;
@@ -21,6 +21,7 @@ type CurrencyEditItem = {
 };
 
 const currencyDrafts = reactive<Record<number, CurrencyDraft>>({});
+const currencyAmountMax = Number.MAX_SAFE_INTEGER;
 let nextCurrencyLocalId = -1;
 
 function unsetRecordKey<T>(record: Record<number, T>, key: number) {
@@ -86,7 +87,14 @@ const currencyDirty = computed(() => {
     result[currency.id] = Boolean(
       currency.local ||
       currencyDeletePending[currency.id] ||
-      (draft && (draft.name !== currency.name || draft.slug !== currency.slug || draft.growth !== currency.growth || draft.init_amount !== currency.init_amount || draft.prec !== currency.prec || draft.max_amount !== currency.max_amount)),
+      (draft &&
+        (draft.name !== currency.name ||
+          draft.slug !== currency.slug ||
+          draft.growth !== currency.growth ||
+          draft.init_amount !== currency.init_amount ||
+          draft.init_hidden !== currency.init_hidden ||
+          draft.prec !== currency.prec ||
+          draft.max_amount !== currency.max_amount)),
     );
   }
   return result;
@@ -128,6 +136,7 @@ function toCurrencyDraft(currency: AdminCurrencyData): CurrencyDraft {
     slug: currency.slug,
     growth: currency.growth,
     init_amount: currency.init_amount,
+    init_hidden: currency.init_hidden,
     prec: currency.prec,
     max_amount: currency.max_amount,
   };
@@ -152,7 +161,19 @@ function syncCurrencyDrafts(next: CurrencyItem[]) {
 }
 
 function isCurrencyDraftValid(draft: CurrencyDraft) {
-  return draft.name.trim().length > 0 && draft.name.trim().length <= 40 && currencySlugPattern.test(draft.slug.trim()) && draft.prec >= 0 && draft.prec <= 6 && draft.init_amount >= 0 && draft.max_amount >= 0 && draft.init_amount <= draft.max_amount;
+  return (
+    draft.name.trim().length > 0 &&
+    draft.name.trim().length <= 40 &&
+    currencySlugPattern.test(draft.slug.trim()) &&
+    draft.prec >= 0 &&
+    draft.prec <= 6 &&
+    Math.abs(draft.growth) <= currencyAmountMax &&
+    draft.init_amount >= 0 &&
+    draft.init_amount <= currencyAmountMax &&
+    draft.max_amount >= 0 &&
+    draft.max_amount <= currencyAmountMax &&
+    draft.init_amount <= draft.max_amount
+  );
 }
 
 function currencyErrorHints() {
@@ -192,8 +213,9 @@ function addCurrencyDraft() {
     slug: '',
     growth: 0,
     init_amount: 0,
+    init_hidden: false,
     prec: 0,
-    max_amount: 1000000,
+    max_amount: currencyAmountMax,
     local: true,
   };
   currencies.value = [...currencies.value, currency];
@@ -434,9 +456,7 @@ watch(
                 class="relative transition-colors"
                 :class="[
                   item.deletePending ? 'opacity-55 before:content-[\'\'] before:pointer-events-none before:absolute before:-inset-s-4 before:top-0 before:bottom-0 before:w-0.5 before:rounded-full before:bg-error' : '',
-                  !item.deletePending && item.dirty
-                    ? 'before:content-[\'\'] before:pointer-events-none before:absolute before:-inset-s-4 before:top-0 before:bottom-0 before:w-0.5 before:rounded-full before:bg-warning'
-                    : '',
+                  !item.deletePending && item.dirty ? 'before:content-[\'\'] before:pointer-events-none before:absolute before:-inset-s-4 before:top-0 before:bottom-0 before:w-0.5 before:rounded-full before:bg-warning' : '',
                 ]"
               >
                 <div class="relative rounded-lg bg-elevated/60 px-4 py-3 ring ring-default">
@@ -478,7 +498,7 @@ watch(
                         <u-input v-model="item.draft.slug" placeholder="例如 hint" class="w-full font-mono" :disabled="currencySubmitting || item.deletePending" />
                       </rb-form-field>
                     </div>
-                    <div class="grid gap-3 md:grid-cols-[7rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
+                    <div class="grid gap-3 md:grid-cols-[7rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_8rem]">
                       <rb-form-field label="精度">
                         <u-input-number v-model="item.draft.prec" :min="0" :max="6" :step="1" orientation="vertical" class="w-full" :disabled="currencySubmitting || item.deletePending" />
                       </rb-form-field>
@@ -495,25 +515,13 @@ watch(
                         />
                       </rb-form-field>
                       <rb-form-field label="增长/分钟">
-                        <rb-input-number
-                          v-model="item.draft.growth"
-                          :prec="item.draft.prec"
-                          :step="10 ** item.draft.prec"
-                          orientation="vertical"
-                          class="w-full"
-                          :disabled="currencySubmitting || item.deletePending"
-                        />
+                        <rb-input-number v-model="item.draft.growth" :prec="item.draft.prec" :max="currencyAmountMax" :step="10 ** item.draft.prec" orientation="vertical" class="w-full" :disabled="currencySubmitting || item.deletePending" />
                       </rb-form-field>
                       <rb-form-field label="上限">
-                        <rb-input-number
-                          v-model="item.draft.max_amount"
-                          :prec="item.draft.prec"
-                          :min="0"
-                          :step="10 ** item.draft.prec"
-                          orientation="vertical"
-                          class="w-full"
-                          :disabled="currencySubmitting || item.deletePending"
-                        />
+                        <rb-input-number v-model="item.draft.max_amount" :prec="item.draft.prec" :min="0" :max="currencyAmountMax" :step="10 ** item.draft.prec" orientation="vertical" class="w-full" :disabled="currencySubmitting || item.deletePending" />
+                      </rb-form-field>
+                      <rb-form-field label="初始隐藏">
+                        <u-switch v-model="item.draft.init_hidden" :disabled="currencySubmitting || item.deletePending" class="mt-2.5" />
                       </rb-form-field>
                     </div>
                   </div>

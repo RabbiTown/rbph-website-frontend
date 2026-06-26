@@ -60,6 +60,7 @@ export interface AdminCurrencyData {
   slug: string;
   growth: number;
   init_amount: number;
+  init_hidden: boolean;
   prec: number;
   max_amount: number;
 }
