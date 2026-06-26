@@ -18,6 +18,22 @@ function normalizeNavigationBadge(badge: NavigationMenuChildItem['badge']): Badg
   return badge;
 }
 
+function normalizeNavigationPath(to: NavigationMenuChildItem['to']): string | undefined {
+  if (typeof to === 'string') return to.split(/[?#]/, 1)[0];
+  if (to && typeof to === 'object' && 'path' in to && typeof to.path === 'string') return to.path;
+  return undefined;
+}
+
+function isCurrentPath(path: string): boolean {
+  return route.path === path || route.path.startsWith(`${path}/`);
+}
+
+function isUserMenuChildActive(child: NavigationMenuChildItem): boolean {
+  const path = normalizeNavigationPath(child.to);
+  if (!path || path === '/logout') return false;
+  return isCurrentPath(path);
+}
+
 const navItems = computed(() => {
   if (!game.value) return [];
 
@@ -140,6 +156,7 @@ const userNav = computed(() => {
         chip: notificationUnread.value > 0 ? { color: 'error' } : undefined,
       },
       slot: 'user-menu',
+      active: children.some(isUserMenuChildActive),
       ui: { content: 'w-60 overflow-x-hidden' },
       children: children,
     });
@@ -249,12 +266,14 @@ const userNavMobile = computed(() => {
         <ul class="grid w-full min-w-0 gap-1 p-2">
           <li v-for="child in item.children" :key="child.label">
             <u-link
-              v-slot="{ active }"
               :to="child.to"
               :target="child.target"
               :external="child.external"
-              class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors"
-              :class="[child.class, active ? 'bg-elevated text-highlighted' : 'text-default hover:bg-elevated/50 hover:text-highlighted']"
+              :active="isUserMenuChildActive(child)"
+              raw
+              :class="['flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors', child.class]"
+              active-class="bg-elevated text-highlighted"
+              inactive-class="text-default hover:bg-elevated/50 hover:text-highlighted"
               @click="userMenuOpen = undefined"
             >
               <u-icon v-if="child.icon" :name="child.icon" class="size-5 shrink-0 text-dimmed" />
