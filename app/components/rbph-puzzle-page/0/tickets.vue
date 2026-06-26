@@ -5,11 +5,21 @@ const api = useApi();
 const toast = useToast();
 const team = useTeam().ref;
 const game = useGame().ref;
+const user = useUser().ref;
+const isStaff = computed(() => (user.value?.urole ?? RbUserRole.User) >= RbUserRole.Moderator);
+const isAdmin = computed(() => user.value?.urole === RbUserRole.Admin);
+
+type StaffView = 'staff' | 'team';
 
 const pageData = ref<TicketPuzzleList>();
+const staffTickets = ref<TicketSummary[]>();
+const staffView = ref<StaffView>('staff');
+const selectedTeamId = ref<number>();
+const selectedAdminTeam = ref<StaffTeamOption>();
+const selectedTeam = computed(() => (isAdmin.value ? selectedAdminTeam.value : team.value));
 const canOpenTicket = computed(() => pageData.value?.open_block === TicketOpenBlock.Ok);
 
-function deriveTicket(ticket: TicketSummary): TicketSummary {
+function deriveTicket(ticket: TicketSummary, targetTeam: Pick<RbTeam, 'id' | 'name' | 'state'> | undefined = team.value): TicketSummary {
   const puzzleData = puzzle.value?.data;
   const puzzleState = puzzle.value?.state;
 
@@ -23,11 +33,11 @@ function deriveTicket(ticket: TicketSummary): TicketSummary {
       }
     : ticketPuzzle;
 
-  const derivedTeam = team.value
+  const derivedTeam = targetTeam
     ? {
-        id: ticket.team?.id ?? team.value.id,
-        name: ticket.team?.name ?? team.value.name,
-        state: ticket.team?.state ?? team.value.state,
+        id: ticket.team?.id ?? targetTeam.id,
+        name: ticket.team?.name ?? targetTeam.name,
+        state: ticket.team?.state ?? targetTeam.state,
       }
     : ticket.team;
 
@@ -39,10 +49,10 @@ function deriveTicket(ticket: TicketSummary): TicketSummary {
   };
 }
 
-function derivePuzzleList(data: TicketPuzzleList): TicketPuzzleList {
+function derivePuzzleList(data: TicketPuzzleList, targetTeam?: Pick<RbTeam, 'id' | 'name' | 'state'>): TicketPuzzleList {
   return {
     ...data,
-    tickets: data.tickets.map(deriveTicket),
+    tickets: data.tickets.map(ticket => deriveTicket(ticket, targetTeam)),
   };
 }
 
@@ -50,6 +60,21 @@ async function updateData(): Promise<boolean> {
   const puzzleId = puzzle.value?.data.id;
   if (puzzleId) {
     try {
+      if (isStaff.value) {
+        const gameId = puzzle.value?.data.game_id;
+        if (staffView.value === 'team') {
+          if (!isAdmin.value) selectedTeamId.value = team.value?.id;
+          if (!selectedTeamId.value) return true;
+          const { data } = await api.get<TicketPuzzleList>(`/games/${gameId}/tickets/staff/puzzle/${puzzleId}/teams/${selectedTeamId.value}`);
+          pageData.value = derivePuzzleList(data, selectedTeam.value);
+          return true;
+        }
+        const { data } = await api.get<StaffTicketListResponse>(`/games/${gameId}/tickets/staff`, {
+          query: { kind: 'puzzle', puzzle_id: puzzleId, state: 'all' },
+        });
+        staffTickets.value = data.tickets;
+        return true;
+      }
       const { data } = await api.get<TicketPuzzleList>(`/puzzles/${puzzleId}/tickets`);
       pageData.value = derivePuzzleList(data);
       return true;
@@ -61,13 +86,33 @@ async function updateData(): Promise<boolean> {
 }
 
 watch(
-  puzzle,
+  [puzzle, isStaff, team],
   async () => {
     pageData.value = undefined;
+    staffTickets.value = undefined;
+    selectedTeamId.value = team.value?.id;
+    selectedAdminTeam.value = team.value
+      ? {
+          id: team.value.id,
+          name: team.value.name,
+          state: team.value.state,
+        }
+      : undefined;
     updateData();
   },
   { immediate: true },
 );
+
+watch([staffView, selectedTeamId], () => {
+  if (!isStaff.value) return;
+  pageData.value = undefined;
+  if (staffView.value === 'staff') staffTickets.value = undefined;
+  updateData();
+});
+
+useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
+  if (data.puzzle_id === puzzle.value?.data.id) updateData();
+});
 
 const submitLoading = ref(false);
 
@@ -79,22 +124,25 @@ async function submitMessage() {
   const puzzleId = puzzle.value?.data.id;
   if (puzzleId) {
     try {
-      const { code, data } = await api.post<TicketOpenResponse>(`/puzzles/${puzzleId}/tickets`, { content: draftMessage.value, content_type: draftContentType.value } satisfies TicketSendRequest, {
+      const gameId = puzzle.value?.data.game_id;
+      const staffTarget = isStaff.value && staffView.value === 'team' ? selectedTeam.value : undefined;
+      const endpoint = staffTarget ? `/games/${gameId}/tickets/staff/puzzle/${puzzleId}/teams/${staffTarget.id}` : `/puzzles/${puzzleId}/tickets`;
+      const { code, data } = await api.post<TicketOpenResponse>(endpoint, { content: draftMessage.value, content_type: draftContentType.value } satisfies TicketSendRequest, {
         errorHints: { [-1]: '无法处理请求。', [-2]: '同时只能请求一个人工提示。', [-3]: '题目人工提示暂未开放。', [-4]: '内容类型无效或无权使用。', [-5]: '发送的信息过长。' },
       });
       draftMessage.value = '';
 
       if (code === 0) {
         toast.add({
-          title: '已请求人工提示',
-          description: '请等待工作人员回复。',
+          title: staffTarget ? `已为 ${staffTarget.name} 发起人工提示` : '已请求人工提示',
+          description: staffTarget ? '队伍会收到该人工提示和通知。' : '请等待工作人员回复。',
           icon: 'material-symbols:check-rounded',
           color: 'success',
         });
         const openedTicket = data.thread.ticket;
         if (openedTicket) {
           const tickets = pageData.value?.tickets ?? [];
-          const derivedTicket = deriveTicket(openedTicket);
+          const derivedTicket = deriveTicket(openedTicket, staffTarget);
           pageData.value = {
             open_block: TicketOpenBlock.CurrentPuzzlePending,
             open_tickets: [],
@@ -121,9 +169,52 @@ const cooldown = computed(() => {
 
 <template>
   <div>
-    <div v-if="pageData" class="flex flex-col gap-4">
-      <u-alert v-if="canOpenTicket" variant="subtle" title="你可以请求人工提示。" description="如果有预设提示无法解决的困惑，请询问人工提示。" icon="material-symbols:near-me-outline-rounded" color="warning" />
+    <div v-if="isStaff" class="mb-4 flex flex-col gap-3">
+      <u-tabs
+        v-model="staffView"
+        :items="[
+          { label: '工作人员视图', value: 'staff', icon: 'material-symbols:support-agent-rounded' },
+          { label: '队伍视图', value: 'team', icon: 'material-symbols:groups-2-outline-rounded' },
+        ]"
+        :content="false"
+        variant="link"
+      />
+      <rbph-staff-team-select v-if="staffView === 'team' && isAdmin && puzzle?.data.game_id" v-model="selectedTeamId" v-model:team="selectedAdminTeam" :game-id="puzzle.data.game_id" placeholder="输入队伍名称搜索" class="w-full sm:max-w-80" />
+      <u-alert v-else-if="staffView === 'team' && team" variant="subtle" color="neutral" icon="material-symbols:groups-2-outline-rounded" :title="`本队视图：${team.name}`" />
+    </div>
+
+    <div v-if="isStaff && staffView === 'staff' && staffTickets" class="flex flex-col gap-4">
+      <div class="flex items-center justify-between gap-3">
+        <u-alert class="flex-1" variant="subtle" title="工作人员视图" description="这里显示所有队伍针对本题发起的人工提示。" icon="material-symbols:support-agent-rounded" color="warning" />
+        <u-button :to="`/games/${puzzle?.data.game_id}/staff/inbox?kind=puzzle&puzzle_id=${puzzle?.data.id}`" label="在工作台打开" icon="material-symbols:inbox-outline-rounded" />
+      </div>
+      <rbph-ticket-card v-for="ticket in staffTickets" :key="ticket.id" :ticket="ticket" />
+      <u-empty v-if="staffTickets.length === 0" icon="material-symbols:inbox-outline-rounded" title="本题暂无人工提示" />
+    </div>
+    <u-empty
+      v-else-if="isStaff && staffView === 'team' && !selectedTeamId"
+      icon="material-symbols:group-search-outline-rounded"
+      :title="isAdmin ? '请选择队伍' : '你当前没有加入队伍'"
+      :description="isAdmin ? '输入队伍名称搜索，选择后可查看其人工提示状态并发起人工提示。' : 'Moderator 只能查看本队视图。'"
+    />
+    <div v-else-if="pageData" class="flex flex-col gap-4">
+      <u-alert
+        v-if="canOpenTicket"
+        variant="subtle"
+        :title="isStaff && selectedTeam ? `可以为 ${selectedTeam.name} 发起人工提示。` : '你可以请求人工提示。'"
+        :description="isStaff && selectedTeam ? '发起后将以工作人员消息开始会话，并通知该队伍。' : '如果有预设提示无法解决的困惑，请询问人工提示。'"
+        icon="material-symbols:near-me-outline-rounded"
+        color="warning"
+      />
       <u-alert v-else-if="pageData.open_block === TicketOpenBlock.Disabled" variant="subtle" title="暂时不能请求人工提示。" description="本题未启用人工提示。" icon="material-symbols:near-me-disabled-outline-rounded" color="error" />
+      <u-alert
+        v-else-if="pageData.open_block === TicketOpenBlock.CurrentPuzzlePending"
+        variant="subtle"
+        title="暂时不能请求人工提示。"
+        description="本题已有开放中的人工提示，请在下方会话中继续沟通。"
+        icon="material-symbols:near-me-disabled-outline-rounded"
+        color="error"
+      />
       <u-alert v-else-if="pageData.open_block === TicketOpenBlock.PendingLimit" variant="subtle" title="暂时不能请求人工提示。" icon="material-symbols:near-me-disabled-outline-rounded" color="error">
         <template #description>
           当前同时开放的人工提示已达到上限，请考虑关闭以下请求。
@@ -134,9 +225,9 @@ const cooldown = computed(() => {
           </div>
         </template>
       </u-alert>
-      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.Cooldown && cooldown" variant="subtle" title="暂时不能请求人工提示。" icon="material-symbols:hourglass-outline-rounded" color="error">
+      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.Cooldown" variant="subtle" title="暂时不能请求人工提示。" icon="material-symbols:hourglass-outline-rounded" color="error">
         <template #description>
-          本题的人工提示将在 {{ formatTime(cooldown) }} 后开放。
+          {{ cooldown ? `本题的人工提示将在 ${formatTime(cooldown)} 后开放。` : '本题的人工提示仍在冷却中。' }}
         </template>
       </u-alert>
       <rbph-message-edit
@@ -145,7 +236,7 @@ const cooldown = computed(() => {
         v-model:content-type="draftContentType"
         class="mb-6"
         :content-types="[RbContentType.UnsafeMarkdown]"
-        placeholder="请求人工提示"
+        :placeholder="isStaff && selectedTeam ? `为 ${selectedTeam.name} 发起人工提示` : '请求人工提示'"
         :disabled="!pageData || submitLoading"
         :loading="!pageData || submitLoading"
         @submit="submitMessage"

@@ -42,6 +42,10 @@ watch(
   { immediate: true },
 );
 
+useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
+  if (data.game_id === game.value?.id && data.team_id === useTeam(false).ref.value?.id) updateData();
+});
+
 const submitLoading = ref(false);
 
 const draftMessage = ref('');
@@ -68,7 +72,7 @@ async function submitMessage() {
         const perm = data.perm ?? pageData.value?.perm ?? { send_block: RbTicketSendBlock.Ok, can_host: false, can_view_locked: false, content_type: [RbContentType.UnsafeMarkdown], currency: [] };
         pageData.value = {
           ticket: data.ticket ?? pageData.value?.ticket,
-          messages: [...(pageData.value?.messages ?? []), data.msg],
+          messages: (pageData.value?.messages ?? []).some(item => isTicketMessage(item) && item.id === data.msg.id) ? (pageData.value?.messages ?? []) : [...(pageData.value?.messages ?? []), data.msg],
           perm,
         };
         draftContentType.value = getDefaultTicketContentType(perm);

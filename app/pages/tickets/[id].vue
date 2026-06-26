@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SelectItem, TabsItem, TimelineItem } from '@nuxt/ui';
+import type { SelectItem, TabsItem } from '@nuxt/ui';
 import type { BreadcrumbItem } from '@nuxt/ui/runtime/components/Breadcrumb.vue.js';
 
 definePageMeta({
@@ -7,6 +7,7 @@ definePageMeta({
 });
 
 useUser().required();
+const user = useUser().ref;
 
 const api = useApi();
 const route = useRoute();
@@ -33,17 +34,15 @@ async function updateData(new_id: string | undefined = undefined) {
   const id = new_id ? parseInt(new_id) : ticket.value?.id || NaN;
   if (isNaN(id)) throw 'Invalid ticket id';
 
-  if (ticket.value?.id !== id) {
-    try {
-      const { data } = await useApi().get<TicketThread>(`/tickets/${new_id}`);
-      pageData.value = data;
+  try {
+    const { data } = await useApi().get<TicketThread>(`/tickets/${id}`);
+    pageData.value = data;
 
-      if (data.ticket?.game_id) {
-        updateGameState(data.ticket.game_id.toString());
-      }
-    } catch (error) {
-      showError(error instanceof Error ? error : String(error));
+    if (data.ticket?.game_id) {
+      updateGameState(data.ticket.game_id.toString());
     }
+  } catch (error) {
+    showError(error instanceof Error ? error : String(error));
   }
 }
 
@@ -54,6 +53,11 @@ watch(
   },
   { immediate: true },
 );
+
+useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
+  if (data.actor_id === user.value?.id && (data.event === 'assigned' || data.event === 'unassigned')) return;
+  if (data.ticket_id === Number(ticket_id.value)) updateData(ticket_id.value);
+});
 
 const breadItems = computed<BreadcrumbItem[]>(() => [
   {
@@ -73,35 +77,16 @@ const breadItems = computed<BreadcrumbItem[]>(() => [
   },
 ]);
 
-const history = computed<TimelineItem[]>(
-  () =>
-    pageData.value?.messages.map(msg => {
-      if (isTicketMessage(msg)) {
-        return {
-          username: msg.sender.nickname,
-          date: msg.ctime_at,
-          action: '发送了消息',
-          icon: 'material-symbols:chat-outline-rounded',
-          data: msg,
-          message: msg,
-        };
-      }
-      return {
-        username: msg.actor.nickname,
-        date: msg.ctime_at,
-        action: ticketActionConsts[msg.action].desc,
-        icon: ticketActionConsts[msg.action].icon,
-        data: msg,
-        message: msg.message,
-      };
-    }) ?? [],
-);
-
 const submitLoading = ref(false);
 const unlockLoading = ref(false);
+const assigneeLoading = ref(false);
+const assigneeConfirmOpen = ref(false);
+const assigneeActionButtonClass = 'group grid h-6 max-w-full cursor-pointer overflow-hidden px-0 text-xs';
+const assigneeActionNormalClass = 'col-start-1 row-start-1 inline-flex items-center justify-center gap-1 px-1.5 transition-all duration-150 group-hover:-translate-y-1 group-hover:opacity-0';
+const assigneeActionHoverClass = 'col-start-1 row-start-1 inline-flex translate-y-1 items-center justify-center gap-1 px-1.5 opacity-0 transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100';
 
 const draftMessage = ref('');
-async function submitMessage(senderType: RbTicketSenderType) {
+async function submitMessage(senderType: RbTicketSenderType, forceAssignee = false) {
   if (senderType === RbTicketSenderType.Team && !canSend.value) return;
   if (senderType === RbTicketSenderType.Host && !pageData.value?.perm.can_host) return;
 
@@ -116,6 +101,7 @@ async function submitMessage(senderType: RbTicketSenderType) {
         sender_type: senderType,
         cost_id: senderType === RbTicketSenderType.Host ? reqCurrencyId.value : null,
         cost_amount: senderType === RbTicketSenderType.Host ? reqCurrencyAmount.value : 0,
+        force_assignee: forceAssignee,
       } satisfies TicketSendRequest;
       const { code, data } = await api.post<TicketSendResponse>(`/tickets/${ticketId}/send`, payload, {
         errorHints: { [-1]: '这条人工提示已关闭。', [-2]: '积压信息过多，请先等待工作人员回复。', [-3]: '内容类型无效或无权使用。', [-4]: '发送的信息过长。', [-5]: '信息要求的费用无效。' },
@@ -140,12 +126,17 @@ async function submitMessage(senderType: RbTicketSenderType) {
           };
         pageData.value = {
           ticket: data.ticket ?? pageData.value?.ticket,
-          messages: [...(pageData.value?.messages ?? []), data.msg],
+          messages: (pageData.value?.messages ?? []).some(item => isTicketMessage(item) && item.id === data.msg.id) ? (pageData.value?.messages ?? []) : [...(pageData.value?.messages ?? []), data.msg],
           perm,
         };
         draftContentType.value = getDefaultTicketContentType(perm);
       }
     } catch (error) {
+      const assignee = (error as { data?: { payload?: { assignee?: { nickname: string } } } }).data?.payload?.assignee;
+      if (senderType === RbTicketSenderType.Host && !forceAssignee && assignee && window.confirm(`该会话已由 ${assignee.nickname} 认领，仍要继续回复吗？`)) {
+        submitLoading.value = false;
+        return submitMessage(senderType, true);
+      }
       handleError(error, '站内信发送失败');
     }
   }
@@ -161,7 +152,40 @@ function submitHostMessage() {
   return submitMessage(RbTicketSenderType.Host);
 }
 
-async function submitClose() {
+async function assignSelf(force = false) {
+  if (!ticket.value?.id || assigneeLoading.value) return;
+  assigneeLoading.value = true;
+  try {
+    const { data } = await api.post<TicketAssignResponse>(`/tickets/${ticket.value.id}/assignee/self`, { force }, { errorHints: { [-7]: '已有其他工作人员认领此会话。' } });
+    ticket.value.assignee = data.assignee ?? undefined;
+    assigneeConfirmOpen.value = false;
+  } catch (error) {
+    const assignee = (error as { data?: { payload?: { assignee?: { id: number; nickname: string; email?: string } } } }).data?.payload?.assignee;
+    if (!force && assignee) {
+      ticket.value.assignee = assignee;
+      assigneeConfirmOpen.value = true;
+      return;
+    }
+    handleError(error, '认领失败');
+  } finally {
+    assigneeLoading.value = false;
+  }
+}
+
+async function unassign() {
+  if (!ticket.value?.id || assigneeLoading.value) return;
+  assigneeLoading.value = true;
+  try {
+    await api.del(`/tickets/${ticket.value.id}/assignee`);
+    ticket.value.assignee = undefined;
+  } catch (error) {
+    handleError(error, '取消认领失败');
+  } finally {
+    assigneeLoading.value = false;
+  }
+}
+
+async function submitClose(forceAssignee = false) {
   if (!pageData.value?.perm.can_host) return;
 
   submitLoading.value = true;
@@ -175,6 +199,7 @@ async function submitClose() {
         sender_type: RbTicketSenderType.Host,
         cost_id: reqCurrencyId.value,
         cost_amount: reqCurrencyAmount.value,
+        force_assignee: forceAssignee,
       } satisfies TicketSendRequest;
       const { data } = await api.post<TicketCloseResponse>(`/tickets/${ticketId}/close`, payload);
       draftMessage.value = '';
@@ -199,6 +224,11 @@ async function submitClose() {
       };
       draftContentType.value = getDefaultTicketContentType(pageData.value.perm);
     } catch (error) {
+      const assignee = (error as { data?: { payload?: { assignee?: { nickname: string } } } }).data?.payload?.assignee;
+      if (!forceAssignee && assignee && window.confirm(`该会话已由 ${assignee.nickname} 认领，仍要回复并关闭吗？`)) {
+        submitLoading.value = false;
+        return submitClose(true);
+      }
       handleError(error, '关闭工单失败');
     }
   }
@@ -258,17 +288,6 @@ const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
   [RbTicketSendBlock.Pending]: { icon: 'material-symbols:more-horiz', color: 'warning', desc: '请等待工作人员回复。' },
 };
 
-interface TicketActionConst {
-  icon: string;
-  desc: string;
-}
-
-const ticketActionConsts: Record<RbTicketOperationAction, TicketActionConst> = {
-  [RbTicketOperationAction.Open]: { icon: 'material-symbols:add-circle-outline-rounded', desc: '请求了人工提示' },
-  [RbTicketOperationAction.Close]: { icon: 'material-symbols:check-rounded', desc: '关闭了人工提示' },
-  [RbTicketOperationAction.AutoCloseSolved]: { icon: 'material-symbols:check-rounded', desc: '解出了谜题，人工提示自动关闭' },
-};
-
 const tabItems = computed(
   () =>
     [
@@ -323,13 +342,61 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
     <div class="mb-4">
       <rbph-currency-badges :currency="teamCurrency" />
     </div>
-    <div class="flex items-baseline justify-between md:flex-row flex-col">
+    <div>
       <div>
         <div class="flex items-baseline gap-2 flex-wrap">
           <span class="text-3xl font-bold">人工提示 </span>
           <span class="text-muted text-2xl">#{{ ticket?.id }}</span>
           <u-badge v-if="ticket?.state === RbTicketState.Open" class="rounded-full py-1.5 px-2.5" color="success" variant="subtle" icon="material-symbols:add-circle-outline-rounded">开放中</u-badge>
           <u-badge v-else-if="ticket?.state === RbTicketState.Closed" class="rounded-full py-1.5 px-2.5" color="error" variant="subtle" icon="material-symbols:check-circle-outline-rounded">已关闭</u-badge>
+        </div>
+
+        <div v-if="pageData?.perm.can_host" class="mt-2 flex flex-wrap items-center gap-2">
+          <u-button v-if="!ticket.assignee" :class="assigneeActionButtonClass" size="xs" color="neutral" variant="soft" :loading="assigneeLoading" @click="assignSelf()">
+            <span :class="assigneeActionNormalClass">
+              <u-icon name="material-symbols:person-off-outline-rounded" class="size-4 shrink-0" />
+              <span>未认领</span>
+            </span>
+            <span :class="assigneeActionHoverClass">
+              <u-icon name="material-symbols:person-add-outline-rounded" class="size-4 shrink-0" />
+              <span>认领会话</span>
+            </span>
+          </u-button>
+
+          <u-button v-else-if="ticket.assignee.id === user?.id" :class="assigneeActionButtonClass" size="xs" color="neutral" variant="soft" :loading="assigneeLoading" @click="unassign">
+            <span :class="assigneeActionNormalClass">
+              <u-avatar :src="buildCravatarUrl(ticket.assignee.email ?? '')" :text="ticket.assignee.nickname" size="3xs" />
+              <span class="min-w-0 truncate">{{ ticket.assignee.nickname }}</span>
+            </span>
+            <span :class="assigneeActionHoverClass">
+              <u-icon name="material-symbols:person-remove-outline-rounded" class="size-4 shrink-0" />
+              <span>取消认领</span>
+            </span>
+          </u-button>
+
+          <u-popover v-else v-model:open="assigneeConfirmOpen" arrow>
+            <u-button :class="assigneeActionButtonClass" size="xs" color="neutral" variant="soft">
+              <span :class="assigneeActionNormalClass">
+                <u-avatar :src="buildCravatarUrl(ticket.assignee.email ?? '')" :text="ticket.assignee.nickname" size="3xs" />
+                <span class="min-w-0 truncate">{{ ticket.assignee.nickname }}</span>
+              </span>
+              <span :class="assigneeActionHoverClass">
+                <u-icon name="material-symbols:person-add-outline-rounded" class="size-4 shrink-0" />
+                <span>认领会话</span>
+              </span>
+            </u-button>
+            <template #content>
+              <div class="flex items-center gap-2 px-4 py-2 text-xs">
+                <u-icon name="material-symbols:warning-outline-rounded" />
+                <span>会话已由 {{ ticket.assignee.nickname }} 认领，确定覆盖认领吗？</span>
+                <u-button :loading="assigneeLoading" class="cursor-pointer" color="warning" variant="soft" size="xs" @click="assignSelf(true)">确定</u-button>
+              </div>
+            </template>
+          </u-popover>
+
+          <u-badge size="sm" color="primary" variant="soft" icon="material-symbols:groups-2-outline-rounded">
+            {{ ticket.team?.name }}
+          </u-badge>
         </div>
       </div>
 
@@ -338,53 +405,7 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
         创建于 {{ formatDate(ticket.?.state.utime_at) }}
       </div> -->
     </div>
-    <u-timeline :items="history" :ui="{ date: 'float-end ms-1' }" class="w-full mt-6" color="success">
-      <template #title="{ item }">
-        <u-badge v-if="(item.data.actor_type || item.data.sender_type) === RbTicketSenderType.Host" variant="soft" color="warning" class="me-2">工作人员</u-badge>
-        <span class="me-1">{{ item.username }}</span>
-        <span class="font-normal text-muted">&nbsp;{{ item.action }}</span>
-      </template>
-      <template #date="{ item }">
-        {{ formatDate(item.date) }}
-      </template>
-      <template #description="{ item }">
-        <div v-if="item.message?.content !== undefined || (item.data.cost_id !== null && item.data.cost_id !== undefined)" class="px-4 py-4 ring ring-default mt-2 rounded-md text-default">
-          <rbph-content v-if="item.message.content !== undefined" :content="item.message" />
-          <div v-else class="flex align-middle gap-2">
-            这条消息已被锁定……
-            <u-popover arrow>
-              <u-button class="cursor-pointer" size="xs" color="error" variant="soft" icon="material-symbols:lock-outline">
-                解锁：{{ teamCurrency[item.data.cost_id]?.name }} {{ intPrecString(-item.data.cost_amount, teamCurrency[item.data.cost_id]?.prec ?? 0, true, ' ') }}
-              </u-button>
-              <template #content>
-                <div class="py-2 px-4 text-xs">
-                  <u-icon name="material-symbols:lock-open-right-outline-rounded" class="align-middle" />
-                  <span class="text-xs"> 确定要解锁这条消息吗？ </span>
-                  <u-button :loading="unlockLoading" class="cursor-pointer" color="success" variant="soft" size="xs" @click="unlockMessage(item.data)"> 解锁 </u-button>
-                </div>
-              </template>
-            </u-popover>
-          </div>
-          <div v-if="item.data.cost_id !== null && item.data.cost_id !== undefined" class="flex justify-end">
-            <u-badge v-if="item.data.unlocked" class="mt-2" color="success" variant="soft" icon="material-symbols:lock-open-right-outline-rounded">
-              已解锁：{{ teamCurrency[item.data.cost_id]?.name }} {{ intPrecString(-item.data.cost_amount, teamCurrency[item.data.cost_id]?.prec ?? 0, true, ' ') }}
-            </u-badge>
-            <u-popover v-else-if="pageData?.perm.can_view_locked" class="mt-2" arrow>
-              <u-button class="cursor-pointer" size="xs" color="error" variant="soft" icon="material-symbols:lock-outline">
-                未解锁：{{ teamCurrency[item.data.cost_id]?.name }} {{ intPrecString(-item.data.cost_amount, teamCurrency[item.data.cost_id]?.prec ?? 0, true, ' ') }}
-              </u-button>
-              <template #content>
-                <div class="py-2 px-4 text-xs">
-                  <u-icon name="material-symbols:lock-open-right-outline-rounded" class="align-middle" />
-                  <span class="text-xs"> 为该队伍免费解锁这条消息？ </span>
-                  <u-button :loading="unlockLoading" class="cursor-pointer" color="success" variant="soft" size="xs" @click="unlockMessage(item.data)"> 解锁 </u-button>
-                </div>
-              </template>
-            </u-popover>
-          </div>
-        </div>
-      </template>
-    </u-timeline>
+    <rbph-ticket-timeline :items="pageData?.messages ?? []" :currency="teamCurrency" :can-view-locked="pageData?.perm.can_view_locked" :unlock-loading="unlockLoading" unlockable class="mt-6" @unlock="unlockMessage" />
 
     <u-tabs :items="tabItems" variant="link" :ui="{ list: tabItems.length > 1 ? undefined : 'hidden' }">
       <template #as-team>

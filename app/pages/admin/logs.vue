@@ -175,7 +175,7 @@ function logView(log: AdminLogData) {
     case 'ticket.closed':
       return { icon: 'material-symbols:check-circle-outline-rounded', color: 'neutral' as const, title: actorTitle(log, `关闭了人工提示${ticket}`), details: [] };
     case 'ticket.message_purchased':
-      return { icon: 'material-symbols:mark_email_read-outline-rounded', color: 'primary' as const, title: actorTitle(log, `在人工提示${ticket}中购买了付费消息`), details: [] };
+      return { icon: 'material-symbols:mark-email-read-outline-rounded', color: 'primary' as const, title: actorTitle(log, `在人工提示${ticket}中购买了付费消息`), details: [] };
     default:
       return {
         icon: severity.color === 'error' ? 'material-symbols:error-outline-rounded' : severity.color === 'warning' ? 'material-symbols:warning-outline-rounded' : 'material-symbols:history-rounded',

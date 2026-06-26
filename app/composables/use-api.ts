@@ -112,7 +112,7 @@ export function useApi() {
               code,
               message: resolvedMessage,
               hint: errorHints?.[code],
-              payload: envelope.data,
+              payload: envelope,
             },
           });
         }

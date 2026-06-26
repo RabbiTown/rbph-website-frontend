@@ -1,17 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui';
 import { h } from 'vue';
-import {
-  activityActorTitle,
-  activityConsequenceText,
-  activityCurrencyAfter,
-  activityJudgeResultLabel,
-  activitySimpleNamedLabel,
-  activityTicketLabel,
-  activityUserLabel,
-  formatActivityLogCurrency,
-  isStaffActivityLog,
-} from '~/utils/activity-log';
+import { activityActorTitle, activityConsequenceText, activityCurrencyAfter, activityJudgeResultLabel, activitySimpleNamedLabel, activityTicketLabel, activityUserLabel, formatActivityLogCurrency, isStaffActivityLog } from '~/utils/activity-log';
 
 const props = defineProps<{
   currencyId?: number | null;
@@ -260,7 +250,8 @@ const currencyColumns = computed<TableColumn<CurrencyActivityRow>[]>(() => [
     },
     meta: {
       class: {
-        td: 'min-w-[14rem] whitespace-normal',
+        th: 'w-64 md:w-none wrap-anywhere whitespace-normal',
+        td: 'w-64 md:w-none wrap-anywhere whitespace-normal',
       },
     },
   },
@@ -274,8 +265,8 @@ const currencyColumns = computed<TableColumn<CurrencyActivityRow>[]>(() => [
     },
     meta: {
       class: {
-        th: 'w-40',
-        td: 'w-40 whitespace-nowrap',
+        th: 'w-28',
+        td: 'w-28 whitespace-nowrap',
       },
     },
   },
@@ -288,8 +279,8 @@ const currencyColumns = computed<TableColumn<CurrencyActivityRow>[]>(() => [
     },
     meta: {
       class: {
-        th: 'w-40',
-        td: 'w-40 whitespace-nowrap',
+        th: 'w-28',
+        td: 'w-28 whitespace-nowrap',
       },
     },
   },
@@ -333,8 +324,9 @@ defineExpose({
             <div class="min-w-0 wrap-break-word text-sm font-medium text-highlighted">
               <u-badge v-if="isStaffActivityLog(activity)" size="sm" color="warning" variant="soft" class="mr-1 align-middle mb-0.5">工作人员</u-badge>
               <span>{{ activityView(activity).title }}</span>
+              <time class="mt-1 block text-xs font-normal text-muted sm:hidden">{{ formatDate(activity.ctime_at) }}</time>
             </div>
-            <time class="shrink-0 text-xs text-muted">{{ formatDate(activity.ctime_at) }}</time>
+            <time class="hidden shrink-0 text-xs text-muted sm:block">{{ formatDate(activity.ctime_at) }}</time>
           </div>
           <div v-for="detail in activityView(activity).details" :key="detail" class="mt-1 wrap-break-word text-sm text-muted">
             {{ detail }}

@@ -11,9 +11,12 @@ const teamStore = useTeam();
 const team = teamStore.ref;
 const currencyStore = useCurrency();
 const currencies = currencyStore.ref;
+const route = useRoute();
+const notificationUnread = useNotificationUnread().count;
 
-const activeTab = ref('team');
+const activeTab = ref(route.query.tab === 'notifications' ? 'notifications' : 'team');
 const activityList = useTemplateRef<{ reload: () => Promise<void> }>('activity-list');
+const notificationList = useTemplateRef<{ reload: () => Promise<void> }>('notification-list');
 const updateTime = ref<number | null>(null);
 const refreshLoading = ref(false);
 
@@ -22,6 +25,12 @@ const tabItems = computed(() => [
     label: '队伍动态',
     icon: 'material-symbols:dynamic-form-outline-rounded',
     value: 'team',
+  },
+  {
+    label: '通知',
+    icon: 'material-symbols:notifications-outline-rounded',
+    badge: notificationUnread.value > 0 ? { label: notificationUnread.value, color: 'error', variant: 'soft', size: 'sm' } : undefined,
+    value: 'notifications',
   },
   ...(currencies.value ?? []).map(currency => ({
     label: `${currency.name} 变动记录`,
@@ -48,10 +57,11 @@ watch(tabItems, items => {
 });
 
 async function refreshCurrent() {
-  if (!activityList.value) return;
+  const list = activeTab.value === 'notifications' ? notificationList.value : activityList.value;
+  if (!list) return;
   refreshLoading.value = true;
   try {
-    await activityList.value.reload();
+    await list.reload();
   } finally {
     refreshLoading.value = false;
   }
@@ -79,7 +89,8 @@ useHead({
 
       <u-tabs v-model="activeTab" :items="tabItems" variant="link" :content="false" class="-mb-2" />
 
-      <u-card variant="subtle" :ui="{ body: activeCurrencyId ? 'sm:p-4' : undefined }">
+      <rbph-team-notification-list v-if="activeTab === 'notifications'" ref="notification-list" @updated="time => (updateTime = time)" />
+      <u-card v-else variant="subtle" :ui="{ body: activeCurrencyId ? 'sm:p-4' : undefined }">
         <rbph-team-activity-list v-if="activeTab === 'team'" ref="activity-list" @updated="time => (updateTime = time)" />
         <rbph-team-activity-list v-else :key="activeCurrencyId ?? 'currency'" ref="activity-list" :currency-id="activeCurrencyId" @updated="time => (updateTime = time)" />
       </u-card>

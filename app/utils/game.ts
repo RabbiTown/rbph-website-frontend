@@ -71,11 +71,7 @@ export interface RbPuzzleShowData {
   state: RbPuzzleTeamData;
 }
 
-export function mergePuzzleSubmitState(
-  current: RbPuzzleTeamData,
-  next: RbPuzzleTeamData | undefined,
-  action: RbJudgeAction,
-): RbPuzzleTeamData {
+export function mergePuzzleSubmitState(current: RbPuzzleTeamData, next: RbPuzzleTeamData | undefined, action: RbJudgeAction): RbPuzzleTeamData {
   const currentSubmitCount = current.submit_count ?? 0;
   const fallbackSubmitCount = action === RbJudgeAction.Fail ? currentSubmitCount + 1 : currentSubmitCount;
 
@@ -372,6 +368,7 @@ export interface TicketSummary {
   msg_count?: number;
   last_at: string | null;
   last_by?: RbTicketSenderType;
+  assignee?: { id: number; nickname: string; email?: string };
 }
 
 export interface TicketPerm {
@@ -454,6 +451,45 @@ export interface TicketSendRequest {
   sender_type?: RbTicketSenderType;
   cost_id?: number | null;
   cost_amount?: number;
+  force_assignee?: boolean;
+}
+
+export interface StaffTicketListResponse {
+  tickets: TicketSummary[];
+}
+
+export interface StaffTeamOption {
+  id: number;
+  name: string;
+  state: RbTeamState;
+}
+
+export interface TicketAssignResponse {
+  assignee?: { id: number; nickname: string; email?: string } | null;
+}
+
+export enum NotificationKind {
+  TicketReply = 1,
+}
+
+export interface TeamNotification {
+  id: number;
+  kind: NotificationKind;
+  actor?: { id: number; nickname: string } | null;
+  data: {
+    ticket_id: number;
+    message_id: number;
+    puzzle_id?: number | null;
+    puzzle_title?: string | null;
+  };
+  read: boolean;
+  read_at?: string | null;
+  ctime_at: string;
+}
+
+export interface NotificationUnreadResponse {
+  count: number;
+  dm_count: number;
 }
 
 export type TicketAggreInfo = TicketSummary;

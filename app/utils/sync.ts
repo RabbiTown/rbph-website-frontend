@@ -13,6 +13,10 @@ export enum SyncMessageType {
   // 300 - puzzle
   PuzzleSubmitted = 301,
   PuzzleHintUnlocked = 302,
+
+  // 400 - ticket
+  TicketUpdated = 401,
+  NotificationUpdated = 402,
 }
 
 export interface SyncMessage<T> {
@@ -47,4 +51,19 @@ export interface SyncMessageMap {
     currency_penalty?: RbCurrencyPenalty[];
   };
   [SyncMessageType.PuzzleHintUnlocked]: { sid?: string; user: { id: number; name: string }; puzzle: { id: number; title: string }; hint: { id: number; title: string; cost_id?: number | null; cost_amount: number } };
+  [SyncMessageType.TicketUpdated]: {
+    event: 'created' | 'message' | 'closed' | 'assigned' | 'unassigned';
+    ticket_id: number;
+    message_id?: number | null;
+    actor_id: number;
+    team_id: number;
+    puzzle_id?: number | null;
+    game_id: number;
+  };
+  [SyncMessageType.NotificationUpdated]: {
+    event: 'created' | 'read' | 'read_all';
+    notification_id?: number | null;
+    team_id: number;
+    game_id: number;
+  };
 }

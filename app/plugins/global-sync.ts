@@ -2,6 +2,8 @@ export default defineNuxtPlugin(() => {
   const sync = useSync();
   const user = useUser(false);
   const team = useTeam(false);
+  const game = useGame();
+  const notificationUnread = useNotificationUnread();
   const toast = useToast();
   const currency = useCurrency().getAllCurrent();
 
@@ -35,6 +37,8 @@ export default defineNuxtPlugin(() => {
     }
   });
 
+  watch([game.ref, team.ref], () => notificationUnread.refresh(), { immediate: true });
+
   watch(sync.online, newState => {
     let toastData: Omit<Partial<Toast>, 'id'> | undefined = undefined;
     if (newState) {
@@ -62,6 +66,59 @@ export default defineNuxtPlugin(() => {
       }
     }
   });
+
+  function notificationTitle(notification: TeamNotification) {
+    return notification.data.puzzle_id ? `${notification.data.puzzle_title ?? '人工提示'} #${notification.data.ticket_id}` : '站内信';
+  }
+
+  function notificationTarget(gameId: number, notification: TeamNotification) {
+    return notification.data.puzzle_id ? `/tickets/${notification.data.ticket_id}` : `/games/${gameId}/ticket`;
+  }
+
+  async function showNotificationToast(gameId: number, notificationId?: number | null) {
+    if (!notificationId) {
+      toast.add({
+        title: '收到新通知',
+        description: '工作人员回复了人工提示或站内信。',
+        icon: 'material-symbols:notifications-outline-rounded',
+        color: 'info',
+        duration: 10000,
+        actions: [{ label: '查看通知', to: `/games/${gameId}/activity?tab=notifications` }],
+      });
+      return;
+    }
+
+    try {
+      const { data: notification } = await useApi().get<TeamNotification>(`/games/${gameId}/notifications/${notificationId}`);
+      const title = notificationTitle(notification);
+      const actor = notification.actor?.nickname ?? '工作人员';
+      const isPuzzle = Boolean(notification.data.puzzle_id);
+      toast.add({
+        title,
+        description: h('span', [h('span', { class: 'inline-flex items-center gap-1' }, [h('span', { class: 'rounded-md bg-warning/10 px-1.5 py-0.5 text-xs font-medium text-warning' }, '工作人员'), ` ${actor}`]), ' 回复了信息。']),
+        icon: isPuzzle ? 'material-symbols:near-me-outline-rounded' : 'material-symbols:mail-outline-rounded',
+        color: 'primary',
+        duration: 10000,
+        actions: [
+          {
+            icon: 'material-symbols:notifications-outline-rounded',
+            label: '查看通知',
+            variant: 'soft',
+            to: `/games/${gameId}/activity?tab=notifications`,
+          },
+          {
+            icon: isPuzzle ? 'material-symbols:near-me-outline-rounded' : 'material-symbols:mail-outline-rounded',
+            label: title,
+            variant: 'soft',
+            to: notificationTarget(gameId, notification),
+          },
+        ],
+        ui: { actions: 'flex-wrap' },
+      });
+    } catch (error) {
+      handleError(error, '获取通知详情失败');
+    }
+  }
 
   sync.listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
     if (useSid().consume(data.sid)) return;
@@ -150,6 +207,15 @@ export default defineNuxtPlugin(() => {
         icon: 'material-symbols:lock-open-right-outline-rounded',
         duration: 10000,
       });
+    }
+  });
+
+  sync.listen(SyncMessageType.NotificationUpdated, ({ data }) => {
+    if (data.game_id !== game.ref.value?.id || team.ref.value?.id !== data.team_id) return;
+    notificationUnread.refresh();
+
+    if (data.event === 'created') {
+      showNotificationToast(data.game_id, data.notification_id);
     }
   });
 
