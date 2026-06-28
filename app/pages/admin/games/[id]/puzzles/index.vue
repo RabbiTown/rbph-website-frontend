@@ -767,6 +767,10 @@ function distanceToRect(clientX: number, clientY: number, rect: Pick<PuzzleDropE
   return Math.hypot(dx, dy);
 }
 
+function isPointInPuzzleDropEntry(event: Pick<MouseEvent, 'clientX' | 'clientY'>, entry: PuzzleDropEntry) {
+  return event.clientX >= entry.left && event.clientX <= entry.right && event.clientY >= entry.top && event.clientY <= entry.bottom;
+}
+
 function candidateFromPuzzleEntry(entry: PuzzleDropEntry, event: Pick<MouseEvent, 'clientX' | 'clientY'>): PuzzleDropCandidate | null {
   const source = draggingPuzzle.value;
   if (!source || source.id === entry.id) return null;
@@ -811,8 +815,12 @@ function candidateFromEmptyRound(round: AdminRound, event: Pick<MouseEvent, 'cli
 }
 
 function getPuzzleDropTargetByPosition(event: Pick<MouseEvent, 'clientX' | 'clientY'>): PuzzleDropCandidate | null {
-  if (!draggingPuzzle.value) return null;
+  const source = draggingPuzzle.value;
+  if (!source) return null;
   if (puzzleDropEntries.length === 0) cachePuzzleDropEntries();
+
+  const sourceEntry = puzzleDropEntries.find(entry => entry.id === source.id);
+  if (sourceEntry && isPointInPuzzleDropEntry(event, sourceEntry)) return null;
 
   const candidates: PuzzleDropCandidate[] = [];
   for (const entry of puzzleDropEntries) {
@@ -841,7 +849,7 @@ function getPuzzleDropTargetFromPuzzle(puzzle: AdminPuzzle, event: DragEvent): P
 }
 
 function isOriginalPositionActive(puzzle: AdminPuzzle) {
-  return puzzleOriginPlaceholderVisible.value && draggingPuzzle.value?.id === puzzle.id && !dragOverPuzzle.value;
+  return puzzleOriginPlaceholderVisible.value && draggingPuzzle.value?.id === puzzle.id && !dragOverPuzzle.value && dragOverEmptyRoundId.value === null;
 }
 
 function originPlaceholderClass(puzzle: AdminPuzzle) {
