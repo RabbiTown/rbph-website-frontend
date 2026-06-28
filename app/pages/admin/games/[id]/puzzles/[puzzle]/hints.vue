@@ -189,7 +189,7 @@ function addHint() {
     id: nextDraftId--,
     sort: nextSort,
     title: '',
-    title_hidden: false,
+    title_hidden: true,
     content: '',
     content_type: RbContentType.Markdown,
     cooldown: 0,
