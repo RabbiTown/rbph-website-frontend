@@ -50,6 +50,7 @@ export interface AdminHintData {
   cooldown: number;
   cost_id?: number | null;
   cost_amount: number;
+  backend_function?: string | null;
   puzzle_id: number;
   ctime_at: string;
 }

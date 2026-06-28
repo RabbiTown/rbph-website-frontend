@@ -106,11 +106,12 @@ const ruleOriginPlaceholderVisible = ref(false);
 let nextRuleId = 0;
 let ruleDropEntries: RuleDropEntry[] = [];
 
-const ruleTypeItems = [
+const allRuleTypeItems = [
   { label: '精确匹配', value: 'exact', icon: 'material-symbols:match-case-rounded' },
   { label: '兜底规则', value: 'all', icon: 'material-symbols:keyboard-double-arrow-down-rounded' },
   { label: '评测函数', value: 'custom', icon: 'material-symbols:function-rounded' },
 ] satisfies SelectItem[];
+const backendEnabled = computed(() => backend.value?.enabled ?? false);
 
 const actionItems = [
   { label: judgeActionConsts[RbJudgeAction.Correct].name, value: 'correct', icon: judgeActionConsts[RbJudgeAction.Correct].icon },
@@ -141,14 +142,6 @@ const actionValueMap: Record<JudgeActionKey, RbJudgeAction> = {
   finish_game: RbJudgeAction.FinishGame,
   pending: RbJudgeAction.Pending,
 };
-
-const backendFunctionItems = computed<SelectItem[]>(() =>
-  parseBackendExportFunctions(backend.value?.source ?? '').map(name => ({
-    label: name,
-    value: name,
-    icon: 'material-symbols:function-rounded',
-  })),
-);
 
 const currencyItems = computed<SelectItem[]>(() => [
   { label: '不扣除', value: null, icon: 'material-symbols:money-off-outline-rounded' },
@@ -376,6 +369,7 @@ async function fetchCurrency(gameId: number | undefined) {
 }
 
 function addRule(type: JudgeRuleType = 'exact') {
+  if (type === 'custom' && !backendEnabled.value) type = 'exact';
   state.rules.push(makeRule({ type, action: type === 'all' ? 'fail' : 'correct' }));
 }
 
@@ -388,7 +382,15 @@ function isRuleInvalid(rule: JudgeRuleState) {
 }
 
 function selectedRuleTypeIcon(type: JudgeRuleType) {
-  return ruleTypeItems.find(item => item.value === type)?.icon;
+  return allRuleTypeItems.find(item => item.value === type)?.icon;
+}
+
+function ruleTypeItemsFor(rule: JudgeRuleState) {
+  return allRuleTypeItems.filter(item => item.value !== 'custom' || backendEnabled.value || rule.type === 'custom');
+}
+
+function ruleBackendWarning(rule: JudgeRuleState) {
+  return rule.type === 'custom' && !backendEnabled.value;
 }
 
 function selectedActionIcon(action: JudgeActionKey) {
@@ -616,7 +618,7 @@ async function apply() {
   if (hasInvalidRules.value) {
     toast.add({
       title: '答案判定规则不完整',
-      description: '精确匹配规则需要填写匹配答案，自定义评测函数需要选择函数名。',
+      description: '精确匹配规则需要填写匹配答案，自定义评测函数需要填写函数名。',
       icon: 'material-symbols:error-med-outline-rounded',
       color: 'error',
     });
@@ -720,7 +722,7 @@ watch(dirty, value => {
               data-judge-rule-card="true"
               :data-rule-id="rule.id"
               class="relative rounded-lg bg-elevated/60 p-4 ring ring-default"
-              :class="[isRuleInvalid(rule) ? 'ring-error/60' : undefined, ruleDropHintClass(rule)]"
+              :class="[isRuleInvalid(rule) || ruleBackendWarning(rule) ? 'ring-error/60' : undefined, ruleDropHintClass(rule)]"
               @dragover="onRuleDragOver"
               @dragleave="onRuleDragLeave(rule.id, $event)"
               @drop="onRuleDrop"
@@ -753,34 +755,46 @@ watch(dirty, value => {
                 </div>
               </div>
 
-              <div class="mt-3 space-y-3">
-                <div class="grid gap-2 sm:grid-cols-[5rem_10rem_minmax(0,1fr)] sm:items-center">
-                  <div class="text-sm font-medium text-muted">匹配方式</div>
-                  <u-select v-model="rule.type" :items="ruleTypeItems" :leading-icon="selectedRuleTypeIcon(rule.type)" color="neutral" variant="subtle" class="w-full" :disabled="saving" />
-                  <u-form-field :error="isRuleInvalid(rule) ? true : undefined">
-                    <u-input v-if="rule.type === 'exact'" v-model="rule.text" placeholder="匹配内容，例如 ORME SHOE" class="w-full font-mono" :disabled="saving" />
-                    <u-select-menu
-                      v-else-if="rule.type === 'custom'"
-                      v-model="rule.function"
-                      :items="backendFunctionItems"
-                      value-key="value"
-                      :filter-fields="['label']"
-                      search-input
-                      placeholder="选择后端脚本导出函数"
-                      class="w-full font-mono"
-                      icon="material-symbols:function-rounded"
-                      :disabled="saving"
-                    />
-                    <u-input v-else model-value="任意答案" class="w-full" disabled />
-                  </u-form-field>
+              <div class="mt-4 flex flex-col gap-4">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
+                  <rb-form-field row class="flex-1" label="匹配方式" :error="isRuleInvalid(rule) || ruleBackendWarning(rule) ? true : undefined">
+                    <div class="flex min-w-0 flex-col gap-2">
+                      <div class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start">
+                        <u-select v-model="rule.type" :items="ruleTypeItemsFor(rule)" :leading-icon="selectedRuleTypeIcon(rule.type)" color="neutral" variant="subtle" class="w-full sm:w-40 sm:shrink-0" :disabled="saving" />
+                        <u-input v-if="rule.type === 'exact'" v-model="rule.text" placeholder="ORME SHOE" class="w-full min-w-0 font-mono" :disabled="saving" />
+                        <div v-else-if="rule.type === 'custom'" class="flex min-w-0 flex-1 flex-col gap-1">
+                          <div class="flex min-w-0 items-center">
+                            <u-input v-model="rule.function" placeholder="(required)" class="w-full min-w-0 font-mono" icon="material-symbols:function-rounded" :color="ruleBackendWarning(rule) ? 'error' : 'neutral'" :disabled="saving" />
+                            <rb-tooltip class="mx-1 shrink-0" text="评测时将调用对应的后端函数，函数失败会导致评测失败。">
+                              <u-icon name="material-symbols:help-outline-rounded" class="size-4 align-middle mb-0.5 ms-1 text-secondary cursor-help" />
+                            </rb-tooltip>
+                          </div>
+                          <div v-if="ruleBackendWarning(rule)" class="text-xs text-error">题目后端已关闭，该评测函数不会生效；重新启用后端后会恢复。</div>
+                        </div>
+                        <u-input v-else model-value="任意答案" class="w-full min-w-0" disabled />
+                      </div>
+                    </div>
+                  </rb-form-field>
+
+                  <rb-form-field v-if="rule.type !== 'custom'" row class="flex-1">
+                    <template #label>
+                      实际答案
+                      <rb-tooltip text="实际答案将显示给玩家作为参考。若为空，则默认使用匹配规则作为答案。">
+                        <u-icon name="material-symbols:help-outline-rounded" class="size-4 align-middle mb-0.5 ms-1 cursor-help text-secondary" />
+                      </rb-tooltip>
+                    </template>
+                    <u-input v-model="rule.answer" placeholder="(optional)" class="w-full font-mono" :disabled="saving" />
+                  </rb-form-field>
                 </div>
 
-                <div v-if="rule.type !== 'custom'" class="grid gap-2 lg:grid-cols-[5rem_10rem_minmax(0,1fr)_minmax(0,14rem)] lg:items-center">
-                  <div class="text-sm font-medium text-muted">匹配正确时</div>
-                  <u-select v-model="rule.action" :items="actionItems" :leading-icon="selectedActionIcon(rule.action)" :color="selectedActionColor(rule.action)" variant="subtle" class="w-full" :disabled="saving" />
-                  <u-input v-model="rule.result" placeholder="返回提示，留空则使用默认提示" class="w-full" :disabled="saving" />
-                  <u-input v-model="rule.answer" placeholder="记录答案，可选" class="w-full font-mono" :disabled="saving" />
-                </div>
+                <template v-if="rule.type !== 'custom'">
+                  <rb-form-field row label="匹配正确时" :ui="{ container: 'w-full' }">
+                    <div class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+                      <u-select v-model="rule.action" :items="actionItems" :leading-icon="selectedActionIcon(rule.action)" :color="selectedActionColor(rule.action)" variant="subtle" class="w-full sm:w-40 sm:shrink-0" :disabled="saving" />
+                      <u-input v-model="rule.result" placeholder="进一步指示，留空则使用默认提示" class="w-full min-w-0" :disabled="saving" />
+                    </div>
+                  </rb-form-field>
+                </template>
               </div>
             </div>
           </div>
@@ -801,7 +815,7 @@ watch(dirty, value => {
 
       <section class="space-y-4">
         <div>
-          <h3 class="text-lg font-semibold text-highlighted">错误惩罚</h3>
+          <h2 class="text-xl font-semibold text-highlighted">错误惩罚</h2>
           <p class="mt-1 text-sm text-muted">在评测结果为回答错误时将生效惩罚，多种惩罚可以同时生效。</p>
         </div>
 

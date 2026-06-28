@@ -9,6 +9,7 @@ interface HintState {
   cooldown: number;
   cost_id: number | null;
   cost_amount: number;
+  backend_function: string | null;
   deleting?: boolean;
   open?: boolean;
 }
@@ -22,6 +23,7 @@ interface HintPatch {
   cooldown: number;
   cost_id: number | null;
   cost_amount: number;
+  backend_function: string | null;
   puzzle_id: number;
 }
 
@@ -40,7 +42,7 @@ const api = useApi();
 const toast = useToast();
 const dirtyToast = useDirtyToast();
 const route = useRoute();
-const { puzzle, refresh } = useAdmin().usePuzzleContext();
+const { puzzle, backend, refresh } = useAdmin().usePuzzleContext();
 const dragAutoScroll = useDragAutoScroll({
   onScroll: () => {
     if (draggingHintId.value !== null) cacheHintDropEntries();
@@ -83,6 +85,7 @@ function selectedCurrencyLabel(id: number | null) {
 }
 
 const ticketCooldownPatch = computed(() => Math.max(0, Math.trunc(ticketCooldown.value || 0)));
+const backendEnabled = computed(() => backend.value?.enabled ?? false);
 const originalTicketEnabled = computed(() => puzzle.value?.ticket_enabled ?? true);
 const originalTicketCooldown = computed(() => puzzle.value?.ticket_cooldown ?? 0);
 const ticketEnabledDirty = computed(() => Boolean(puzzle.value && ticketEnabled.value !== originalTicketEnabled.value));
@@ -119,6 +122,7 @@ function hintToState(hint: AdminHintData): HintState {
     cooldown: hint.cooldown,
     cost_id: hint.cost_id ?? null,
     cost_amount: hint.cost_amount,
+    backend_function: hint.backend_function ?? null,
     open: false,
   };
 }
@@ -133,6 +137,7 @@ function stateToPatch(hint: HintState): HintPatch {
     cooldown: Math.max(0, Math.trunc(hint.cooldown || 0)),
     cost_id: hint.cost_id,
     cost_amount: hint.cost_id === null ? 0 : Math.max(0, Math.trunc(hint.cost_amount || 0)),
+    backend_function: hint.backend_function?.trim() || null,
     puzzle_id: currentPuzzleId.value,
   };
 }
@@ -147,6 +152,7 @@ function stateToDirtySnapshot(hint: HintState) {
     cooldown: patch.cooldown,
     cost_id: patch.cost_id,
     cost_amount: patch.cost_amount,
+    backend_function: patch.backend_function,
   };
 }
 
@@ -189,6 +195,7 @@ function addHint() {
     cooldown: 0,
     cost_id: null,
     cost_amount: 0,
+    backend_function: null,
     open: true,
   });
 }
@@ -433,9 +440,18 @@ function validate(): boolean {
     activeHints.value.every(hint => {
       const patch = stateToPatch(hint);
       const costValid = patch.cost_id === null || currencies.value.some(currency => currency.id === patch.cost_id);
-      return patch.title.length > 0 && patch.cooldown >= 0 && patch.cost_amount >= 0 && costValid;
+      const backendFunctionValid = patch.backend_function === null || /^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(patch.backend_function);
+      return patch.title.length > 0 && patch.cooldown >= 0 && patch.cost_amount >= 0 && costValid && backendFunctionValid;
     })
   );
+}
+
+function showBackendFunction(hint: HintState) {
+  return backendEnabled.value || Boolean(hint.backend_function?.trim());
+}
+
+function hintBackendWarning(hint: HintState) {
+  return !backendEnabled.value && Boolean(hint.backend_function?.trim());
 }
 
 async function fetchData() {
@@ -462,7 +478,7 @@ async function apply() {
   if (!validate()) {
     toast.add({
       title: '提示配置不合法',
-      description: '请检查标题、冷却时间和货币消耗。',
+      description: '请检查标题、冷却时间、货币消耗和后端函数名。',
       icon: 'material-symbols:error-med-outline-rounded',
       color: 'error',
     });
@@ -656,12 +672,27 @@ onBeforeUnmount(() => {
                         </rb-form-field>
                       </div>
 
-                      <rb-form-field row label="解锁消耗">
-                        <div class="flex flex-wrap items-center gap-2">
-                          <u-select v-model="hint.cost_id" :items="currencyItems" :leading-icon="selectedCurrencyIcon(hint.cost_id)" variant="subtle" class="w-40" :disabled="saving || hint.deleting" />
-                          <rb-input-number v-if="hint.cost_id !== null" v-model="hint.cost_amount" :prec="currencyPrec(hint.cost_id)" :min="0" :step="1" orientation="vertical" variant="subtle" class="w-36" :disabled="saving || hint.deleting" />
-                        </div>
-                      </rb-form-field>
+                      <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
+                        <rb-form-field row class="flex-1" label="解锁消耗">
+                          <div class="flex flex-wrap items-center gap-2">
+                            <u-select v-model="hint.cost_id" :items="currencyItems" :leading-icon="selectedCurrencyIcon(hint.cost_id)" variant="subtle" class="w-40" :disabled="saving || hint.deleting" />
+                            <rb-input-number v-if="hint.cost_id !== null" v-model="hint.cost_amount" :prec="currencyPrec(hint.cost_id)" :min="0" :step="1" orientation="vertical" variant="subtle" class="w-36" :disabled="saving || hint.deleting" />
+                          </div>
+                        </rb-form-field>
+
+                        <rb-form-field v-if="showBackendFunction(hint)" row class="flex-1" :error="hintBackendWarning(hint) ? true : undefined">
+                          <template #label>
+                            解锁调用函数
+                            <rb-tooltip text="若非空，购买提示时将调用对应的后端函数，函数失败会导致购买失败。">
+                              <u-icon name="material-symbols:help-outline-rounded" class="size-4 align-middle mb-0.5 ms-1 cursor-help" :class="hintBackendWarning(hint) ? 'text-error' : 'text-secondary'" />
+                            </rb-tooltip>
+                          </template>
+                          <div class="flex flex-col gap-1">
+                            <u-input v-model="hint.backend_function" placeholder="(optional)" icon="material-symbols:function-rounded" variant="subtle" class="w-full max-w-md font-mono" :color="hintBackendWarning(hint) ? 'error' : 'neutral'" :disabled="saving || hint.deleting" />
+                            <div v-if="hintBackendWarning(hint)" class="text-xs text-error">题目后端已关闭，该解锁调用函数不会生效；重新启用后端后会恢复。</div>
+                          </div>
+                        </rb-form-field>
+                      </div>
 
                       <rbph-content-editor v-model="hint.content" framed placeholder="提示内容" :disabled="saving || hint.deleting" @save="apply" />
                     </div>
@@ -680,7 +711,7 @@ onBeforeUnmount(() => {
 
         <section class="space-y-4">
           <div>
-            <h3 class="text-lg font-semibold text-highlighted">人工提示</h3>
+            <h2 class="text-xl font-semibold text-highlighted">人工提示</h2>
             <p class="mt-1 text-sm text-muted">玩家在特定情况下可以请求人工提示。</p>
           </div>
 

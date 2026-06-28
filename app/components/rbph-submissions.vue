@@ -30,7 +30,7 @@ const columns = ref<TableColumn<RbSubmission>[]>([
   },
   {
     accessorKey: 'user_answer',
-    header: () => h('span', ['内容', h(RbTooltip, { text: '鼠标悬停可查看归一化结果' }, () => h(Icon, { name: 'material-symbols:help-outline-rounded', class: 'size-4 align-middle mb-0.5 ms-1 text-secondary cursor-help' }))]),
+    header: () => h('span', ['内容', h(RbTooltip, { text: '鼠标悬停可查看规范化结果' }, () => h(Icon, { name: 'material-symbols:help-outline-rounded', class: 'size-4 align-middle mb-0.5 ms-1 text-secondary cursor-help' }))]),
     cell: ({ row, getValue }) => {
       return h(RbTooltip, { text: row.original.norm_answer }, () => h('span', { variant: 'ghost', color: 'neutral', class: 'cursor-help' }, getValue<string>()));
     },
