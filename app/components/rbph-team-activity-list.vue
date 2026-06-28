@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui';
-import { h } from 'vue';
-import { activityActorTitle, activityConsequenceText, activityCurrencyAfter, activityJudgeResultLabel, activitySimpleNamedLabel, activityTicketLabel, activityUserLabel, formatActivityLogCurrency, isStaffActivityLog } from '~/utils/activity-log';
 
 const props = defineProps<{
   currencyId?: number | null;
@@ -188,8 +186,8 @@ function activityView(activity: RbTeamActivity) {
       return {
         icon: 'material-symbols:account-balance-wallet-outline-rounded',
         color: activity.delta_amount && activity.delta_amount < 0 ? ('warning' as const) : ('success' as const),
-        title: actorTitle('变更了货币'),
-        details: [`变动：${currencyText}`, activityCurrencyAfter(activity) ? `余额：${activityCurrencyAfter(activity)}` : ''].filter(Boolean),
+        title: actorTitle(activityCurrencyReasonTitle(activity)),
+        details: [`变动：${currencyText}${activityCurrencyAfter(activity) ? `；余额：${activityCurrencyAfter(activity)}` : ''}`].filter(Boolean),
       };
     case 'ticket.opened':
       return { icon: 'material-symbols:near-me-outline-rounded', color: 'success' as const, title: actorTitle(`开启了人工提示${ticketTitle}`), details: [] };

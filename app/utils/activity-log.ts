@@ -160,10 +160,7 @@ export function formatActivityLogCurrencyAmount(data: ActivityLogPayload, amount
 
 export function activityCurrencyDetails(entry: ActivityLogEntry) {
   const delta = Number(entry.data.delta ?? entry.delta_amount ?? 0);
-  return [
-    delta ? `变动：${formatActivityLogCurrencyAmount(entry.data, delta)}` : '',
-    entry.data.after !== undefined ? `结余：${formatActivityLogCurrencyAmount(entry.data, Number(entry.data.after), false)}` : '',
-  ].filter(Boolean);
+  return [delta ? `变动：${formatActivityLogCurrencyAmount(entry.data, delta)}` : '', entry.data.after !== undefined ? `结余：${formatActivityLogCurrencyAmount(entry.data, Number(entry.data.after), false)}` : ''].filter(Boolean);
 }
 
 export function formatActivityLogCurrency(entry: ActivityLogEntry) {
@@ -179,11 +176,13 @@ export function activityCurrencyAfter(entry: ActivityLogEntry) {
   return `${currency.name ?? ''} ${intPrecString(Number(entry.data.after), currency.prec ?? 0)}`;
 }
 
-export function activityConsequenceText(
-  entry: ActivityLogEntry,
-  currencyById: (id: number) => ActivityLogCurrencyInfo | undefined,
-  formatTime: (value: string) => string,
-) {
+export function activityCurrencyReasonTitle(entry: ActivityLogEntry) {
+  const reason = typeof entry.data.reason === 'string' ? entry.data.reason.trim() : '';
+  if (reason) return reason;
+  return `${activitySimpleNamedLabel(entry.data.puzzle, '题目')}变动了货币`;
+}
+
+export function activityConsequenceText(entry: ActivityLogEntry, currencyById: (id: number) => ActivityLogCurrencyInfo | undefined, formatTime: (value: string) => string) {
   const parts: string[] = [];
   const data = entry.data;
 
@@ -202,4 +201,3 @@ export function activityConsequenceText(
 
   return parts.join('，');
 }
-

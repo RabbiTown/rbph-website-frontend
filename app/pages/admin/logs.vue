@@ -167,7 +167,7 @@ function logView(log: AdminLogData) {
       return {
         icon: 'material-symbols:account-balance-wallet-outline-rounded',
         color: log.delta_amount && log.delta_amount < 0 ? ('warning' as const) : ('success' as const),
-        title: actorTitle(log, '变更了货币'),
+        title: actorTitle(log, activityCurrencyReasonTitle(log)),
         details: activityCurrencyDetails(log),
       };
     case 'ticket.opened':
