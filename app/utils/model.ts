@@ -1,6 +1,6 @@
 export interface RbGameSettings {
   team: {
-    max_members: number;
+    max_members: number | null;
   };
   ticket: Record<string, unknown>;
 }

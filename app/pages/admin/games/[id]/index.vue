@@ -19,6 +19,13 @@ type CurrencyEditItem = {
   dirty: boolean;
   deletePending: boolean;
 };
+type GameSettingsPatchBody = Partial<Pick<RbGameModel, 'title' | 'is_shown' | 'is_online' | 'start_at' | 'end_at'>> & {
+  settings?: {
+    team?: {
+      max_members?: number | null;
+    };
+  };
+};
 
 const currencyDrafts = reactive<Record<number, CurrencyDraft>>({});
 const currencyAmountMax = Number.MAX_SAFE_INTEGER;
@@ -32,6 +39,7 @@ const state = reactive({
   title: '',
   is_shown: false,
   is_online: false,
+  max_members: null as number | null,
   date: {
     start: new Date(),
     end: new Date(),
@@ -42,6 +50,7 @@ function syncState() {
   state.title = game.value?.title ?? '';
   state.is_shown = game.value?.is_shown ?? false;
   state.is_online = game.value?.is_online ?? false;
+  state.max_members = game.value?.settings?.team.max_members ?? null;
   state.date.start = new Date(game.value?.start_at ?? '');
   state.date.end = new Date(game.value?.end_at ?? '');
 }
@@ -50,19 +59,27 @@ function normalizeDate(date: Date | string | undefined) {
   return date ? new Date(date).toISOString() : undefined;
 }
 
+function normalizeMaxMembers(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return null;
+  return Math.trunc(value);
+}
+
 function makePatchBody() {
   const current = game.value;
   if (!current) return {};
 
-  const body: Partial<Pick<RbGameModel, 'title' | 'is_shown' | 'is_online' | 'start_at' | 'end_at'>> = {};
+  const body: GameSettingsPatchBody = {};
   const startAt = normalizeDate(state.date.start);
   const endAt = normalizeDate(state.date.end);
+  const maxMembers = normalizeMaxMembers(state.max_members);
+  const currentMaxMembers = current.settings?.team.max_members ?? null;
 
   if (state.title !== current.title) body.title = state.title;
   if (state.is_shown !== current.is_shown) body.is_shown = state.is_shown;
   if (state.is_online !== current.is_online) body.is_online = state.is_online;
   if (startAt && startAt !== normalizeDate(current.start_at)) body.start_at = startAt;
   if (endAt && endAt !== normalizeDate(current.end_at)) body.end_at = endAt;
+  if (maxMembers !== currentMaxMembers) body.settings = { team: { max_members: maxMembers } };
 
   return body;
 }
@@ -75,6 +92,7 @@ const dirtyFields = computed(() => {
     title: 'title' in patch,
     isShown: 'is_shown' in patch,
     isOnline: 'is_online' in patch,
+    maxMembers: Boolean(patch.settings?.team && 'max_members' in patch.settings.team),
     date: 'start_at' in patch || 'end_at' in patch,
   };
 });
@@ -266,6 +284,8 @@ function resetField(field: keyof typeof dirtyFields.value) {
     state.is_shown = current.is_shown ?? false;
   } else if (field === 'isOnline') {
     state.is_online = current.is_online ?? false;
+  } else if (field === 'maxMembers') {
+    state.max_members = current.settings?.team.max_members ?? null;
   } else if (field === 'date') {
     state.date.start = new Date(current.start_at);
     state.date.end = new Date(current.end_at);
@@ -277,12 +297,23 @@ async function submitChanges() {
   if (!current || submitLoading.value || currencySubmitting.value) return;
 
   const body = patchBody.value;
+  const maxMembers = normalizeMaxMembers(state.max_members);
 
   if (Object.keys(body).length === 0 && !hasCurrencyPatch.value) {
     toast.add({
       title: '没有需要保存的修改',
       icon: 'material-symbols:info-outline-rounded',
       color: 'neutral',
+    });
+    return;
+  }
+
+  if (maxMembers !== null && maxMembers <= 0) {
+    toast.add({
+      title: '队伍人数上限不合法',
+      description: '请输入大于 0 的整数，或清空为无上限。',
+      icon: 'material-symbols:error-outline-rounded',
+      color: 'error',
     });
     return;
   }
@@ -427,6 +458,20 @@ watch(
               <u-switch v-model="state.is_online" />
             </rb-form-field>
             <u-separator />
+            <rb-form-field
+              name="max_members"
+              orientation="horizontal"
+              label="队伍人数上限"
+              description="限制每支队伍最多可加入的人数"
+              class="flex max-sm:flex-col justify-between items-center gap-4"
+              :dirty="dirtyFields.maxMembers"
+              :reset="() => resetField('maxMembers')"
+            >
+              <div class="flex w-full flex-wrap items-center justify-end gap-3">
+                <u-input-number v-model="state.max_members" :min="1" :step="1" orientation="vertical" placeholder="无上限" class="w-32" />
+              </div>
+            </rb-form-field>
+            <u-separator />
             <rb-form-field name="date" orientation="horizontal" label="比赛时间" required description="活动开始/结束时间" class="flex max-sm:flex-col justify-between items-center gap-4" :dirty="dirtyFields.date" :reset="() => resetField('date')">
               <rb-input-date-time-range v-model="state.date" class="w-full" icon="material-symbols:event-outline-rounded" />
             </rb-form-field>
@@ -518,7 +563,16 @@ watch(
                         <rb-input-number v-model="item.draft.growth" :prec="item.draft.prec" :max="currencyAmountMax" :step="10 ** item.draft.prec" orientation="vertical" class="w-full" :disabled="currencySubmitting || item.deletePending" />
                       </rb-form-field>
                       <rb-form-field label="上限">
-                        <rb-input-number v-model="item.draft.max_amount" :prec="item.draft.prec" :min="0" :max="currencyAmountMax" :step="10 ** item.draft.prec" orientation="vertical" class="w-full" :disabled="currencySubmitting || item.deletePending" />
+                        <rb-input-number
+                          v-model="item.draft.max_amount"
+                          :prec="item.draft.prec"
+                          :min="0"
+                          :max="currencyAmountMax"
+                          :step="10 ** item.draft.prec"
+                          orientation="vertical"
+                          class="w-full"
+                          :disabled="currencySubmitting || item.deletePending"
+                        />
                       </rb-form-field>
                       <rb-form-field label="初始隐藏">
                         <u-switch v-model="item.draft.init_hidden" :disabled="currencySubmitting || item.deletePending" class="mt-2.5" />
