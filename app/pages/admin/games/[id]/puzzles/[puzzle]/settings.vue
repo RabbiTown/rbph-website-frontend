@@ -7,6 +7,7 @@ const dirtyToast = useDirtyToast();
 const { puzzle, backend, round } = useAdmin().usePuzzleContext();
 
 const state = reactive({
+  releaseAt: undefined as Date | undefined,
   unlock: defaultUnlockGate('default') as UnlockGateNode,
   backend: {
     enabled: false,
@@ -55,17 +56,25 @@ const deleteConfirmDescription = computed(() => {
 const unlockCondPatch = computed(() => serializeUnlockGate(state.unlock));
 const originalUnlockCond = computed(() => puzzle.value?.unlock_cond ?? 'default');
 const unlockCondDirty = computed(() => Boolean(puzzle.value && unlockCondPatch.value !== originalUnlockCond.value));
+const releaseAtPatch = computed(() => state.releaseAt?.toISOString() ?? null);
+const originalReleaseAt = computed(() => (puzzle.value?.release_at ? new Date(puzzle.value.release_at).toISOString() : null));
+const releaseAtDirty = computed(() => Boolean(puzzle.value && releaseAtPatch.value !== originalReleaseAt.value));
 const backendEnabled = computed(() => state.backend.enabled);
 const backendEnabledDirty = computed(() => Boolean(puzzle.value && backendLoaded.value && backendEnabled.value !== (backend.value?.enabled ?? false)));
 const backendSourceDirty = computed(() => Boolean(puzzle.value && backendLoaded.value && state.backend.source !== (backend.value?.source ?? '')));
 const backendFunctionsDirty = computed(() => Boolean(puzzle.value && backendLoaded.value && JSON.stringify([...state.backend.functions].sort()) !== JSON.stringify([...(backend.value?.functions ?? [])].sort())));
 const backendDirty = computed(() => backendEnabledDirty.value || backendSourceDirty.value || backendFunctionsDirty.value);
-const dirty = computed(() => unlockCondDirty.value || backendDirty.value);
+const dirty = computed(() => releaseAtDirty.value || unlockCondDirty.value || backendDirty.value);
 const previewText = computed(() => translateUnlockCondition(unlockCondPatch.value || ''));
 const invalid = computed(() => !unlockCondPatch.value);
 
 function syncFromPuzzle() {
+  state.releaseAt = puzzle.value?.release_at ? new Date(puzzle.value.release_at) : undefined;
   state.unlock = parseUnlockGate(originalUnlockCond.value);
+}
+
+function resetReleaseAt() {
+  state.releaseAt = puzzle.value?.release_at ? new Date(puzzle.value.release_at) : undefined;
 }
 
 function syncFromBackend() {
@@ -91,6 +100,7 @@ function resetBackendFunctions() {
 }
 
 function reset() {
+  resetReleaseAt();
   resetUnlockCond();
   syncFromBackend();
   dirtyToast.clear();
@@ -109,6 +119,37 @@ async function fetchOptions() {
     handleError(error, '获取谜题和区域列表失败');
   } finally {
     loadingOptions.value = false;
+  }
+}
+
+async function applyReleaseAt() {
+  if (!puzzle.value || !releaseAtDirty.value) return true;
+
+  try {
+    type Response = { puzzle: AdminPuzzleData };
+    const response = await api.patch<Response>(
+      `/admin/puzzles/${puzzle.value.id}`,
+      { release_at: releaseAtPatch.value },
+      {
+        errorHints: {
+          [-2]: '发布时间不合法。',
+          [-1]: '谜题不存在。',
+        },
+      },
+    );
+
+    puzzle.value = response.data.puzzle;
+    syncFromPuzzle();
+
+    toast.add({
+      title: '发布时间已保存',
+      icon: 'material-symbols:check-rounded',
+      color: 'success',
+    });
+    return true;
+  } catch (error) {
+    handleError(error, '保存发布时间失败');
+    return false;
   }
 }
 
@@ -193,6 +234,8 @@ async function apply() {
 
   saving.value = true;
   try {
+    const releaseAtSaved = await applyReleaseAt();
+    if (!releaseAtSaved) return;
     const unlockSaved = await applyUnlockCond();
     if (!unlockSaved) return;
     await applyBackend();
@@ -352,8 +395,6 @@ watch(dirty, value => {
         <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
           <rbph-unlock-condition-editor v-model="state.unlock" :puzzles="puzzles" :rounds="rounds" :disabled="saving" :loading="loadingOptions" />
 
-          <u-separator />
-
           <div class="space-y-2">
             <div class="flex flex-wrap items-center gap-2 text-sm">
               <u-button v-if="unlockCondDirty" size="xs" variant="soft" color="warning" icon="material-symbols:restart-alt-rounded" label="重置" @click="resetUnlockCond" />
@@ -362,6 +403,20 @@ watch(dirty, value => {
             </div>
             <code class="block overflow-x-auto rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted">{{ unlockCondPatch || '未生成表达式' }}</code>
           </div>
+
+          <u-separator />
+
+          <rb-form-field name="release_at" row :dirty="releaseAtDirty" :reset="resetReleaseAt">
+            <template #label>
+              发布时间
+              <rb-tooltip text="题目允许访问的时间。可以提前或晚于比赛开始，常用作序章或多阶段。">
+                <u-icon name="material-symbols:help-outline-rounded" class="size-4 align-middle mb-0.5 ms-1 cursor-help text-secondary" />
+              </rb-tooltip>
+            </template>
+            <div class="flex flex-wrap items-center gap-2">
+              <rb-input-date-time v-model="state.releaseAt" optional icon="material-symbols:event-available-outline-rounded" placeholder="跟随比赛开始" />
+            </div>
+          </rb-form-field>
         </div>
       </section>
 

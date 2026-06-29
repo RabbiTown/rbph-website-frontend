@@ -23,6 +23,7 @@ interface AdminPuzzle {
   penalty: unknown;
   max_submit?: number | null;
   unlock_cond: string;
+  release_at?: string | null;
   round_id: number;
   sort: number;
   ticket_enabled: boolean;
@@ -937,6 +938,7 @@ async function addPuzzle(roundId: number) {
     penalty: [],
     max_submit: null,
     unlock_cond: 'default',
+    release_at: null,
     ticket_enabled: true,
     ticket_cooldown: 0,
     sort: nextSort,

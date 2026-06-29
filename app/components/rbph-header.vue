@@ -47,7 +47,7 @@ const navItems = computed(() => {
     exact: true,
   });
 
-  if (team.value && game.value.rounds) {
+  if (team.value && game.value.rounds && game.value.rounds.length > 0) {
     result.push({
       value: 'game-puzzles',
       label: '谜题',

@@ -24,6 +24,7 @@ export interface AdminPuzzleData {
   penalty: unknown;
   max_submit?: number | null;
   unlock_cond: string;
+  release_at?: string | null;
   round_id: number;
   sort: number;
   ticket_enabled: boolean;
