@@ -3,6 +3,7 @@ export enum SyncMessageType {
 
   // 100 - game
   GameNewAnnouncement = 101,
+  GameReleaseUpdated = 102,
 
   // 200 - team
   TeamInfoUpdated = 201,
@@ -29,6 +30,7 @@ export interface SyncMessageMap {
 
   // 100 - game
   [SyncMessageType.GameNewAnnouncement]: object;
+  [SyncMessageType.GameReleaseUpdated]: { game_id: number; cursor: number };
 
   // 200 - team
   [SyncMessageType.TeamDisbanded]: null;

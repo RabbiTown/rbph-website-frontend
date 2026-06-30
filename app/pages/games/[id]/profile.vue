@@ -16,6 +16,8 @@ const user = userStore.ref;
 const game = useGame().ref;
 const team = useTeam();
 const teamData = team.ref;
+const releaseSync = useGameReleaseSync();
+const teamOpen = computed(() => releaseSync.features.value.team_formation === 'open');
 
 useHead({
   titleTemplate: computed(() => buildTitleParts([{ text: '个人资料' }, { text: game.value?.title, sep: ' - ' }])),
@@ -392,6 +394,7 @@ async function joinSubmit(event: FormSubmitEvent<JoinSchema>) {
         errorHints: {
           [RbErrorCode.NotFound]: '队伍 ID 无效。',
           [-4]: '输入密码错误。',
+          [-5]: '当前尚未开放组队。',
           [-3]: '队伍已满。',
           [-2]: '队伍已锁定，请联系工作人员。',
           [-1]: '你已经有一个队伍了。',
@@ -439,6 +442,7 @@ async function createSubmit(event: FormSubmitEvent<CreateSchema>) {
       { name: event.data.name, pass: event.data.pass, bio: event.data.bio },
       {
         errorHints: {
+          [-3]: '当前尚未开放组队。',
           [-2]: '提交的凭据无效。',
           [-1]: '你已经有一个队伍了。',
         },
@@ -589,8 +593,16 @@ watch(user, () => syncUserState(), { immediate: true });
           <template v-else>
             <div class="flex flex-col gap-6">
               <u-alert variant="subtle" color="info" icon="material-symbols:info-outline-rounded" title="参与比赛前需要加入或创建队伍，个人参赛也要创建队伍。" />
+              <u-alert
+                v-if="!teamOpen"
+                variant="subtle"
+                color="warning"
+                icon="material-symbols:schedule-outline-rounded"
+                title="组队尚未开放"
+                description="开放时间尚未公开。"
+              />
 
-              <div class="hidden team-profile-desktop-grid gap-6 lg:flex" :class="teamProfileGridMode === 'join' ? 'team-profile-desktop-grid-join' : 'team-profile-desktop-grid-create'">
+              <div v-if="teamOpen" class="hidden team-profile-desktop-grid gap-6 lg:flex" :class="teamProfileGridMode === 'join' ? 'team-profile-desktop-grid-join' : 'team-profile-desktop-grid-create'">
                 <div class="team-profile-slot team-profile-slot-left">
                   <transition name="team-profile-morph">
                     <u-card v-if="teamProfileMode === 'join'" key="join-form" variant="subtle" class="team-profile-morph-panel h-full w-full lg:min-h-108">
@@ -669,7 +681,7 @@ watch(user, () => syncUserState(), { immediate: true });
                 </div>
               </div>
 
-              <transition name="team-profile-switch" mode="out-in">
+              <transition v-if="teamOpen" name="team-profile-switch" mode="out-in">
                 <u-card v-if="teamProfileMode === 'join'" key="join-mobile" variant="subtle" class="w-full lg:hidden">
                   <div class="mb-6 flex items-center gap-3">
                     <u-icon name="material-symbols:login-rounded" class="size-6 text-primary" />

@@ -632,7 +632,7 @@ watch(
     <u-modal v-model:open="infoOpen" title="资产组信息" :dismissible="!savingInfo" :close="!savingInfo">
       <template #body>
         <u-form :state="infoState" class="space-y-4" @submit.prevent="saveAssetInfo">
-          <rb-form-field name="originalName" row label="名称" required class="w-full gap-4" :dirty="infoDirty" :reset="resetAssetInfoName" :ui="{ container: 'w-full' }">
+          <rb-form-field name="originalName" row narrow-label label="名称" required class="w-full gap-4" :dirty="infoDirty" :reset="resetAssetInfoName" :ui="{ container: 'w-full' }">
             <div class="w-full min-w-0">
               <u-input v-model="infoState.originalName" placeholder="资产组名称" :disabled="savingInfo" maxlength="255" class="w-full" />
             </div>

@@ -33,6 +33,11 @@ const tabs = computed(() => {
       exact: true,
     },
     {
+      label: '比赛功能',
+      icon: 'material-symbols:tune-rounded',
+      to: `/admin/games/${game.value.id}/features`,
+    },
+    {
       label: '谜题管理',
       icon: 'material-symbols:extension-outline-rounded',
       to: `/admin/games/${game.value.id}/puzzles`,

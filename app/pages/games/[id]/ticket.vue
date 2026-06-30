@@ -100,6 +100,7 @@ const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
   [RbTicketSendBlock.NoAccess]: { icon: 'material-symbols:error-med-outline-rounded', color: 'error', desc: '没有发送权限。' },
   [RbTicketSendBlock.Closed]: { icon: 'material-symbols:check-rounded', color: 'success', desc: '本队伍站内信功能已被禁用。如果你认为这是一个错误，请通过其他渠道联系工作人员。' },
   [RbTicketSendBlock.Pending]: { icon: 'material-symbols:more-horiz', color: 'warning', desc: '积压信息过多，请等待工作人员回复。' },
+  [RbTicketSendBlock.FeatureClosed]: { icon: 'material-symbols:lock-outline-rounded', color: 'warning', desc: '比赛站内信已关闭，暂时不能发送消息。' },
 };
 </script>
 

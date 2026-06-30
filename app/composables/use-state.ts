@@ -230,4 +230,5 @@ export function usePuzzle() {
 export async function resetStates() {
   useState('user').value = undefined;
   resetTeamState();
+  useGameReleaseSync().reset();
 }

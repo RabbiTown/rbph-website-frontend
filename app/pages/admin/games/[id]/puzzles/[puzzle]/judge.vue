@@ -757,7 +757,7 @@ watch(dirty, value => {
 
               <div class="mt-4 flex flex-col gap-4">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-                  <rb-form-field row class="flex-1" label="匹配方式" :error="isRuleInvalid(rule) || ruleBackendWarning(rule) ? true : undefined">
+                  <rb-form-field row narrow-label class="flex-1" label="匹配方式" :error="isRuleInvalid(rule) || ruleBackendWarning(rule) ? true : undefined">
                     <div class="flex min-w-0 flex-col gap-2">
                       <div class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start">
                         <u-select v-model="rule.type" :items="ruleTypeItemsFor(rule)" :leading-icon="selectedRuleTypeIcon(rule.type)" color="neutral" variant="subtle" class="w-full sm:w-40 sm:shrink-0" :disabled="saving" />
@@ -776,7 +776,7 @@ watch(dirty, value => {
                     </div>
                   </rb-form-field>
 
-                  <rb-form-field v-if="rule.type !== 'custom'" row class="flex-1">
+                  <rb-form-field v-if="rule.type !== 'custom'" row narrow-label class="flex-1">
                     <template #label>
                       实际答案
                       <rb-tooltip text="实际答案将显示给玩家作为参考。若为空，则默认使用匹配规则作为答案。">
@@ -788,7 +788,7 @@ watch(dirty, value => {
                 </div>
 
                 <template v-if="rule.type !== 'custom'">
-                  <rb-form-field row label="匹配正确时" :ui="{ container: 'w-full' }">
+                  <rb-form-field row narrow-label label="匹配正确时" :ui="{ container: 'w-full' }">
                     <div class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
                       <u-select v-model="rule.action" :items="actionItems" :leading-icon="selectedActionIcon(rule.action)" :color="selectedActionColor(rule.action)" variant="subtle" class="w-full sm:w-40 sm:shrink-0" :disabled="saving" />
                       <u-input v-model="rule.result" placeholder="进一步指示，留空则使用默认提示" class="w-full min-w-0" :disabled="saving" />
@@ -820,7 +820,7 @@ watch(dirty, value => {
         </div>
 
         <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
-          <rb-form-field row label="冷却惩罚" :dirty="cooldownPenaltyDirty" :reset="resetCooldownPenalty">
+          <rb-form-field row narrow-label label="冷却惩罚" :dirty="cooldownPenaltyDirty" :reset="resetCooldownPenalty">
             <div class="flex flex-wrap items-center gap-2">
               <u-select v-model="state.penalty.cooldownType" :items="cooldownTypeItems" :leading-icon="selectedCooldownTypeIcon" variant="subtle" class="w-40" :disabled="saving" />
               <u-input-number
@@ -844,7 +844,7 @@ watch(dirty, value => {
 
           <u-separator />
 
-          <rb-form-field row label="扣除货币" :dirty="currencyPenaltyDirty" :reset="resetCurrencyPenalty">
+          <rb-form-field row narrow-label label="扣除货币" :dirty="currencyPenaltyDirty" :reset="resetCurrencyPenalty">
             <div class="flex flex-wrap items-center gap-2">
               <u-select v-model="state.penalty.currencyId" :items="currencyItems" :leading-icon="selectedCurrencyIcon" placeholder="选择货币" variant="subtle" class="w-40" :disabled="saving" />
               <rb-input-number
@@ -864,7 +864,7 @@ watch(dirty, value => {
 
           <u-separator />
 
-          <rb-form-field row label="提交次数" :dirty="submitLimitDirty" :reset="resetSubmitLimit">
+          <rb-form-field row narrow-label label="提交次数" :dirty="submitLimitDirty" :reset="resetSubmitLimit">
             <div class="flex flex-wrap items-center gap-2">
               <u-select v-model="state.penalty.submitLimitType" :items="submitLimitItems" :leading-icon="selectedSubmitLimitIcon" variant="subtle" class="w-40" :disabled="saving" />
               <u-input-number v-if="state.penalty.submitLimitType === 'limited'" v-model="state.penalty.maxSubmit" :min="0" :step="1" orientation="vertical" trailing="次" variant="subtle" class="w-36" :disabled="saving" />

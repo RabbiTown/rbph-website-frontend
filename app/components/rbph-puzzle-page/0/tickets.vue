@@ -173,7 +173,7 @@ const cooldown = computed(() => {
       <u-tabs
         v-model="staffView"
         :items="[
-          { label: '工作人员视图', value: 'staff', icon: 'material-symbols:support-agent-rounded' },
+          { label: '工作人员视图', value: 'staff', icon: 'material-symbols:near-me-outline-rounded' },
           { label: '队伍视图', value: 'team', icon: 'material-symbols:groups-2-outline-rounded' },
         ]"
         :content="false"
@@ -185,7 +185,7 @@ const cooldown = computed(() => {
 
     <div v-if="isStaff && staffView === 'staff' && staffTickets" class="flex flex-col gap-4">
       <div class="flex items-center justify-between gap-3">
-        <u-alert class="flex-1" variant="subtle" title="工作人员视图" description="这里显示所有队伍针对本题发起的人工提示。" icon="material-symbols:support-agent-rounded" color="warning" />
+        <u-alert class="flex-1" variant="subtle" title="工作人员视图" description="这里显示所有队伍针对本题发起的人工提示。" icon="material-symbols:near-me-outline-rounded" color="warning" />
         <u-button :to="`/games/${puzzle?.data.game_id}/staff/inbox?kind=puzzle&puzzle_id=${puzzle?.data.id}`" label="在工作台打开" icon="material-symbols:inbox-outline-rounded" />
       </div>
       <rbph-ticket-card v-for="ticket in staffTickets" :key="ticket.id" :ticket="ticket" />
@@ -207,6 +207,7 @@ const cooldown = computed(() => {
         color="warning"
       />
       <u-alert v-else-if="pageData.open_block === TicketOpenBlock.Disabled" variant="subtle" title="暂时不能请求人工提示。" description="本题未启用人工提示。" icon="material-symbols:near-me-disabled-outline-rounded" color="error" />
+      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.FeatureClosed" variant="subtle" title="人工提示暂未开放" description="比赛当前不允许创建新的人工提示工单。" icon="material-symbols:near-me-disabled-outline-rounded" color="warning" />
       <u-alert
         v-else-if="pageData.open_block === TicketOpenBlock.CurrentPuzzlePending"
         variant="subtle"

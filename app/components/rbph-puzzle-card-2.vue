@@ -5,11 +5,12 @@ interface AdminPuzzleCardData {
   title: string;
   ptype: number;
   unlock_cond: string;
-  release_at?: string | null;
+  release_phase_id: number;
 }
 
 const props = defineProps<{
   puzzle: AdminPuzzleCardData;
+  releasePhase?: AdminReleasePhaseData;
   isRoundPuzzle?: boolean;
   title?: string;
   slug?: string | null;
@@ -43,7 +44,6 @@ const puzzleType = computed(() =>
 );
 
 const unlockConditionText = computed(() => translateUnlockCondition(props.puzzle.unlock_cond));
-const releaseText = computed(() => (props.puzzle.release_at ? formatDate(props.puzzle.release_at) : '跟随比赛开始'));
 const displayedTitle = computed(() => props.title ?? props.puzzle.title);
 const displayedSlug = computed(() => props.slug ?? props.puzzle.slug);
 </script>
@@ -69,15 +69,15 @@ const displayedSlug = computed(() => props.slug ?? props.puzzle.slug);
         </u-badge>
       </div>
 
-      <div class="mt-auto flex items-center gap-2">
+      <div class="mt-auto flex items-end gap-2 mb-1.5">
         <div class="min-w-0 flex-1 space-y-1">
           <div class="truncate text-xs text-muted" :title="puzzle.unlock_cond">
             <u-icon name="material-symbols:lock-open-right-outline-rounded" class="align-middle mb-0.5 me-0.5" />
             {{ unlockConditionText }}
           </div>
-          <div v-if="props.puzzle.release_at" class="truncate text-xs text-muted" :title="releaseText">
+          <div v-if="releasePhase" class="truncate text-xs text-muted" :title="formatDate(releasePhase.release_at)">
             <u-icon name="material-symbols:event-available-outline-rounded" class="align-middle mb-0.5 me-0.5" />
-            {{ releaseText }}
+            {{ releasePhase.title }} · {{ formatDate(releasePhase.release_at) }}
           </div>
         </div>
         <slot name="actions" />

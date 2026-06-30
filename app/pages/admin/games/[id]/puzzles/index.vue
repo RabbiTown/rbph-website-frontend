@@ -23,7 +23,7 @@ interface AdminPuzzle {
   penalty: unknown;
   max_submit?: number | null;
   unlock_cond: string;
-  release_at?: string | null;
+  release_phase_id: number;
   round_id: number;
   sort: number;
   ticket_enabled: boolean;
@@ -96,6 +96,7 @@ const loading = ref(false);
 const applyLoading = ref(false);
 const rounds = ref<AdminRound[]>([]);
 const puzzles = ref<AdminPuzzle[]>([]);
+const releasePhases = ref<AdminReleasePhaseData[]>([]);
 const originalRounds = ref<AdminRound[]>([]);
 const originalPuzzles = ref<AdminPuzzle[]>([]);
 const deletingRoundIds = ref<Set<number>>(new Set());
@@ -925,6 +926,16 @@ async function addPuzzle(roundId: number) {
   const title = '新建谜题';
   const round = rounds.value.find(item => item.id === roundId);
   if (!round) return;
+  const releasePhase = releasePhases.value.find(phase => !phase.released);
+  if (!releasePhase) {
+    toast.add({
+      title: '没有可用的发布阶段',
+      description: '请先在比赛设置中创建一个未来发布阶段。',
+      icon: 'material-symbols:event-busy-outline-rounded',
+      color: 'error',
+    });
+    return;
+  }
 
   const nextSort = puzzles.value.filter(puzzle => puzzle.round_id === roundId && !isRoundPuzzle(puzzle, roundId)).reduce((max, puzzle) => Math.max(max, puzzle.sort), -1) + 1;
 
@@ -938,7 +949,7 @@ async function addPuzzle(roundId: number) {
     penalty: [],
     max_submit: null,
     unlock_cond: 'default',
-    release_at: null,
+    release_phase_id: releasePhase.id,
     ticket_enabled: true,
     ticket_cooldown: 0,
     sort: nextSort,
@@ -1137,8 +1148,9 @@ async function fetchData() {
   try {
     type RoundResponse = { rounds: AdminRound[] };
     type PuzzleResponse = { puzzles: AdminPuzzle[] };
+    type ReleaseResponse = { phases: AdminReleasePhaseData[] };
 
-    const [roundResp, puzzleResp] = await Promise.all([
+    const [roundResp, puzzleResp, releaseResp] = await Promise.all([
       api.get<RoundResponse>('/admin/rounds', {
         query: {
           game_id: gameId.value,
@@ -1149,10 +1161,12 @@ async function fetchData() {
           game_id: gameId.value,
         },
       }),
+      api.get<ReleaseResponse>(`/admin/games/${gameId.value}/release-phases`),
     ]);
 
     rounds.value = sortBySortId(roundResp.data.rounds);
     puzzles.value = orderAllPuzzles(sortBySortId(puzzleResp.data.puzzles));
+    releasePhases.value = releaseResp.data.phases;
     originalRounds.value = cloneRounds(rounds.value);
     originalPuzzles.value = clonePuzzles(puzzles.value);
     deletingRoundIds.value = new Set();
@@ -1160,6 +1174,7 @@ async function fetchData() {
   } catch (error) {
     rounds.value = [];
     puzzles.value = [];
+    releasePhases.value = [];
     originalRounds.value = [];
     originalPuzzles.value = [];
     deletingRoundIds.value = new Set();
@@ -1300,6 +1315,7 @@ watch(
                   :is-round-puzzle="isRoundPuzzle(puzzle, group.round.id)"
                   :title="isRoundPuzzle(puzzle, group.round.id) ? group.round.title : puzzle.title"
                   :slug="isRoundPuzzle(puzzle, group.round.id) ? group.round.slug : puzzle.slug"
+                  :release-phase="releasePhases.find(phase => phase.id === puzzle.release_phase_id)"
                   class="cursor-pointer"
                   @click="navigateTo(isRoundPuzzle(puzzle, group.round.id) ? `/admin/games/${gameId}/rounds/${group.round.id}` : `/admin/games/${gameId}/puzzles/${puzzle.id}`)"
                 >

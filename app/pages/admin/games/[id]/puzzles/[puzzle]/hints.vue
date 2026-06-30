@@ -111,7 +111,7 @@ const activeHints = computed(() => state.value.filter(hint => !hint.deleting));
 const orderedHints = computed(() => [...state.value].sort((a, b) => a.sort - b.sort || (a.id ?? 0) - (b.id ?? 0)));
 const orderedActiveHints = computed(() => [...activeHints.value].sort((a, b) => a.sort - b.sort || (a.id ?? 0) - (b.id ?? 0)));
 
-function hintToState(hint: AdminHintData): HintState {
+function hintToState(hint: AdminHintData, open = false): HintState {
   return {
     id: hint.id,
     sort: hint.sort,
@@ -123,7 +123,7 @@ function hintToState(hint: AdminHintData): HintState {
     cost_id: hint.cost_id ?? null,
     cost_amount: hint.cost_amount,
     backend_function: hint.backend_function ?? null,
-    open: false,
+    open,
   };
 }
 
@@ -177,8 +177,12 @@ function resetTicketCooldown() {
   ticketCooldown.value = originalTicketCooldown.value;
 }
 
-function reset() {
-  state.value = hints.value.map(hintToState);
+function expandedHintIds() {
+  return new Set(state.value.filter(hint => hint.open && hint.id !== null && hint.id > 0).map(hint => hint.id as number));
+}
+
+function reset(openIds = expandedHintIds()) {
+  state.value = hints.value.map(hint => hintToState(hint, openIds.has(hint.id)));
   syncTicketCooldownFromPuzzle();
   dirtyToast.clear();
 }
@@ -454,7 +458,7 @@ function hintBackendWarning(hint: HintState) {
   return !backendEnabled.value && Boolean(hint.backend_function?.trim());
 }
 
-async function fetchData() {
+async function fetchData(openIds = expandedHintIds()) {
   if (!Number.isFinite(currentPuzzleId.value) || !Number.isFinite(currentGameId.value)) return;
 
   loading.value = true;
@@ -465,7 +469,7 @@ async function fetchData() {
 
     hints.value = hintResp.data.hints;
     currencies.value = currencyResp.data.currencies;
-    reset();
+    reset(openIds);
   } catch (error) {
     handleError(error, '获取提示信息失败', true);
   } finally {
@@ -485,6 +489,7 @@ async function apply() {
     return;
   }
 
+  const openIds = expandedHintIds();
   saving.value = true;
   try {
     if (ticketSettingsDirty.value && puzzle.value) {
@@ -520,13 +525,14 @@ async function apply() {
             errorHints: { [-2]: '提示配置不合法。', [-1]: '提示不存在。' },
           });
         } else {
-          await api.post('/admin/hints', body, {
+          const { data } = await api.post<{ hint: AdminHintData }>('/admin/hints', body, {
             errorHints: { [-2]: '提示配置不合法。', [-1]: '谜题不存在。' },
           });
+          if (hint.open) openIds.add(data.hint.id);
         }
       }
 
-      await fetchData();
+      await fetchData(openIds);
     }
     dirtyToast.clear();
     toast.add({
@@ -544,7 +550,7 @@ async function apply() {
 watch(
   [currentPuzzleId, currentGameId],
   () => {
-    fetchData();
+    fetchData(new Set());
   },
   { immediate: true },
 );
@@ -648,7 +654,7 @@ onBeforeUnmount(() => {
                   <div class="border-t border-default bg-elevated/40 px-4 pt-4 pb-4">
                     <div class="flex flex-col gap-4">
                       <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-                        <rb-form-field row class="flex-1" label="开放时间">
+                        <rb-form-field row narrow-label class="flex-1" label="开放时间">
                           <div class="flex flex-wrap items-center gap-2">
                             <span class="text-sm text-muted">谜题解锁后</span>
                             <u-input-number
@@ -665,7 +671,7 @@ onBeforeUnmount(() => {
                           </div>
                         </rb-form-field>
 
-                        <rb-form-field row class="flex-1" label="未开放时">
+                        <rb-form-field row narrow-label class="flex-1" label="未开放时">
                           <div class="flex flex-wrap items-center gap-2">
                             <u-switch v-model="hint.title_hidden" class="mt-1.5" label="隐藏标题" :disabled="saving || hint.deleting" />
                           </div>
@@ -673,14 +679,14 @@ onBeforeUnmount(() => {
                       </div>
 
                       <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-                        <rb-form-field row class="flex-1" label="解锁消耗">
+                        <rb-form-field row narrow-label class="flex-1" label="解锁消耗">
                           <div class="flex flex-wrap items-center gap-2">
                             <u-select v-model="hint.cost_id" :items="currencyItems" :leading-icon="selectedCurrencyIcon(hint.cost_id)" variant="subtle" class="w-40" :disabled="saving || hint.deleting" />
                             <rb-input-number v-if="hint.cost_id !== null" v-model="hint.cost_amount" :prec="currencyPrec(hint.cost_id)" :min="0" :step="1" orientation="vertical" variant="subtle" class="w-36" :disabled="saving || hint.deleting" />
                           </div>
                         </rb-form-field>
 
-                        <rb-form-field v-if="showBackendFunction(hint)" row class="flex-1" :error="hintBackendWarning(hint) ? true : undefined">
+                        <rb-form-field v-if="showBackendFunction(hint)" row narrow-label class="flex-1" :error="hintBackendWarning(hint) ? true : undefined">
                           <template #label>
                             解锁调用函数
                             <rb-tooltip text="若非空，购买提示时将调用对应的后端函数，函数失败会导致购买失败。">
@@ -716,13 +722,13 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
-            <rb-form-field row label="启用状态" :dirty="ticketEnabledDirty" :reset="resetTicketEnabled">
+            <rb-form-field row narrow-label label="启用状态" :dirty="ticketEnabledDirty" :reset="resetTicketEnabled">
               <u-switch v-model="ticketEnabled" class="mt-1.5" label="启用人工提示" :disabled="saving" />
             </rb-form-field>
 
             <u-separator v-if="ticketEnabled" />
 
-            <rb-form-field v-if="ticketEnabled" row label="开放时间" :dirty="ticketCooldownDirty" :reset="resetTicketCooldown">
+            <rb-form-field v-if="ticketEnabled" row narrow-label label="开放时间" :dirty="ticketCooldownDirty" :reset="resetTicketCooldown">
               <div class="flex flex-wrap items-center gap-2">
                 <span class="text-sm text-muted">谜题解锁后</span>
                 <u-input-number v-model="ticketCooldown" :min="0" :step="10" :step-snapping="false" orientation="vertical" :format-options="{ style: 'unit', unit: 'second' }" variant="subtle" class="w-40" :disabled="saving" />

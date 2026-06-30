@@ -11,8 +11,6 @@ export interface RbGameModel {
   is_shown?: boolean;
   is_online?: boolean;
 
-  start_at: string;
-  end_at: string;
   ctime_at?: string;
 
   cover?: string;

@@ -19,7 +19,7 @@ type CurrencyEditItem = {
   dirty: boolean;
   deletePending: boolean;
 };
-type GameSettingsPatchBody = Partial<Pick<RbGameModel, 'title' | 'is_shown' | 'is_online' | 'start_at' | 'end_at'>> & {
+type GameSettingsPatchBody = Partial<Pick<RbGameModel, 'title' | 'is_shown' | 'is_online'>> & {
   settings?: {
     team?: {
       max_members?: number | null;
@@ -40,10 +40,6 @@ const state = reactive({
   is_shown: false,
   is_online: false,
   max_members: null as number | null,
-  date: {
-    start: new Date(),
-    end: new Date(),
-  },
 });
 
 function syncState() {
@@ -51,12 +47,6 @@ function syncState() {
   state.is_shown = game.value?.is_shown ?? false;
   state.is_online = game.value?.is_online ?? false;
   state.max_members = game.value?.settings?.team.max_members ?? null;
-  state.date.start = new Date(game.value?.start_at ?? '');
-  state.date.end = new Date(game.value?.end_at ?? '');
-}
-
-function normalizeDate(date: Date | string | undefined) {
-  return date ? new Date(date).toISOString() : undefined;
 }
 
 function normalizeMaxMembers(value: number | null | undefined) {
@@ -69,16 +59,12 @@ function makePatchBody() {
   if (!current) return {};
 
   const body: GameSettingsPatchBody = {};
-  const startAt = normalizeDate(state.date.start);
-  const endAt = normalizeDate(state.date.end);
   const maxMembers = normalizeMaxMembers(state.max_members);
   const currentMaxMembers = current.settings?.team.max_members ?? null;
 
   if (state.title !== current.title) body.title = state.title;
   if (state.is_shown !== current.is_shown) body.is_shown = state.is_shown;
   if (state.is_online !== current.is_online) body.is_online = state.is_online;
-  if (startAt && startAt !== normalizeDate(current.start_at)) body.start_at = startAt;
-  if (endAt && endAt !== normalizeDate(current.end_at)) body.end_at = endAt;
   if (maxMembers !== currentMaxMembers) body.settings = { team: { max_members: maxMembers } };
 
   return body;
@@ -93,7 +79,6 @@ const dirtyFields = computed(() => {
     isShown: 'is_shown' in patch,
     isOnline: 'is_online' in patch,
     maxMembers: Boolean(patch.settings?.team && 'max_members' in patch.settings.team),
-    date: 'start_at' in patch || 'end_at' in patch,
   };
 });
 
@@ -286,9 +271,6 @@ function resetField(field: keyof typeof dirtyFields.value) {
     state.is_online = current.is_online ?? false;
   } else if (field === 'maxMembers') {
     state.max_members = current.settings?.team.max_members ?? null;
-  } else if (field === 'date') {
-    state.date.start = new Date(current.start_at);
-    state.date.end = new Date(current.end_at);
   }
 }
 
@@ -430,16 +412,15 @@ watch(
             <h2 class="text-xl font-semibold text-highlighted">比赛信息</h2>
           </div>
           <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
-            <rb-form-field name="title" orientation="horizontal" label="比赛名称" required description="在平台上显示的名称" class="flex max-sm:flex-col justify-between items-center gap-4" :dirty="dirtyFields.title" :reset="() => resetField('title')">
+            <rb-form-field name="title" row label="比赛名称" required description="在平台上显示的名称" :dirty="dirtyFields.title" :reset="() => resetField('title')" :ui="{ container: 'w-full sm:w-96' }">
               <u-input v-model="state.title" placeholder="输入比赛名称" class="w-full" />
             </rb-form-field>
             <u-separator />
             <rb-form-field
               name="is_shown"
-              orientation="horizontal"
+              row
               label="展示比赛"
               description="控制比赛是否出现在公开列表和入口中"
-              class="flex max-sm:flex-col justify-between items-center gap-4"
               :dirty="dirtyFields.isShown"
               :reset="() => resetField('isShown')"
             >
@@ -448,10 +429,9 @@ watch(
             <u-separator />
             <rb-form-field
               name="is_online"
-              orientation="horizontal"
+              row
               label="比赛在线"
               description="控制比赛是否允许正常访问"
-              class="flex max-sm:flex-col justify-between items-center gap-4"
               :dirty="dirtyFields.isOnline"
               :reset="() => resetField('isOnline')"
             >
@@ -460,20 +440,15 @@ watch(
             <u-separator />
             <rb-form-field
               name="max_members"
-              orientation="horizontal"
+              row
               label="队伍人数上限"
               description="限制每支队伍最多可加入的人数"
-              class="flex max-sm:flex-col justify-between items-center gap-4"
               :dirty="dirtyFields.maxMembers"
               :reset="() => resetField('maxMembers')"
             >
-              <div class="flex w-full flex-wrap items-center justify-end gap-3">
+              <div class="flex flex-wrap items-center gap-3">
                 <u-input-number v-model="state.max_members" :min="1" :step="1" orientation="vertical" placeholder="无上限" class="w-32" />
               </div>
-            </rb-form-field>
-            <u-separator />
-            <rb-form-field name="date" orientation="horizontal" label="比赛时间" required description="活动开始/结束时间" class="flex max-sm:flex-col justify-between items-center gap-4" :dirty="dirtyFields.date" :reset="() => resetField('date')">
-              <rb-input-date-time-range v-model="state.date" class="w-full" icon="material-symbols:event-outline-rounded" />
             </rb-form-field>
           </div>
         </section>

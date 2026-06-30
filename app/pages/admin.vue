@@ -90,6 +90,11 @@ const nav = computed(() => {
         exact: true,
       },
       {
+        label: '比赛功能',
+        icon: 'material-symbols:tune-rounded',
+        to: `/admin/games/${game.ref.value.id}/features`,
+      },
+      {
         value: 'admin-game-puzzles',
         label: '谜题管理',
         icon: 'material-symbols:extension-outline-rounded',

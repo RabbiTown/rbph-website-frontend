@@ -30,7 +30,7 @@ watch(
   async () => {
     color.value = props.success ? 'success' : 'neutral';
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 watch(
@@ -38,7 +38,7 @@ watch(
   async () => {
     color.value = props.success ? 'success' : color.value;
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const cooldown = computed(() => {
@@ -58,7 +58,7 @@ watch(
       state.answer = '';
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const submitLoading = ref(false);
@@ -153,7 +153,7 @@ function submit() {
 
 const inputStyle = computed(() => {
   if (cooldown.value > 0) return { placeholder: `提交冷却中：${formatTime(cooldown.value)}`, icon: 'material-symbols:schedule-outline-rounded' };
-  if (remainSubmit.value === 0) return { placeholder: `剩余提交次数：0/${maxSubmit.value}`, icon: 'material-symbols:block-rounded' };
+  if (remainSubmit.value === 0) return { placeholder: `剩余提交次数：0/${maxSubmit.value}`, icon: 'material-symbols:block-outline' };
   if (props.success) return { placeholder: `你的队伍已通过本题`, icon: 'material-symbols:check-rounded' };
   return { placeholder: `提交答案`, icon: 'material-symbols:send-outline-rounded' };
 });

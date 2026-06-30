@@ -129,6 +129,10 @@ async function updateData(newId: number | undefined = undefined): Promise<boolea
       const { data } = await api.get<LeaderBoardInfo>(`/games/${gameId}/leaderboard`, { query: { version: pageData.value?.version } });
       if (data) {
         pageData.value = data;
+        if (data.state === 'locked' && timer) {
+          clearInterval(timer);
+          timer = null;
+        }
         return true;
       }
     } catch (error) {
@@ -167,6 +171,7 @@ onMounted(() => {
   );
 
   timer = window.setInterval(() => {
+    if (pageData.value?.state === 'locked') return;
     updateData().then(updated => {
       if (updated) updateTime.value = Date.now();
     });
@@ -190,6 +195,15 @@ onUnmounted(() => {
       </div>
     </div>
     <div v-if="pageData">
+      <u-alert
+        v-if="pageData.state === 'locked'"
+        class="mb-4"
+        variant="subtle"
+        color="warning"
+        icon="material-symbols:lock-clock-outline-rounded"
+        title="排行榜已锁定"
+        :description="pageData.locked_at ? `当前展示的是 ${formatDate(pageData.locked_at)} 的排名快照，之后的提交仍然有效但不会改变此处排名。` : '之后的提交仍然有效，但不会改变此处排名。'"
+      />
       <u-table v-if="pageData.data.length > 0" :data="showData" :columns="columns" :ui="{ base: 'md:table-auto table-fixed w-full' }" />
       <u-empty v-else description="暂无有效队伍" />
     </div>

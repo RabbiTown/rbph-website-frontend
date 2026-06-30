@@ -24,12 +24,41 @@ export interface AdminPuzzleData {
   penalty: unknown;
   max_submit?: number | null;
   unlock_cond: string;
-  release_at?: string | null;
+  release_phase_id: number;
   round_id: number;
   sort: number;
   ticket_enabled: boolean;
   ticket_cooldown: number;
   ctime_at: string;
+}
+
+export interface AdminReleasePhaseData {
+  id: number;
+  game_id: number;
+  title: string;
+  description: string;
+  content_type: RbContentType;
+  release_at: string;
+  visibility: number;
+  feature_changes: RbFeatureChange[];
+  puzzle_count: number;
+  released: boolean;
+}
+
+export interface AdminFeatureNextChange {
+  phase_id: number;
+  phase_title: string;
+  state: RbGameFeatureState;
+  release_at: string;
+}
+
+export interface AdminGameFeatureData {
+  feature: RbGameFeature;
+  state: RbGameFeatureState;
+  states: RbGameFeatureState[];
+  source_phase_id?: number | null;
+  updated_at: string;
+  next_change?: AdminFeatureNextChange | null;
 }
 
 export interface AdminPuzzleBackendData {

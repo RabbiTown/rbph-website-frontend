@@ -31,6 +31,7 @@ export default defineNuxtPlugin(() => {
       useTeam().ref.value = info.team;
       useCurrency().ref.value = info.currency || [];
       useSyncTime().syncWith(new Date(info.server_time));
+      useGameReleaseSync().initialize(info);
 
       await nextTick();
     } finally {

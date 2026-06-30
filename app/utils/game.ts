@@ -270,6 +270,8 @@ export interface LeaderBoardTeamInfo {
 export interface LeaderBoardInfo {
   data: LeaderBoardTeamInfo[];
   version: number;
+  state: 'live' | 'locked';
+  locked_at?: string;
 }
 
 export interface RbAnnouncementInfo {
@@ -289,6 +291,51 @@ export interface RbGameAggreInfo {
   team?: RbTeam;
   currency?: RbTeamCurrency[];
   rounds?: Pick<RbRound, 'id' | 'slug' | 'title'>[];
+  release_cursor: number;
+  phases: RbReleasePhase[];
+  features: RbGameFeatures;
+  server_time: string;
+}
+
+export type RbGameFeature = 'team_formation' | 'direct_message' | 'puzzle_ticket' | 'leaderboard';
+export type RbGameFeatureState = 'closed' | 'existing_only' | 'open' | 'live' | 'locked';
+export type RbGameFeatures = Record<RbGameFeature, RbGameFeatureState>;
+
+export interface RbFeatureChange {
+  feature: RbGameFeature;
+  state: RbGameFeatureState;
+}
+
+export interface RbReleasePhase {
+  id: number;
+  title: string;
+  description: string;
+  content_type: RbContentType;
+  release_at: string;
+}
+
+export interface RbReleasedPuzzle {
+  id: number;
+  slug?: string | null;
+  title: string;
+  round_id: number;
+  round_slug?: string | null;
+  is_round_puzzle: boolean;
+}
+
+export interface RbReleaseEvent {
+  id: number;
+  type: 'phase_released';
+  occurred_at: string;
+  phase: RbReleasePhase;
+  puzzles: RbReleasedPuzzle[];
+}
+
+export interface RbReleaseSyncResponse {
+  release_cursor: number;
+  events: RbReleaseEvent[];
+  phases: RbReleasePhase[];
+  features: RbGameFeatures;
   server_time: string;
 }
 
@@ -308,6 +355,7 @@ export enum TicketOpenBlock {
   PendingLimit = -2,
   Cooldown = -3,
   Disabled = -4,
+  FeatureClosed = -5,
 }
 
 export enum RbTicketSendBlock {
@@ -315,6 +363,7 @@ export enum RbTicketSendBlock {
   NoAccess = -1,
   Closed = -2,
   Pending = -3,
+  FeatureClosed = -4,
 }
 
 export enum RbTicketOperationAction {

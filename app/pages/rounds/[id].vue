@@ -14,6 +14,7 @@ const round = ref<RbRoundUserData>();
 
 const game = useGame().ref;
 const sidStore = useSid();
+const releaseRevision = useGameReleaseSync().revision;
 
 useHead({
   titleTemplate: computed(() => buildTitleParts([{ text: round.value?.data.title }, { text: game.value?.title, sep: ' - ' }])),
@@ -50,6 +51,8 @@ watch(
   },
   { immediate: true },
 );
+
+watch(releaseRevision, () => updateData());
 
 function onSubmitSuccess(action: RbJudgeAction) {
   if (action > 0) {

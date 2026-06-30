@@ -6,6 +6,9 @@ export default defineNuxtPlugin(() => {
   const notificationUnread = useNotificationUnread();
   const toast = useToast();
   const currency = useCurrency().getAllCurrent();
+  const releaseSync = useGameReleaseSync();
+
+  releaseSync.start();
 
   let curToast: Toast | undefined = undefined;
 
@@ -65,6 +68,11 @@ export default defineNuxtPlugin(() => {
         curToast = toast.add(toastData);
       }
     }
+    if (newState) releaseSync.sync();
+  });
+
+  sync.listen(SyncMessageType.GameReleaseUpdated, ({ data }) => {
+    releaseSync.notify(data.game_id, data.cursor);
   });
 
   function notificationTitle(notification: TeamNotification) {

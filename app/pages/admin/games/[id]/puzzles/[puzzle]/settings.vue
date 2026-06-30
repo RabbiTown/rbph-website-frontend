@@ -7,7 +7,7 @@ const dirtyToast = useDirtyToast();
 const { puzzle, backend, round } = useAdmin().usePuzzleContext();
 
 const state = reactive({
-  releaseAt: undefined as Date | undefined,
+  releasePhaseId: undefined as number | undefined,
   unlock: defaultUnlockGate('default') as UnlockGateNode,
   backend: {
     enabled: false,
@@ -27,6 +27,7 @@ const clearStatesConfirmOpen = ref(false);
 const loadingOptions = ref(false);
 const rounds = ref<UnlockRoundOptionData[]>([]);
 const puzzles = ref<UnlockPuzzleOptionData[]>([]);
+const releasePhases = ref<AdminReleasePhaseData[]>([]);
 const scriptEditorHeight = '32rem';
 const scriptEditor = ref<{ focus: () => void }>();
 const isRoundPuzzle = computed(() => round.value?.puzzle === puzzle.value?.id);
@@ -56,25 +57,31 @@ const deleteConfirmDescription = computed(() => {
 const unlockCondPatch = computed(() => serializeUnlockGate(state.unlock));
 const originalUnlockCond = computed(() => puzzle.value?.unlock_cond ?? 'default');
 const unlockCondDirty = computed(() => Boolean(puzzle.value && unlockCondPatch.value !== originalUnlockCond.value));
-const releaseAtPatch = computed(() => state.releaseAt?.toISOString() ?? null);
-const originalReleaseAt = computed(() => (puzzle.value?.release_at ? new Date(puzzle.value.release_at).toISOString() : null));
-const releaseAtDirty = computed(() => Boolean(puzzle.value && releaseAtPatch.value !== originalReleaseAt.value));
+const releasePhaseDirty = computed(() => Boolean(puzzle.value && state.releasePhaseId !== puzzle.value.release_phase_id));
+const currentReleasePhase = computed(() => releasePhases.value.find(phase => phase.id === puzzle.value?.release_phase_id));
+const releasePhaseItems = computed(() =>
+  releasePhases.value.map(phase => ({
+    label: `${phase.title} · ${formatDate(phase.release_at)}`,
+    value: phase.id,
+    disabled: phase.released && phase.id !== puzzle.value?.release_phase_id,
+  })),
+);
 const backendEnabled = computed(() => state.backend.enabled);
 const backendEnabledDirty = computed(() => Boolean(puzzle.value && backendLoaded.value && backendEnabled.value !== (backend.value?.enabled ?? false)));
 const backendSourceDirty = computed(() => Boolean(puzzle.value && backendLoaded.value && state.backend.source !== (backend.value?.source ?? '')));
 const backendFunctionsDirty = computed(() => Boolean(puzzle.value && backendLoaded.value && JSON.stringify([...state.backend.functions].sort()) !== JSON.stringify([...(backend.value?.functions ?? [])].sort())));
 const backendDirty = computed(() => backendEnabledDirty.value || backendSourceDirty.value || backendFunctionsDirty.value);
-const dirty = computed(() => releaseAtDirty.value || unlockCondDirty.value || backendDirty.value);
+const dirty = computed(() => releasePhaseDirty.value || unlockCondDirty.value || backendDirty.value);
 const previewText = computed(() => translateUnlockCondition(unlockCondPatch.value || ''));
 const invalid = computed(() => !unlockCondPatch.value);
 
 function syncFromPuzzle() {
-  state.releaseAt = puzzle.value?.release_at ? new Date(puzzle.value.release_at) : undefined;
+  state.releasePhaseId = puzzle.value?.release_phase_id;
   state.unlock = parseUnlockGate(originalUnlockCond.value);
 }
 
-function resetReleaseAt() {
-  state.releaseAt = puzzle.value?.release_at ? new Date(puzzle.value.release_at) : undefined;
+function resetReleasePhase() {
+  state.releasePhaseId = puzzle.value?.release_phase_id;
 }
 
 function syncFromBackend() {
@@ -100,7 +107,7 @@ function resetBackendFunctions() {
 }
 
 function reset() {
-  resetReleaseAt();
+  resetReleasePhase();
   resetUnlockCond();
   syncFromBackend();
   dirtyToast.clear();
@@ -112,9 +119,15 @@ async function fetchOptions() {
   try {
     type RoundResponse = { rounds: UnlockRoundOptionData[] };
     type PuzzleResponse = { puzzles: UnlockPuzzleOptionData[] };
-    const [roundResp, puzzleResp] = await Promise.all([api.get<RoundResponse>('/admin/rounds', { query: { game_id: puzzle.value.game_id } }), api.get<PuzzleResponse>('/admin/puzzles', { query: { game_id: puzzle.value.game_id } })]);
+    type ReleaseResponse = { phases: AdminReleasePhaseData[] };
+    const [roundResp, puzzleResp, releaseResp] = await Promise.all([
+      api.get<RoundResponse>('/admin/rounds', { query: { game_id: puzzle.value.game_id } }),
+      api.get<PuzzleResponse>('/admin/puzzles', { query: { game_id: puzzle.value.game_id } }),
+      api.get<ReleaseResponse>(`/admin/games/${puzzle.value.game_id}/release-phases`),
+    ]);
     rounds.value = roundResp.data.rounds;
     puzzles.value = puzzleResp.data.puzzles;
+    releasePhases.value = releaseResp.data.phases;
   } catch (error) {
     handleError(error, '获取谜题和区域列表失败');
   } finally {
@@ -122,17 +135,17 @@ async function fetchOptions() {
   }
 }
 
-async function applyReleaseAt() {
-  if (!puzzle.value || !releaseAtDirty.value) return true;
+async function applyReleasePhase() {
+  if (!puzzle.value || !releasePhaseDirty.value || !state.releasePhaseId) return true;
 
   try {
     type Response = { puzzle: AdminPuzzleData };
     const response = await api.patch<Response>(
       `/admin/puzzles/${puzzle.value.id}`,
-      { release_at: releaseAtPatch.value },
+      { release_phase_id: state.releasePhaseId },
       {
         errorHints: {
-          [-2]: '发布时间不合法。',
+          [-2]: '发布阶段不合法或已经发布。',
           [-1]: '谜题不存在。',
         },
       },
@@ -142,13 +155,13 @@ async function applyReleaseAt() {
     syncFromPuzzle();
 
     toast.add({
-      title: '发布时间已保存',
+      title: '发布阶段已保存',
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
     return true;
   } catch (error) {
-    handleError(error, '保存发布时间失败');
+    handleError(error, '保存发布阶段失败');
     return false;
   }
 }
@@ -234,8 +247,8 @@ async function apply() {
 
   saving.value = true;
   try {
-    const releaseAtSaved = await applyReleaseAt();
-    if (!releaseAtSaved) return;
+    const releasePhaseSaved = await applyReleasePhase();
+    if (!releasePhaseSaved) return;
     const unlockSaved = await applyUnlockCond();
     if (!unlockSaved) return;
     await applyBackend();
@@ -406,15 +419,25 @@ watch(dirty, value => {
 
           <u-separator />
 
-          <rb-form-field name="release_at" row :dirty="releaseAtDirty" :reset="resetReleaseAt">
+          <rb-form-field name="release_phase_id" row narrow-label :dirty="releasePhaseDirty" :reset="resetReleasePhase">
             <template #label>
-              发布时间
-              <rb-tooltip text="题目允许访问的时间。可以提前或晚于比赛开始，常用作序章或多阶段。">
+              发布阶段
+              <rb-tooltip text="题目只有在所属阶段到达发布时间后才允许访问。">
                 <u-icon name="material-symbols:help-outline-rounded" class="size-4 align-middle mb-0.5 ms-1 cursor-help text-secondary" />
               </rb-tooltip>
             </template>
-            <div class="flex flex-wrap items-center gap-2">
-              <rb-input-date-time v-model="state.releaseAt" optional icon="material-symbols:event-available-outline-rounded" placeholder="跟随比赛开始" />
+            <div class="flex w-full flex-wrap items-center gap-2">
+              <u-select-menu
+                v-model="state.releasePhaseId"
+                :items="releasePhaseItems"
+                value-key="value"
+                placeholder="选择发布阶段"
+                icon="material-symbols:event-available-outline-rounded"
+                class="w-full sm:min-w-72"
+                :loading="loadingOptions"
+                :disabled="saving || currentReleasePhase?.released"
+              />
+              <u-badge v-if="currentReleasePhase?.released" color="neutral" variant="soft" icon="material-symbols:lock-outline">已发布</u-badge>
             </div>
           </rb-form-field>
         </div>
@@ -432,11 +455,11 @@ watch(dirty, value => {
         </div>
 
         <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
-          <rb-form-field name="backend_enabled" row label="启用状态" :dirty="backendEnabledDirty" :reset="resetBackendEnabled">
+          <rb-form-field name="backend_enabled" row narrow-label label="启用状态" :dirty="backendEnabledDirty" :reset="resetBackendEnabled">
             <u-switch v-model="state.backend.enabled" class="mt-1.5" label="启用后端" :disabled="saving" />
           </rb-form-field>
           <u-separator v-if="state.backend.enabled" />
-          <rb-form-field v-if="state.backend.enabled" name="backend_functions" row label="导出函数" :dirty="backendFunctionsDirty" :reset="resetBackendFunctions">
+          <rb-form-field v-if="state.backend.enabled" name="backend_functions" row narrow-label label="导出函数" :dirty="backendFunctionsDirty" :reset="resetBackendFunctions">
             <div class="w-full min-w-0">
               <u-select-menu
                 v-model="state.backend.functions"
@@ -452,7 +475,7 @@ watch(dirty, value => {
             </div>
           </rb-form-field>
           <u-separator v-if="state.backend.enabled" />
-          <rb-form-field v-if="state.backend.enabled" name="backend_source" label="脚本源码" class="space-y-3" :dirty="backendSourceDirty" :reset="resetBackendSource">
+          <rb-form-field v-if="state.backend.enabled" name="backend_source" narrow-label label="脚本源码" class="space-y-3" :dirty="backendSourceDirty" :reset="resetBackendSource">
             <rb-code-editor
               ref="scriptEditor"
               v-model="state.backend.source"
@@ -477,7 +500,7 @@ watch(dirty, value => {
         </div>
 
         <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
-          <rb-form-field row label="执行解锁判定">
+          <rb-form-field row narrow-label label="执行解锁判定">
             <u-button
               color="warning"
               variant="soft"
@@ -492,14 +515,14 @@ watch(dirty, value => {
 
           <u-separator />
 
-          <rb-form-field row label="重置队伍状态">
+          <rb-form-field row narrow-label label="重置队伍状态">
             <u-button color="error" variant="soft" icon="material-symbols:restart-alt-rounded" label="重置队伍状态" :disabled="saving || deleting || checkingUnlock || clearingStates" :loading="clearingStates" @click="clearStatesConfirmOpen = true" />
             <div class="text-muted mt-1.5">清除所有队伍在此题上的解锁、提交、提示和人工提示记录。</div>
           </rb-form-field>
 
           <u-separator />
 
-          <rb-form-field row label="删除谜题">
+          <rb-form-field row narrow-label label="删除谜题">
             <u-button color="error" variant="soft" icon="material-symbols:delete-outline-rounded" label="删除谜题" :disabled="saving || deleting || checkingUnlock || clearingStates" @click="deleteConfirmOpen = true" />
           </rb-form-field>
         </div>
