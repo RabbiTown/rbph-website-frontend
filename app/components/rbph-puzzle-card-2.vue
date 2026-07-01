@@ -5,7 +5,7 @@ interface AdminPuzzleCardData {
   title: string;
   ptype: number;
   unlock_cond: string;
-  release_phase_id: number;
+  release_phase_id: number | null;
 }
 
 const props = defineProps<{
@@ -78,6 +78,10 @@ const displayedSlug = computed(() => props.slug ?? props.puzzle.slug);
           <div v-if="releasePhase" class="truncate text-xs text-muted" :title="formatDate(releasePhase.release_at)">
             <u-icon name="material-symbols:event-available-outline-rounded" class="align-middle mb-0.5 me-0.5" />
             {{ releasePhase.title }} · {{ formatDate(releasePhase.release_at) }}
+          </div>
+          <div v-else class="truncate text-xs text-muted">
+            <u-icon name="material-symbols:event-busy-outline-rounded" class="align-middle mb-0.5 me-0.5" />
+            不发布
           </div>
         </div>
         <slot name="actions" />

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { ContextMenuItem } from '@nuxt/ui';
+
 interface AdminRound {
   id: number;
   slug?: string | null;
@@ -23,7 +25,7 @@ interface AdminPuzzle {
   penalty: unknown;
   max_submit?: number | null;
   unlock_cond: string;
-  release_phase_id: number;
+  release_phase_id: number | null;
   round_id: number;
   sort: number;
   ticket_enabled: boolean;
@@ -81,6 +83,21 @@ interface PuzzleDropCandidate {
   score: number;
 }
 
+interface PuzzleSelectionRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+interface PuzzleSelectionGesture {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  baseIds: Set<number>;
+  active: boolean;
+}
+
 const route = useRoute();
 const api = useApi();
 const toast = useToast();
@@ -94,6 +111,7 @@ const dragAutoScroll = useDragAutoScroll({
 
 const loading = ref(false);
 const applyLoading = ref(false);
+const batchUpdating = ref(false);
 const rounds = ref<AdminRound[]>([]);
 const puzzles = ref<AdminPuzzle[]>([]);
 const releasePhases = ref<AdminReleasePhaseData[]>([]);
@@ -108,10 +126,39 @@ const dragOverEmptyRoundId = ref<number | null>(null);
 const roundOriginPlaceholderVisible = ref(false);
 const puzzleOriginPlaceholderVisible = ref(false);
 const creatingRoundId = ref<number | null>(null);
+const puzzleManagerRoot = ref<HTMLElement>();
+const selectedPuzzleIds = ref<Set<number>>(new Set());
+const selectionRect = ref<PuzzleSelectionRect>();
+const batchReleasePhaseId = ref<number | 'unpublished'>();
+const batchPuzzleIds = ref<number[]>([]);
+const batchUsesSelection = ref(false);
+const batchConfirmOpen = ref(false);
+const deletingPuzzle = ref<AdminPuzzle>();
+const deletePuzzleNameInput = ref('');
+const deletePuzzleConfirmOpen = ref(false);
+const puzzleDeleting = ref(false);
 let roundDropEntries: RoundDropEntry[] = [];
 let puzzleDropEntries: PuzzleDropEntry[] = [];
+let selectionGesture: PuzzleSelectionGesture | undefined;
+let suppressPuzzleClickUntil = 0;
+let previousUserSelect = '';
 
 const gameId = computed(() => Number(route.params.id));
+const selectedPuzzleCount = computed(() => selectedPuzzleIds.value.size);
+const selectionMode = computed(() => selectedPuzzleCount.value > 0);
+const batchPhaseItems = computed(() => [
+  { label: '不发布', value: 'unpublished' as const, icon: 'material-symbols:event-busy-outline-rounded' },
+  ...releasePhases.value
+    .filter(phase => !phase.released && new Date(phase.release_at).getTime() > Date.now())
+    .map(phase => ({
+      label: `${phase.title} · ${formatDate(new Date(phase.release_at))}`,
+      value: phase.id,
+      icon: 'material-symbols:event-available-outline-rounded',
+    })),
+]);
+const selectedBatchPhase = computed(() => (typeof batchReleasePhaseId.value === 'number' ? releasePhases.value.find(phase => phase.id === batchReleasePhaseId.value) : undefined));
+const deletingPuzzleName = computed(() => (deletingPuzzle.value ? puzzleDisplayTitle(deletingPuzzle.value) : ''));
+const deletePuzzleNameMatches = computed(() => deletePuzzleNameInput.value === deletingPuzzleName.value);
 
 const groupedRounds = computed<RoundGroup[]>(() => {
   const byRound = new Map<number, AdminPuzzle[]>();
@@ -163,8 +210,126 @@ function isRoundPuzzle(puzzle: AdminPuzzle, roundId: number = puzzle.round_id) {
   return rounds.value.find(round => round.id === roundId)?.puzzle === puzzle.id;
 }
 
+function puzzleDisplayTitle(puzzle: AdminPuzzle) {
+  if (!isRoundPuzzle(puzzle)) return puzzle.title;
+  return rounds.value.find(round => round.id === puzzle.round_id)?.title ?? puzzle.title;
+}
+
 function hasAnyPuzzle(roundId: number) {
   return puzzles.value.some(puzzle => puzzle.round_id === roundId);
+}
+
+function isPuzzleBatchEligible(puzzle: AdminPuzzle) {
+  return !isRoundDeleting(puzzle.round_id);
+}
+
+function isPuzzleSelected(puzzleId: number) {
+  return selectedPuzzleIds.value.has(puzzleId);
+}
+
+function clearPuzzleSelection() {
+  selectedPuzzleIds.value = new Set();
+}
+
+function togglePuzzleSelection(puzzle: AdminPuzzle) {
+  if (!isPuzzleBatchEligible(puzzle)) {
+    toast.add({ title: '该谜题不能批量修改', description: '请先取消所属区域的删除操作。', icon: 'material-symbols:lock-outline-rounded', color: 'warning' });
+    return;
+  }
+
+  const next = new Set(selectedPuzzleIds.value);
+  if (next.has(puzzle.id)) next.delete(puzzle.id);
+  else next.add(puzzle.id);
+  selectedPuzzleIds.value = next;
+}
+
+function selectAllEligiblePuzzles() {
+  selectedPuzzleIds.value = new Set(puzzles.value.filter(isPuzzleBatchEligible).map(puzzle => puzzle.id));
+}
+
+function invertEligiblePuzzleSelection() {
+  selectedPuzzleIds.value = new Set(puzzles.value.filter(puzzle => isPuzzleBatchEligible(puzzle) && !selectedPuzzleIds.value.has(puzzle.id)).map(puzzle => puzzle.id));
+}
+
+function onPuzzleCardClick(puzzle: AdminPuzzle, roundId: number, event: MouseEvent) {
+  if (Date.now() < suppressPuzzleClickUntil) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  if (selectionMode.value) {
+    event.preventDefault();
+    event.stopPropagation();
+    togglePuzzleSelection(puzzle);
+    return;
+  }
+
+  navigateTo(isRoundPuzzle(puzzle, roundId) ? `/admin/games/${gameId.value}/rounds/${roundId}` : `/admin/games/${gameId.value}/puzzles/${puzzle.id}`);
+}
+
+function cleanupSelectionGesture() {
+  window.removeEventListener('pointermove', onSelectionPointerMove);
+  window.removeEventListener('pointerup', onSelectionPointerEnd);
+  window.removeEventListener('pointercancel', onSelectionPointerEnd);
+  if (selectionGesture?.active) document.body.style.userSelect = previousUserSelect;
+  selectionGesture = undefined;
+  selectionRect.value = undefined;
+}
+
+function onSelectionPointerDown(event: PointerEvent) {
+  if (event.button !== 0 || event.pointerType !== 'mouse' || loading.value || applyLoading.value || batchUpdating.value) return;
+  const target = event.target instanceof Element ? event.target : undefined;
+  if (target?.closest('button, a, input, textarea, select, [role="button"], [contenteditable="true"], [draggable="true"], [data-selection-ignore="true"]')) return;
+
+  cleanupSelectionGesture();
+  selectionGesture = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    baseIds: new Set(selectedPuzzleIds.value),
+    active: false,
+  };
+  window.addEventListener('pointermove', onSelectionPointerMove);
+  window.addEventListener('pointerup', onSelectionPointerEnd);
+  window.addEventListener('pointercancel', onSelectionPointerEnd);
+}
+
+function onSelectionPointerMove(event: PointerEvent) {
+  const gesture = selectionGesture;
+  if (!gesture || event.pointerId !== gesture.pointerId) return;
+  const dx = event.clientX - gesture.startX;
+  const dy = event.clientY - gesture.startY;
+  if (!gesture.active && Math.hypot(dx, dy) < 5) return;
+
+  if (!gesture.active) {
+    gesture.active = true;
+    previousUserSelect = document.body.style.userSelect;
+    document.body.style.userSelect = 'none';
+  }
+  event.preventDefault();
+
+  const left = Math.min(gesture.startX, event.clientX);
+  const top = Math.min(gesture.startY, event.clientY);
+  const right = Math.max(gesture.startX, event.clientX);
+  const bottom = Math.max(gesture.startY, event.clientY);
+  selectionRect.value = { left, top, width: right - left, height: bottom - top };
+
+  const eligibleIds = new Set(puzzles.value.filter(isPuzzleBatchEligible).map(puzzle => puzzle.id));
+  const next = new Set(gesture.baseIds);
+  const cards = puzzleManagerRoot.value?.querySelectorAll<HTMLElement>('[data-puzzle-card-drop="true"]') ?? [];
+  for (const card of cards) {
+    const puzzleId = Number(card.dataset.puzzleId);
+    if (!eligibleIds.has(puzzleId)) continue;
+    const rect = card.getBoundingClientRect();
+    if (rect.left <= right && rect.right >= left && rect.top <= bottom && rect.bottom >= top) next.add(puzzleId);
+  }
+  selectedPuzzleIds.value = next;
+}
+
+function onSelectionPointerEnd(event: PointerEvent) {
+  if (!selectionGesture || event.pointerId !== selectionGesture.pointerId) return;
+  if (selectionGesture.active) suppressPuzzleClickUntil = Date.now() + 250;
+  cleanupSelectionGesture();
 }
 
 function orderRoundPuzzles(items: AdminPuzzle[], round: AdminRound) {
@@ -270,6 +435,56 @@ const changedPuzzlePatches = computed<PuzzlePositionPatch[]>(() => {
 
 const hasSortChanges = computed(() => changedRoundSortPatches.value.length > 0 || changedPuzzlePatches.value.length > 0);
 const hasChanges = computed(() => hasSortChanges.value || hasDeleteChanges.value);
+
+function contextUsesSelection(puzzle: AdminPuzzle) {
+  return selectedPuzzleIds.value.has(puzzle.id);
+}
+
+function contextPuzzleIds(puzzle: AdminPuzzle) {
+  return contextUsesSelection(puzzle) ? [...selectedPuzzleIds.value] : [puzzle.id];
+}
+
+function onPuzzleContextOpen(puzzle: AdminPuzzle, open: boolean) {
+  if (open && selectionMode.value && !contextUsesSelection(puzzle)) clearPuzzleSelection();
+}
+
+function puzzleContextMenuItems(puzzle: AdminPuzzle): ContextMenuItem[][] {
+  const puzzleIds = contextPuzzleIds(puzzle);
+  const multiple = puzzleIds.length > 1;
+  const actions: ContextMenuItem[] = [
+    {
+      label: '更改开放阶段',
+      icon: 'material-symbols:published-with-changes-rounded',
+      disabled: batchUpdating.value || puzzleDeleting.value || hasChanges.value,
+      onSelect: () => openBatchReleaseConfirm(puzzle),
+    },
+  ];
+
+  if (!multiple) {
+    actions.push({
+      label: '删除谜题',
+      icon: 'material-symbols:delete-outline-rounded',
+      color: 'error',
+      disabled: batchUpdating.value || puzzleDeleting.value || hasChanges.value,
+      onSelect: () => openDeletePuzzleConfirm(puzzle),
+    });
+  }
+
+  return [[{ type: 'label', label: multiple ? `已选择 ${puzzleIds.length} 道谜题` : puzzleDisplayTitle(puzzle) }], actions];
+}
+
+function openBatchReleaseConfirm(puzzle: AdminPuzzle) {
+  batchPuzzleIds.value = contextPuzzleIds(puzzle);
+  batchUsesSelection.value = contextUsesSelection(puzzle);
+  batchReleasePhaseId.value = undefined;
+  batchConfirmOpen.value = true;
+}
+
+function openDeletePuzzleConfirm(puzzle: AdminPuzzle) {
+  deletingPuzzle.value = puzzle;
+  deletePuzzleNameInput.value = '';
+  deletePuzzleConfirmOpen.value = true;
+}
 
 function syncDirtyToast() {
   if (!hasChanges.value) {
@@ -926,17 +1141,6 @@ async function addPuzzle(roundId: number) {
   const title = '新建谜题';
   const round = rounds.value.find(item => item.id === roundId);
   if (!round) return;
-  const releasePhase = releasePhases.value.find(phase => !phase.released);
-  if (!releasePhase) {
-    toast.add({
-      title: '没有可用的发布阶段',
-      description: '请先在比赛设置中创建一个未来发布阶段。',
-      icon: 'material-symbols:event-busy-outline-rounded',
-      color: 'error',
-    });
-    return;
-  }
-
   const nextSort = puzzles.value.filter(puzzle => puzzle.round_id === roundId && !isRoundPuzzle(puzzle, roundId)).reduce((max, puzzle) => Math.max(max, puzzle.sort), -1) + 1;
 
   const body = {
@@ -949,7 +1153,7 @@ async function addPuzzle(roundId: number) {
     penalty: [],
     max_submit: null,
     unlock_cond: 'default',
-    release_phase_id: releasePhase.id,
+    release_phase_id: null,
     ticket_enabled: true,
     ticket_cooldown: 0,
     sort: nextSort,
@@ -981,6 +1185,80 @@ async function addPuzzle(roundId: number) {
   } finally {
     creatingRoundId.value = null;
     applyLoading.value = false;
+  }
+}
+
+async function applyBatchReleasePhase() {
+  if (batchUpdating.value || batchPuzzleIds.value.length === 0 || !batchReleasePhaseId.value) return false;
+  if (hasChanges.value) {
+    toast.add({ title: '请先保存修改', description: '当前页面存在未保存的排序或删除操作。', icon: 'material-symbols:warning-rounded', color: 'error' });
+    return false;
+  }
+
+  batchUpdating.value = true;
+  try {
+    type Response = { puzzles: AdminPuzzle[] };
+    const { data } = await api.patch<Response>(
+      '/admin/puzzles/batch/release-phase',
+      {
+        game_id: gameId.value,
+        puzzle_ids: batchPuzzleIds.value,
+        release_phase_id: batchReleasePhaseId.value === 'unpublished' ? null : batchReleasePhaseId.value,
+      },
+      {
+        errorHints: {
+          [-2]: '部分谜题或目标阶段已经发生，无法批量修改。',
+          [-1]: '谜题或阶段不存在。',
+        },
+      },
+    );
+
+    const updated = new Map(data.puzzles.map(puzzle => [puzzle.id, puzzle]));
+    puzzles.value = puzzles.value.map(puzzle => updated.get(puzzle.id) ?? puzzle);
+    originalPuzzles.value = originalPuzzles.value.map(puzzle => updated.get(puzzle.id) ?? puzzle);
+    const count = data.puzzles.length;
+    if (batchUsesSelection.value) clearPuzzleSelection();
+    toast.add({ title: '开放时间已批量更新', description: `已更新 ${count} 道谜题。`, icon: 'material-symbols:check-rounded', color: 'success' });
+    return true;
+  } catch (error) {
+    handleError(error, '批量修改开放时间失败');
+    return false;
+  } finally {
+    batchUpdating.value = false;
+  }
+}
+
+async function confirmBatchRelease() {
+  if (await applyBatchReleasePhase()) batchConfirmOpen.value = false;
+}
+
+async function deleteContextPuzzle() {
+  const puzzle = deletingPuzzle.value;
+  if (!puzzle || puzzleDeleting.value || !deletePuzzleNameMatches.value) return;
+
+  puzzleDeleting.value = true;
+  try {
+    await api.del(`/admin/puzzles/${puzzle.id}`, {
+      errorHints: {
+        [-1]: '谜题不存在。',
+      },
+    });
+
+    puzzles.value = puzzles.value.filter(item => item.id !== puzzle.id);
+    originalPuzzles.value = originalPuzzles.value.filter(item => item.id !== puzzle.id);
+    if (isRoundPuzzle(puzzle)) {
+      rounds.value = rounds.value.map(round => (round.id === puzzle.round_id ? { ...round, puzzle: null } : round));
+      originalRounds.value = originalRounds.value.map(round => (round.id === puzzle.round_id ? { ...round, puzzle: null } : round));
+    }
+    const nextSelected = new Set(selectedPuzzleIds.value);
+    nextSelected.delete(puzzle.id);
+    selectedPuzzleIds.value = nextSelected;
+    deletePuzzleConfirmOpen.value = false;
+    toast.add({ title: '谜题已删除', icon: 'material-symbols:check-rounded', color: 'success' });
+  } catch (error) {
+    handleError(error, '删除谜题失败');
+  } finally {
+    puzzleDeleting.value = false;
   }
 }
 
@@ -1170,6 +1448,7 @@ async function fetchData() {
     originalRounds.value = cloneRounds(rounds.value);
     originalPuzzles.value = clonePuzzles(puzzles.value);
     deletingRoundIds.value = new Set();
+    clearPuzzleSelection();
     dirtyToast.clear();
   } catch (error) {
     rounds.value = [];
@@ -1178,6 +1457,7 @@ async function fetchData() {
     originalRounds.value = [];
     originalPuzzles.value = [];
     deletingRoundIds.value = new Set();
+    clearPuzzleSelection();
     dirtyToast.clear();
     handleError(error, '获取谜题列表失败', true);
   } finally {
@@ -1192,10 +1472,12 @@ watch(
   },
   { immediate: true },
 );
+
+onBeforeUnmount(cleanupSelectionGesture);
 </script>
 
 <template>
-  <div class="flex flex-col gap-5 sm:gap-6 w-full">
+  <div ref="puzzleManagerRoot" class="flex w-full flex-col gap-5 sm:gap-6" @pointerdown="onSelectionPointerDown">
     <div v-if="loading && groupedRounds.length === 0" class="flex flex-col gap-4">
       <u-skeleton v-for="item in 3" :key="item" class="h-32 w-full" />
     </div>
@@ -1234,7 +1516,7 @@ watch(
                 class="mt-0.5 shrink-0 cursor-grab text-muted active:cursor-grabbing"
                 title="拖动调整区域顺序"
                 aria-label="拖动调整区域顺序"
-                :disabled="isRoundDeleting(group.round.id)"
+                :disabled="selectionMode || isRoundDeleting(group.round.id)"
                 @dragstart="onRoundDragStart(group.round.id, $event)"
                 @dragend="clearDragState"
               />
@@ -1267,7 +1549,7 @@ watch(
                       square
                       icon="material-symbols:add-circle-outline-rounded"
                       aria-label="新建谜题"
-                      :disabled="applyLoading || isRoundBeingCreated(group.round.id) || isRoundDeleting(group.round.id)"
+                      :disabled="selectionMode || applyLoading || isRoundBeingCreated(group.round.id) || isRoundDeleting(group.round.id)"
                       @click.stop="addPuzzle(group.round.id)"
                     />
                   </u-tooltip>
@@ -1292,53 +1574,66 @@ watch(
           </div>
 
           <div v-if="group.puzzles.length" class="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-3 pb-1.5">
-            <div
-              v-for="puzzle in group.puzzles"
-              :key="puzzle.id"
-              data-puzzle-card-drop="true"
-              :data-puzzle-id="puzzle.id"
-              :data-round-id="group.round.id"
-              class="relative flex flex-col rounded-md transition"
-              :class="[isRoundPuzzle(puzzle, group.round.id) ? 'cursor-default' : 'hover:-translate-y-0.5', puzzleDropHintClass(puzzle)]"
-              @dragover="onPuzzleDragOver(puzzle, $event)"
-              @dragleave="onPuzzleDragLeave(puzzle.id, $event)"
-              @drop="onPuzzleDrop"
-            >
-              <div v-if="isPuzzleOriginPlaceholderVisible(puzzle)" class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-md transition" :class="originPlaceholderClass(puzzle)">
-                <div class="flex items-center justify-center rounded-full border-2 transition-all duration-100" :class="originPlaceholderIconClass(puzzle)">
-                  <u-icon name="material-symbols:drag-pan-rounded" class="size-5" />
+            <u-context-menu v-for="puzzle in group.puzzles" :key="puzzle.id" :items="puzzleContextMenuItems(puzzle)" @update:open="onPuzzleContextOpen(puzzle, $event)">
+              <div
+                data-puzzle-card-drop="true"
+                :data-puzzle-id="puzzle.id"
+                :data-round-id="group.round.id"
+                class="relative flex flex-col rounded-md transition"
+                :class="[
+                  selectionMode ? 'cursor-pointer' : isRoundPuzzle(puzzle, group.round.id) ? 'cursor-default' : 'hover:-translate-y-0.5',
+                  isPuzzleSelected(puzzle.id) ? 'ring-2 ring-primary ring-offset-2 ring-offset-default' : '',
+                  selectionMode && !isPuzzleBatchEligible(puzzle) ? 'opacity-60' : '',
+                  puzzleDropHintClass(puzzle),
+                ]"
+                @dragover="onPuzzleDragOver(puzzle, $event)"
+                @dragleave="onPuzzleDragLeave(puzzle.id, $event)"
+                @drop="onPuzzleDrop"
+              >
+                <div
+                  v-if="selectionMode"
+                  class="pointer-events-none absolute start-2 top-2 z-20 flex size-6 items-center justify-center rounded-full ring ring-default"
+                  :class="isPuzzleSelected(puzzle.id) ? 'bg-primary text-inverted' : 'bg-default/90 text-muted'"
+                >
+                  <u-icon :name="isPuzzleSelected(puzzle.id) ? 'material-symbols:check-rounded' : isPuzzleBatchEligible(puzzle) ? 'material-symbols:circle-outline' : 'material-symbols:lock-outline-rounded'" class="size-4" />
+                </div>
+                <div v-if="isPuzzleOriginPlaceholderVisible(puzzle)" class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-md transition" :class="originPlaceholderClass(puzzle)">
+                  <div class="flex items-center justify-center rounded-full border-2 transition-all duration-100" :class="originPlaceholderIconClass(puzzle)">
+                    <u-icon name="material-symbols:drag-pan-rounded" class="size-5" />
+                  </div>
+                </div>
+                <div class="relative rounded-md" :class="[isPuzzleOriginPlaceholderVisible(puzzle) ? 'opacity-25' : '', isRoundPuzzle(puzzle, group.round.id) ? 'overflow-hidden bg-primary/5' : '']">
+                  <rbph-puzzle-card-2
+                    :puzzle="puzzle"
+                    :is-round-puzzle="isRoundPuzzle(puzzle, group.round.id)"
+                    :title="isRoundPuzzle(puzzle, group.round.id) ? group.round.title : puzzle.title"
+                    :slug="isRoundPuzzle(puzzle, group.round.id) ? group.round.slug : puzzle.slug"
+                    :release-phase="releasePhases.find(phase => phase.id === puzzle.release_phase_id)"
+                    class="cursor-pointer"
+                    @click="onPuzzleCardClick(puzzle, group.round.id, $event)"
+                  >
+                    <template v-if="!isRoundPuzzle(puzzle, group.round.id)" #actions>
+                      <u-button
+                        draggable="true"
+                        color="neutral"
+                        variant="ghost"
+                        size="sm"
+                        square
+                        icon="material-symbols:drag-indicator"
+                        class="cursor-grab text-muted active:cursor-grabbing"
+                        title="拖动调整谜题位置"
+                        aria-label="拖动调整谜题位置"
+                        :disabled="selectionMode"
+                        @click.stop
+                        @dragstart.stop="onPuzzleDragStart(puzzle, $event)"
+                        @dragend="clearDragState"
+                      />
+                    </template>
+                  </rbph-puzzle-card-2>
+                  <div v-if="isRoundPuzzle(puzzle, group.round.id)" class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-primary/60" />
                 </div>
               </div>
-              <div class="relative rounded-md" :class="[isPuzzleOriginPlaceholderVisible(puzzle) ? 'opacity-25' : '', isRoundPuzzle(puzzle, group.round.id) ? 'overflow-hidden bg-primary/5' : '']">
-                <rbph-puzzle-card-2
-                  :puzzle="puzzle"
-                  :is-round-puzzle="isRoundPuzzle(puzzle, group.round.id)"
-                  :title="isRoundPuzzle(puzzle, group.round.id) ? group.round.title : puzzle.title"
-                  :slug="isRoundPuzzle(puzzle, group.round.id) ? group.round.slug : puzzle.slug"
-                  :release-phase="releasePhases.find(phase => phase.id === puzzle.release_phase_id)"
-                  class="cursor-pointer"
-                  @click="navigateTo(isRoundPuzzle(puzzle, group.round.id) ? `/admin/games/${gameId}/rounds/${group.round.id}` : `/admin/games/${gameId}/puzzles/${puzzle.id}`)"
-                >
-                  <template v-if="!isRoundPuzzle(puzzle, group.round.id)" #actions>
-                    <u-button
-                      draggable="true"
-                      color="neutral"
-                      variant="ghost"
-                      size="sm"
-                      square
-                      icon="material-symbols:drag-indicator"
-                      class="cursor-grab text-muted active:cursor-grabbing"
-                      title="拖动调整谜题位置"
-                      aria-label="拖动调整谜题位置"
-                      @click.stop
-                      @dragstart.stop="onPuzzleDragStart(puzzle, $event)"
-                      @dragend="clearDragState"
-                    />
-                  </template>
-                </rbph-puzzle-card-2>
-                <div v-if="isRoundPuzzle(puzzle, group.round.id)" class="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-primary/60" />
-              </div>
-            </div>
+            </u-context-menu>
           </div>
 
           <div v-else class="flex min-h-28 items-center justify-center rounded-md border border-dashed transition-all duration-100" :class="emptyRoundDropClass(group.round.id)">
@@ -1352,9 +1647,66 @@ watch(
         </div>
       </section>
 
-      <div class="sticky bottom-4 z-20 flex justify-start">
-        <u-button icon="material-symbols:add-rounded" label="新建区域" size="lg" class="shadow-lg shadow-primary/20" :disabled="applyLoading" @click="addRound" />
+      <div class="sticky bottom-4 z-30 flex justify-start" data-selection-ignore="true">
+        <div v-if="selectionMode" class="flex w-full flex-wrap items-center gap-2 rounded-md bg-default/95 p-2 shadow-lg ring ring-default backdrop-blur-sm">
+          <u-badge color="primary" variant="soft" size="lg">已选择 {{ selectedPuzzleCount }} 道谜题</u-badge>
+          <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:select-all-rounded" label="全选" @click="selectAllEligiblePuzzles" />
+          <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:change-history-outline-rounded" label="反选" @click="invertEligiblePuzzleSelection" />
+          <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:deselect-rounded" label="清空" :disabled="selectedPuzzleCount === 0" @click="clearPuzzleSelection" />
+        </div>
+        <u-button v-else icon="material-symbols:add-rounded" label="新建区域" size="lg" class="shadow-lg shadow-primary/20" :disabled="applyLoading" @click="addRound" />
       </div>
     </template>
+
+    <div
+      v-if="selectionRect"
+      class="pointer-events-none fixed z-50 border border-primary bg-primary/10 shadow-sm"
+      :style="{ left: `${selectionRect.left}px`, top: `${selectionRect.top}px`, width: `${selectionRect.width}px`, height: `${selectionRect.height}px` }"
+    />
+    <rb-confirm-modal v-model:open="batchConfirmOpen" title="更改开放阶段" :description="`为 ${batchPuzzleIds.length} 道谜题设置新的开放阶段。`" :busy="batchUpdating">
+      <template #body>
+        <rb-form-field row narrow-label label="开放阶段">
+          <u-select
+            v-model="batchReleasePhaseId"
+            :items="batchPhaseItems"
+            :leading-icon="batchReleasePhaseId === 'unpublished' ? 'material-symbols:event-busy-outline-rounded' : selectedBatchPhase ? 'material-symbols:event-available-outline-rounded' : undefined"
+            placeholder="选择开放阶段"
+            class="w-full"
+            :disabled="batchUpdating"
+          />
+        </rb-form-field>
+        <p v-if="batchReleasePhaseId === 'unpublished'" class="mt-3 text-sm text-warning">撤销发布后玩家将无法访问这些谜题，已有队伍数据会保留。</p>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <u-button color="neutral" variant="soft" :disabled="batchUpdating" label="取消" @click="batchConfirmOpen = false" />
+          <u-button
+            :color="batchReleasePhaseId === 'unpublished' ? 'warning' : 'primary'"
+            :icon="batchReleasePhaseId === 'unpublished' ? 'material-symbols:event-busy-outline-rounded' : 'material-symbols:event-available-outline-rounded'"
+            :loading="batchUpdating"
+            :disabled="batchUpdating || !batchReleasePhaseId"
+            label="确认修改"
+            @click="confirmBatchRelease"
+          />
+        </div>
+      </template>
+    </rb-confirm-modal>
+    <rb-confirm-modal
+      v-model:open="deletePuzzleConfirmOpen"
+      title="删除谜题"
+      :description="`确认删除谜题「${deletingPuzzleName}」？此操作不可恢复。`"
+      confirm-label="删除谜题"
+      confirm-color="error"
+      confirm-icon="material-symbols:delete-outline-rounded"
+      :confirm-disabled="!deletePuzzleNameMatches"
+      :busy="puzzleDeleting"
+      @confirm="deleteContextPuzzle"
+    >
+      <template #body>
+        <rb-form-field label="输入谜题名称以确认">
+          <u-input v-model="deletePuzzleNameInput" :placeholder="deletingPuzzleName" autocomplete="off" class="w-full" :disabled="puzzleDeleting" />
+        </rb-form-field>
+      </template>
+    </rb-confirm-modal>
   </div>
 </template>

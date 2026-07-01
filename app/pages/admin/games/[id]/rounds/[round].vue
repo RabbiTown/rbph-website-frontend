@@ -63,18 +63,6 @@ async function createRoundPuzzle() {
 
   creatingRoundPuzzle.value = true;
   try {
-    type ReleaseResponse = { phases: AdminReleasePhaseData[] };
-    const releaseResp = await api.get<ReleaseResponse>(`/admin/games/${gameId.value}/release-phases`);
-    const releasePhase = releaseResp.data.phases.find(phase => !phase.released);
-    if (!releasePhase) {
-      toast.add({
-        title: '没有可用的发布阶段',
-        description: '请先在比赛设置中创建一个未来发布阶段。',
-        icon: 'material-symbols:event-busy-outline-rounded',
-        color: 'error',
-      });
-      return;
-    }
     type PuzzleResponse = { puzzle: AdminPuzzleData };
     const nextSort = 0;
     const body = {
@@ -87,7 +75,7 @@ async function createRoundPuzzle() {
       penalty: [],
       max_submit: null,
       unlock_cond: 'default',
-      release_phase_id: releasePhase.id,
+      release_phase_id: null,
       ticket_enabled: true,
       ticket_cooldown: 0,
       sort: nextSort,

@@ -7,6 +7,7 @@ defineProps<{
   confirmLabel?: string;
   confirmColor?: 'primary' | 'neutral' | 'error' | 'success' | 'warning';
   confirmIcon?: string;
+  confirmDisabled?: boolean;
   busy?: boolean;
 }>();
 
@@ -28,7 +29,7 @@ function onConfirm() {
       <slot name="footer">
         <div class="flex justify-end gap-2 w-full">
           <u-button color="neutral" variant="soft" :disabled="busy" @click="open = false"> 取消 </u-button>
-          <u-button :color="confirmColor ?? 'primary'" :icon="confirmIcon" :loading="busy" :disabled="busy" :label="confirmLabel ?? '确认'" @click="onConfirm" />
+          <u-button :color="confirmColor ?? 'primary'" :icon="confirmIcon" :loading="busy" :disabled="busy || confirmDisabled" :label="confirmLabel ?? '确认'" @click="onConfirm" />
         </div>
       </slot>
     </template>

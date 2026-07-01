@@ -7,7 +7,7 @@ const dirtyToast = useDirtyToast();
 const { puzzle, backend, round } = useAdmin().usePuzzleContext();
 
 const state = reactive({
-  releasePhaseId: undefined as number | undefined,
+  releasePhaseId: 'unpublished' as number | 'unpublished',
   unlock: defaultUnlockGate('default') as UnlockGateNode,
   backend: {
     enabled: false,
@@ -22,6 +22,7 @@ const deleting = ref(false);
 const checkingUnlock = ref(false);
 const clearingStates = ref(false);
 const deleteConfirmOpen = ref(false);
+const deletePuzzleNameInput = ref('');
 const unlockCheckConfirmOpen = ref(false);
 const clearStatesConfirmOpen = ref(false);
 const loadingOptions = ref(false);
@@ -53,18 +54,28 @@ const deleteConfirmDescription = computed(() => {
   }
   return `确认删除谜题「${puzzle.value.title}」？此操作不可恢复。`;
 });
+const deletePuzzleName = computed(() => {
+  if (!puzzle.value) return '';
+  return isRoundPuzzle.value && round.value ? round.value.title : puzzle.value.title;
+});
+const deletePuzzleNameMatches = computed(() => deletePuzzleNameInput.value === deletePuzzleName.value);
 
 const unlockCondPatch = computed(() => serializeUnlockGate(state.unlock));
 const originalUnlockCond = computed(() => puzzle.value?.unlock_cond ?? 'default');
 const unlockCondDirty = computed(() => Boolean(puzzle.value && unlockCondPatch.value !== originalUnlockCond.value));
-const releasePhaseDirty = computed(() => Boolean(puzzle.value && state.releasePhaseId !== puzzle.value.release_phase_id));
+const releasePhasePatch = computed(() => (state.releasePhaseId === 'unpublished' ? null : state.releasePhaseId));
+const releasePhaseDirty = computed(() => Boolean(puzzle.value && releasePhasePatch.value !== puzzle.value.release_phase_id));
 const currentReleasePhase = computed(() => releasePhases.value.find(phase => phase.id === puzzle.value?.release_phase_id));
 const releasePhaseItems = computed(() =>
-  releasePhases.value.map(phase => ({
-    label: `${phase.title} · ${formatDate(phase.release_at)}`,
-    value: phase.id,
-    disabled: phase.released && phase.id !== puzzle.value?.release_phase_id,
-  })),
+  [
+    { label: '不发布', value: 'unpublished' as const, icon: 'material-symbols:event-busy-outline-rounded' },
+    ...releasePhases.value.map(phase => ({
+      label: `${phase.title} · ${formatDate(phase.release_at)}`,
+      value: phase.id,
+      icon: 'material-symbols:event-available-outline-rounded',
+      disabled: phase.released || new Date(phase.release_at).getTime() <= Date.now(),
+    })),
+  ],
 );
 const backendEnabled = computed(() => state.backend.enabled);
 const backendEnabledDirty = computed(() => Boolean(puzzle.value && backendLoaded.value && backendEnabled.value !== (backend.value?.enabled ?? false)));
@@ -76,12 +87,12 @@ const previewText = computed(() => translateUnlockCondition(unlockCondPatch.valu
 const invalid = computed(() => !unlockCondPatch.value);
 
 function syncFromPuzzle() {
-  state.releasePhaseId = puzzle.value?.release_phase_id;
+  state.releasePhaseId = puzzle.value?.release_phase_id ?? 'unpublished';
   state.unlock = parseUnlockGate(originalUnlockCond.value);
 }
 
 function resetReleasePhase() {
-  state.releasePhaseId = puzzle.value?.release_phase_id;
+  state.releasePhaseId = puzzle.value?.release_phase_id ?? 'unpublished';
 }
 
 function syncFromBackend() {
@@ -113,6 +124,11 @@ function reset() {
   dirtyToast.clear();
 }
 
+function openDeleteConfirm() {
+  deletePuzzleNameInput.value = '';
+  deleteConfirmOpen.value = true;
+}
+
 async function fetchOptions() {
   if (!puzzle.value?.game_id) return;
   loadingOptions.value = true;
@@ -136,16 +152,16 @@ async function fetchOptions() {
 }
 
 async function applyReleasePhase() {
-  if (!puzzle.value || !releasePhaseDirty.value || !state.releasePhaseId) return true;
+  if (!puzzle.value || !releasePhaseDirty.value) return true;
 
   try {
     type Response = { puzzle: AdminPuzzleData };
     const response = await api.patch<Response>(
       `/admin/puzzles/${puzzle.value.id}`,
-      { release_phase_id: state.releasePhaseId },
+      { release_phase_id: releasePhasePatch.value },
       {
         errorHints: {
-          [-2]: '发布阶段不合法或已经发布。',
+          [-2]: '目标发布阶段不合法或已经发生。',
           [-1]: '谜题不存在。',
         },
       },
@@ -155,7 +171,7 @@ async function applyReleasePhase() {
     syncFromPuzzle();
 
     toast.add({
-      title: '发布阶段已保存',
+      title: releasePhasePatch.value === null ? '已撤销发布' : '发布阶段已保存',
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
@@ -271,7 +287,7 @@ async function saveBackendSection() {
 }
 
 async function deletePuzzle() {
-  if (!puzzle.value || deleting.value) return;
+  if (!puzzle.value || deleting.value || !deletePuzzleNameMatches.value) return;
 
   deleting.value = true;
   try {
@@ -292,6 +308,7 @@ async function deletePuzzle() {
   } finally {
     deleting.value = false;
     deleteConfirmOpen.value = false;
+    deletePuzzleNameInput.value = '';
   }
 }
 
@@ -422,7 +439,7 @@ watch(dirty, value => {
           <rb-form-field name="release_phase_id" row narrow-label :dirty="releasePhaseDirty" :reset="resetReleasePhase">
             <template #label>
               发布阶段
-              <rb-tooltip text="题目只有在所属阶段到达发布时间后才允许访问。">
+              <rb-tooltip text="未设置阶段时题目不会发布；撤销发布不会删除队伍数据。">
                 <u-icon name="material-symbols:help-outline-rounded" class="size-4 align-middle mb-0.5 ms-1 cursor-help text-secondary" />
               </rb-tooltip>
             </template>
@@ -432,12 +449,13 @@ watch(dirty, value => {
                 :items="releasePhaseItems"
                 value-key="value"
                 placeholder="选择发布阶段"
-                icon="material-symbols:event-available-outline-rounded"
+                :icon="state.releasePhaseId === 'unpublished' ? 'material-symbols:event-busy-outline-rounded' : 'material-symbols:event-available-outline-rounded'"
                 class="w-full sm:min-w-72"
                 :loading="loadingOptions"
-                :disabled="saving || currentReleasePhase?.released"
+                :disabled="saving"
               />
-              <u-badge v-if="currentReleasePhase?.released" color="neutral" variant="soft" icon="material-symbols:lock-outline">已发布</u-badge>
+              <u-badge v-if="currentReleasePhase?.released" color="success" variant="soft" icon="material-symbols:check-circle-outline-rounded">已发布</u-badge>
+              <u-badge v-else-if="puzzle.release_phase_id === null" color="neutral" variant="soft" icon="material-symbols:event-busy-outline-rounded">不发布</u-badge>
             </div>
           </rb-form-field>
         </div>
@@ -523,7 +541,7 @@ watch(dirty, value => {
           <u-separator />
 
           <rb-form-field row narrow-label label="删除谜题">
-            <u-button color="error" variant="soft" icon="material-symbols:delete-outline-rounded" label="删除谜题" :disabled="saving || deleting || checkingUnlock || clearingStates" @click="deleteConfirmOpen = true" />
+            <u-button color="error" variant="soft" icon="material-symbols:delete-outline-rounded" label="删除谜题" :disabled="saving || deleting || checkingUnlock || clearingStates" @click="openDeleteConfirm" />
           </rb-form-field>
         </div>
 
@@ -556,9 +574,16 @@ watch(dirty, value => {
           confirm-label="删除谜题"
           confirm-color="error"
           confirm-icon="material-symbols:delete-outline-rounded"
+          :confirm-disabled="!deletePuzzleNameMatches"
           :busy="deleting"
           @confirm="deletePuzzle"
-        />
+        >
+          <template #body>
+            <rb-form-field label="输入谜题名称以确认">
+              <u-input v-model="deletePuzzleNameInput" :placeholder="deletePuzzleName" autocomplete="off" class="w-full" :disabled="deleting" />
+            </rb-form-field>
+          </template>
+        </rb-confirm-modal>
       </section>
     </u-form>
 
