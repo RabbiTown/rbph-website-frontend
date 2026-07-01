@@ -8,8 +8,8 @@ export interface RbGameSettings {
 export interface RbGameModel {
   id: number;
   title: string;
-  is_shown?: boolean;
-  is_online?: boolean;
+  is_listed?: boolean;
+  is_active?: boolean;
 
   ctime_at?: string;
 

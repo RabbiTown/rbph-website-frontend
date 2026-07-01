@@ -198,7 +198,7 @@ function addPhase() {
     title: '',
     description: '',
     releaseAt: nextReleaseAt(),
-    isPublic: false,
+    isPublic: true,
     states: {},
     puzzleCount: 0,
     released: false,
@@ -285,7 +285,11 @@ async function apply(): Promise<boolean> {
   }
 }
 
-watch(() => props.gameId, () => fetchPhases(new Set()), { immediate: true });
+watch(
+  () => props.gameId,
+  () => fetchPhases(new Set()),
+  { immediate: true },
+);
 watch(dirty, value => emit('update:dirty', value), { immediate: true });
 
 defineExpose({ apply, reset });
@@ -302,7 +306,7 @@ defineExpose({ apply, reset });
       <u-skeleton v-for="i in 2" :key="i" class="h-14 w-full" />
     </div>
 
-    <u-empty v-else-if="state.length === 0" icon="material-symbols:event-busy-outline-rounded" title="暂无阶段" description="新建阶段后，可以设置展示信息和自动修改的比赛功能。">
+    <u-empty v-else-if="state.length === 0" icon="material-symbols:event-busy-outline-rounded" title="暂无阶段">
       <template #actions><u-button icon="material-symbols:add-rounded" label="新建阶段" :disabled="saving" @click="addPhase" /></template>
     </u-empty>
 
@@ -368,27 +372,14 @@ defineExpose({ apply, reset });
                             </div>
                           </div>
                           <div class="mt-3 flex justify-end">
-                            <u-button size="xs" color="error" variant="soft" icon="material-symbols:delete-outline-rounded" label="删除" @click="removeFeatureChange(phase, change.feature), close()" />
+                            <u-button size="xs" color="error" variant="soft" icon="material-symbols:delete-outline-rounded" label="删除" @click="(removeFeatureChange(phase, change.feature), close())" />
                           </div>
                         </div>
                       </template>
                     </u-popover>
 
-                    <u-popover
-                      :open="phase.featurePopoverOpen"
-                      arrow
-                      :content="{ side: 'top', align: 'start', sideOffset: 8 }"
-                      @update:open="open => setFeaturePopoverOpen(phase, open)"
-                    >
-                      <u-button
-                        type="button"
-                        size="sm"
-                        color="neutral"
-                        variant="soft"
-                        icon="material-symbols:add-rounded"
-                        label="修改功能"
-                        :disabled="saving || phase.deleting || phase.released || availableFeatureItems(phase).length === 0"
-                      />
+                    <u-popover :open="phase.featurePopoverOpen" arrow :content="{ side: 'top', align: 'start', sideOffset: 8 }" @update:open="open => setFeaturePopoverOpen(phase, open)">
+                      <u-button type="button" size="sm" color="neutral" variant="soft" icon="material-symbols:add-rounded" label="修改功能" :disabled="saving || phase.deleting || phase.released || availableFeatureItems(phase).length === 0" />
                       <template #content>
                         <div class="w-72 space-y-3 p-3">
                           <u-select
@@ -410,15 +401,7 @@ defineExpose({ apply, reset });
                             :disabled="!phase.pendingFeature"
                           />
                           <div class="flex justify-end">
-                            <u-button
-                              type="button"
-                              size="sm"
-                              icon="material-symbols:add-rounded"
-                              label="添加"
-                              variant="soft"
-                              :disabled="!phase.pendingFeature || !phase.pendingState"
-                              @click="addFeatureChange(phase)"
-                            />
+                            <u-button type="button" size="sm" icon="material-symbols:add-rounded" label="添加" variant="soft" :disabled="!phase.pendingFeature || !phase.pendingState" @click="addFeatureChange(phase)" />
                           </div>
                         </div>
                       </template>

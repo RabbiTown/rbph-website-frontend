@@ -164,12 +164,16 @@ function basename(path: string) {
   return path.split('/').filter(Boolean).at(-1) ?? path;
 }
 
+function encodeAssetPath(path: string) {
+  return path.split('/').map(encodeURIComponent).join('/');
+}
+
 function fileUrl(item: AdminAssetGroupItem, file: AdminAssetFileData) {
-  return `/assets/${item.group.object_key}/${file.relative_path}`;
+  return `/assets/${encodeURIComponent(item.group.object_key)}/${encodeAssetPath(file.relative_path)}`;
 }
 
 function groupUrl(item: AdminAssetGroupItem) {
-  return `/assets/${item.group.object_key}/`;
+  return `/assets/${encodeURIComponent(item.group.object_key)}/`;
 }
 
 function primaryFile(item: AdminAssetGroupItem) {

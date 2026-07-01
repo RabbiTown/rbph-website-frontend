@@ -1647,16 +1647,17 @@ onBeforeUnmount(cleanupSelectionGesture);
         </div>
       </section>
 
-      <div class="sticky bottom-4 z-30 flex justify-start" data-selection-ignore="true">
-        <div v-if="selectionMode" class="flex w-full flex-wrap items-center gap-2 rounded-md bg-default/95 p-2 shadow-lg ring ring-default backdrop-blur-sm">
-          <u-badge color="primary" variant="soft" size="lg">已选择 {{ selectedPuzzleCount }} 道谜题</u-badge>
-          <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:select-all-rounded" label="全选" @click="selectAllEligiblePuzzles" />
-          <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:change-history-outline-rounded" label="反选" @click="invertEligiblePuzzleSelection" />
-          <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:deselect-rounded" label="清空" :disabled="selectedPuzzleCount === 0" @click="clearPuzzleSelection" />
-        </div>
-        <u-button v-else icon="material-symbols:add-rounded" label="新建区域" size="lg" class="shadow-lg shadow-primary/20" :disabled="applyLoading" @click="addRound" />
-      </div>
     </template>
+
+    <div v-if="!loading" class="sticky bottom-4 z-30 flex justify-start" data-selection-ignore="true">
+      <div v-if="selectionMode" class="flex w-full flex-wrap items-center gap-2 rounded-md bg-default/95 p-2 shadow-lg ring ring-default backdrop-blur-sm">
+        <u-badge color="primary" variant="soft" size="lg">已选择 {{ selectedPuzzleCount }} 道谜题</u-badge>
+        <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:select-all-rounded" label="全选" @click="selectAllEligiblePuzzles" />
+        <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:change-history-outline-rounded" label="反选" @click="invertEligiblePuzzleSelection" />
+        <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:deselect-rounded" label="清空" :disabled="selectedPuzzleCount === 0" @click="clearPuzzleSelection" />
+      </div>
+      <u-button v-else icon="material-symbols:add-rounded" label="新建区域" size="lg" class="shadow-lg shadow-primary/20" :disabled="applyLoading" @click="addRound" />
+    </div>
 
     <div
       v-if="selectionRect"

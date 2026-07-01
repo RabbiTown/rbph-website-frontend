@@ -439,7 +439,7 @@ watch(dirty, value => {
           <rb-form-field name="release_phase_id" row narrow-label :dirty="releasePhaseDirty" :reset="resetReleasePhase">
             <template #label>
               发布阶段
-              <rb-tooltip text="未设置阶段时题目不会发布；撤销发布不会删除队伍数据。">
+              <rb-tooltip text="题目将在对应阶段发布；只能选择还未开始的阶段。">
                 <u-icon name="material-symbols:help-outline-rounded" class="size-4 align-middle mb-0.5 ms-1 cursor-help text-secondary" />
               </rb-tooltip>
             </template>

@@ -599,7 +599,7 @@ watch(user, () => syncUserState(), { immediate: true });
                 color="warning"
                 icon="material-symbols:schedule-outline-rounded"
                 title="组队尚未开放"
-                description="开放时间尚未公开。"
+                description="请参考赛程安排确认开放时间。"
               />
 
               <div v-if="teamOpen" class="hidden team-profile-desktop-grid gap-6 lg:flex" :class="teamProfileGridMode === 'join' ? 'team-profile-desktop-grid-join' : 'team-profile-desktop-grid-create'">

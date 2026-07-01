@@ -19,7 +19,7 @@ type CurrencyEditItem = {
   dirty: boolean;
   deletePending: boolean;
 };
-type GameSettingsPatchBody = Partial<Pick<RbGameModel, 'title' | 'is_shown' | 'is_online'>> & {
+type GameSettingsPatchBody = Partial<Pick<RbGameModel, 'title' | 'is_listed' | 'is_active'>> & {
   settings?: {
     team?: {
       max_members?: number | null;
@@ -37,15 +37,15 @@ function unsetRecordKey<T>(record: Record<number, T>, key: number) {
 
 const state = reactive({
   title: '',
-  is_shown: false,
-  is_online: false,
+  is_listed: false,
+  is_active: false,
   max_members: null as number | null,
 });
 
 function syncState() {
   state.title = game.value?.title ?? '';
-  state.is_shown = game.value?.is_shown ?? false;
-  state.is_online = game.value?.is_online ?? false;
+  state.is_listed = game.value?.is_listed ?? false;
+  state.is_active = game.value?.is_active ?? false;
   state.max_members = game.value?.settings?.team.max_members ?? null;
 }
 
@@ -63,8 +63,8 @@ function makePatchBody() {
   const currentMaxMembers = current.settings?.team.max_members ?? null;
 
   if (state.title !== current.title) body.title = state.title;
-  if (state.is_shown !== current.is_shown) body.is_shown = state.is_shown;
-  if (state.is_online !== current.is_online) body.is_online = state.is_online;
+  if (state.is_listed !== current.is_listed) body.is_listed = state.is_listed;
+  if (state.is_active !== current.is_active) body.is_active = state.is_active;
   if (maxMembers !== currentMaxMembers) body.settings = { team: { max_members: maxMembers } };
 
   return body;
@@ -76,8 +76,8 @@ const dirtyFields = computed(() => {
   const patch = patchBody.value;
   return {
     title: 'title' in patch,
-    isShown: 'is_shown' in patch,
-    isOnline: 'is_online' in patch,
+    isListed: 'is_listed' in patch,
+    isActive: 'is_active' in patch,
     maxMembers: Boolean(patch.settings?.team && 'max_members' in patch.settings.team),
   };
 });
@@ -265,10 +265,10 @@ function resetField(field: keyof typeof dirtyFields.value) {
 
   if (field === 'title') {
     state.title = current.title;
-  } else if (field === 'isShown') {
-    state.is_shown = current.is_shown ?? false;
-  } else if (field === 'isOnline') {
-    state.is_online = current.is_online ?? false;
+  } else if (field === 'isListed') {
+    state.is_listed = current.is_listed ?? false;
+  } else if (field === 'isActive') {
+    state.is_active = current.is_active ?? false;
   } else if (field === 'maxMembers') {
     state.max_members = current.settings?.team.max_members ?? null;
   }
@@ -416,36 +416,15 @@ watch(
               <u-input v-model="state.title" placeholder="输入比赛名称" class="w-full" />
             </rb-form-field>
             <u-separator />
-            <rb-form-field
-              name="is_shown"
-              row
-              label="展示比赛"
-              description="控制比赛是否出现在公开列表和入口中"
-              :dirty="dirtyFields.isShown"
-              :reset="() => resetField('isShown')"
-            >
-              <u-switch v-model="state.is_shown" />
+            <rb-form-field name="is_listed" row label="公开展示" description="控制运营中的比赛是否出现在公开活动列表" :dirty="dirtyFields.isListed" :reset="() => resetField('isListed')">
+              <u-switch v-model="state.is_listed" />
             </rb-form-field>
             <u-separator />
-            <rb-form-field
-              name="is_online"
-              row
-              label="比赛在线"
-              description="控制比赛是否允许正常访问"
-              :dirty="dirtyFields.isOnline"
-              :reset="() => resetField('isOnline')"
-            >
-              <u-switch v-model="state.is_online" />
+            <rb-form-field name="is_active" row label="比赛开放" description="控制普通玩家是否可以进入并使用比赛功能" :dirty="dirtyFields.isActive" :reset="() => resetField('isActive')">
+              <u-switch v-model="state.is_active" />
             </rb-form-field>
             <u-separator />
-            <rb-form-field
-              name="max_members"
-              row
-              label="队伍人数上限"
-              description="限制每支队伍最多可加入的人数"
-              :dirty="dirtyFields.maxMembers"
-              :reset="() => resetField('maxMembers')"
-            >
+            <rb-form-field name="max_members" row label="队伍人数上限" description="限制每支队伍最多可加入的人数" :dirty="dirtyFields.maxMembers" :reset="() => resetField('maxMembers')">
               <div class="flex flex-wrap items-center gap-3">
                 <u-input-number v-model="state.max_members" :min="1" :step="1" orientation="vertical" placeholder="无上限" class="w-32" />
               </div>
