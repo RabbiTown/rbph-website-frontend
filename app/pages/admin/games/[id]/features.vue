@@ -25,12 +25,12 @@ const featureDescriptions: Record<RbGameFeature, Partial<Record<RbGameFeatureSta
   direct_message: {
     closed: '玩家不能发送站内信。',
     existing_only: '只有发送过站内信的队伍可以发送站内信。',
-    open: '玩家可以发起站内信。',
+    open: '玩家可以发送站内信。',
   },
   puzzle_ticket: {
     closed: '玩家不能发起或回复人工提示。',
     existing_only: '玩家不能发起，但可以回复已有人工提示。',
-    open: '玩家可以发起人工提示。',
+    open: '玩家可以发起和回复人工提示。',
   },
   leaderboard: {
     live: '排行榜根据当前解题和提交结果实时更新。',
