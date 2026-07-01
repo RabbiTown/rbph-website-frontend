@@ -23,13 +23,13 @@ const featureDescriptions: Record<RbGameFeature, Partial<Record<RbGameFeatureSta
     open: '玩家可以创建或加入队伍。',
   },
   direct_message: {
-    closed: '玩家不能发起站内信，也不能继续已有会话；工作人员不受限制。',
-    existing_only: '玩家不能发起新会话，但可以继续已有会话；工作人员不受限制。',
+    closed: '玩家不能发送站内信。',
+    existing_only: '只有发送过站内信的队伍可以发送站内信。',
     open: '玩家可以发起站内信。',
   },
   puzzle_ticket: {
-    closed: '玩家不能请求人工提示，也不能继续已有工单；工作人员不受限制。',
-    existing_only: '玩家不能请求人工提示，但可以继续已有工单；工作人员不受限制。',
+    closed: '玩家不能发起或回复人工提示。',
+    existing_only: '玩家不能发起，但可以回复已有人工提示。',
     open: '玩家可以发起人工提示。',
   },
   leaderboard: {
