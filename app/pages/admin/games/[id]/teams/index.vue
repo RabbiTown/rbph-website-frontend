@@ -116,7 +116,6 @@ function statusBadges(team: AdminTeamListItem) {
   if (team.is_banned) result.push({ label: '封禁', color: 'error', icon: 'material-symbols:block-outline' });
   if (team.is_locked) result.push({ label: '锁定', color: 'warning', icon: 'material-symbols:lock-outline' });
   if (team.finish_at) result.push({ label: '完赛', color: 'success', icon: 'material-symbols:flag-outline-rounded' });
-  if (result.length === 0) result.push({ label: '未开始', color: 'neutral', icon: 'material-symbols:radio-button-unchecked' });
   return result;
 }
 
