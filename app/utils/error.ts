@@ -4,6 +4,7 @@ export interface RbError {
 }
 
 export enum RbErrorCode {
+  Maintenance = -107,
   PasswordChangeRequired = -106,
   NotFound = -104,
   Forbidden = -103,
@@ -12,6 +13,7 @@ export enum RbErrorCode {
 }
 
 export const defaultErrorHints: Record<number, string> = {
+  [RbErrorCode.Maintenance]: '系统正在维护。',
   [RbErrorCode.NotFound]: '请求的资源不存在。',
   [RbErrorCode.Forbidden]: '权限不足。',
   [RbErrorCode.Unauthorized]: '登录失效，请重新登录。',

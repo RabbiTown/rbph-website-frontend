@@ -26,12 +26,15 @@ const loginLoading = ref(false);
 
 const toast = useToast();
 const api = useApi();
+const systemStatus = useSystemStatus();
+await systemStatus.refresh();
 
 async function submit(event: FormSubmitEvent<Schema>) {
   loginLoading.value = true;
   try {
     const { code } = await api.post('/auth/register', event.data, {
       errorHints: {
+        [-3]: '系统已关闭注册。',
         [-2]: '请求无效。',
         [-1]: '邮箱已占用。',
       },
@@ -79,37 +82,42 @@ async function submit(event: FormSubmitEvent<Schema>) {
   <div class="min-h-screen">
     <div class="flex items-center justify-center p-6">
       <div class="w-full max-w-xs">
-        <div class="w-full flex justify-center my-4">
-          <u-icon name="material-symbols:deployed-code" size="40px" />
-        </div>
-        <div class="text-2xl font-bold mb-8 text-center">注册</div>
-        <u-form :schema="schema" :state="state" class="space-y-4" @submit="submit">
-          <u-form-field label="邮箱" name="email">
-            <u-input v-model="state.email" class="w-full" icon="material-symbols:alternate-email-rounded" />
-          </u-form-field>
-          <u-form-field label="密码" name="password">
-            <u-input v-model="state.password" class="w-full" :type="showPwd ? 'text' : 'password'" icon="material-symbols:password-rounded">
-              <template #trailing>
-                <UButton
-                  color="neutral"
-                  variant="link"
-                  size="sm"
-                  :icon="showPwd ? 'material-symbols:visibility-off-outline-rounded' : 'material-symbols:visibility-outline-rounded'"
-                  :aria-label="showPwd ? '隐藏密码' : '显示密码'"
-                  :aria-pressed="showPwd"
-                  aria-controls="password"
-                  @click="showPwd = !showPwd"
-                />
-              </template>
-            </u-input>
-          </u-form-field>
-          <div class="mt-8">
-            <u-button type="submit" :loading="loginLoading" class="w-full justify-center cursor-pointer" size="lg">注册</u-button>
+        <u-empty v-if="!systemStatus.ref.value?.registration_open" icon="material-symbols:person-cancel-outline-rounded" title="注册已关闭" description="当前不接受新用户注册。">
+          <template #actions><u-button to="/login" icon="material-symbols:login-rounded" label="前往登录" /></template>
+        </u-empty>
+        <template v-else>
+          <div class="w-full flex justify-center my-4">
+            <u-icon name="material-symbols:deployed-code" size="40px" />
           </div>
-          <div class="">
-            <u-button class="w-full justify-center cursor-pointer" variant="outline" size="md" to="/login">前往登录页面</u-button>
-          </div>
-        </u-form>
+          <div class="text-2xl font-bold mb-8 text-center">注册</div>
+          <u-form :schema="schema" :state="state" class="space-y-4" @submit="submit">
+            <u-form-field label="邮箱" name="email">
+              <u-input v-model="state.email" class="w-full" icon="material-symbols:alternate-email-rounded" />
+            </u-form-field>
+            <u-form-field label="密码" name="password">
+              <u-input v-model="state.password" class="w-full" :type="showPwd ? 'text' : 'password'" icon="material-symbols:password-rounded">
+                <template #trailing>
+                  <UButton
+                    color="neutral"
+                    variant="link"
+                    size="sm"
+                    :icon="showPwd ? 'material-symbols:visibility-off-outline-rounded' : 'material-symbols:visibility-outline-rounded'"
+                    :aria-label="showPwd ? '隐藏密码' : '显示密码'"
+                    :aria-pressed="showPwd"
+                    aria-controls="password"
+                    @click="showPwd = !showPwd"
+                  />
+                </template>
+              </u-input>
+            </u-form-field>
+            <div class="mt-8">
+              <u-button type="submit" :loading="loginLoading" class="w-full justify-center cursor-pointer" size="lg">注册</u-button>
+            </div>
+            <div>
+              <u-button class="w-full justify-center cursor-pointer" variant="outline" size="md" to="/login">前往登录页面</u-button>
+            </div>
+          </u-form>
+        </template>
       </div>
     </div>
   </div>

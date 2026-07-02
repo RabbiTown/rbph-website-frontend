@@ -25,6 +25,8 @@ const loginLoading = ref(false);
 const toast = useToast();
 const api = useApi();
 const route = useRoute();
+const systemStatus = useSystemStatus();
+await systemStatus.refresh();
 
 async function submit(event: FormSubmitEvent<Schema>) {
   loginLoading.value = true;
@@ -97,7 +99,7 @@ async function submit(event: FormSubmitEvent<Schema>) {
             <u-button type="submit" :loading="loginLoading" class="w-full justify-center cursor-pointer" size="lg">登录</u-button>
           </div>
           <div class="">
-            <u-button class="w-full justify-center cursor-pointer" variant="outline" size="md" to="/register">注册</u-button>
+            <u-button v-if="systemStatus.ref.value?.registration_open" class="w-full justify-center cursor-pointer" variant="outline" size="md" to="/register">注册</u-button>
           </div>
         </u-form>
       </div>

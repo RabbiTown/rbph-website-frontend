@@ -122,6 +122,19 @@ function logView(log: AdminLogData) {
       return { icon: 'material-symbols:person-add-outline-rounded', color: 'success' as const, title: actorTitle(log, '注册账号'), details: [] };
     case 'auth.verified':
       return { icon: 'material-symbols:verified-user-outline-rounded', color: 'success' as const, title: actorTitle(log, '完成账号验证'), details: [] };
+    case 'admin.system_settings_updated':
+      return {
+        icon: 'material-symbols:settings-outline-rounded',
+        color: 'warning' as const,
+        title: actorTitle(log, '修改了系统设置'),
+        details: fieldDetails(data.fields, {
+          registration_open: '开放注册',
+          require_email_verification: '邮箱验证',
+          max_sessions: '最大并发会话',
+          maintenance_enabled: '维护模式',
+          maintenance_message: '维护提示',
+        }),
+      };
     case 'user.profile_updated':
       return { icon: 'material-symbols:manage-accounts-outline-rounded', color: 'neutral' as const, title: actorTitle(log, '更新了个人资料'), details: fieldDetails(data.fields, { nickname: '用户名', bio: '个人简介' }) };
     case 'team.created':

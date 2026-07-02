@@ -7,11 +7,21 @@ export default defineNuxtPlugin(() => {
   const toast = useToast();
   const currency = useCurrency().getAllCurrent();
   const releaseSync = useGameReleaseSync();
+  const systemStatus = useSystemStatus();
 
   releaseSync.start();
+  void systemStatus.refresh().catch(() => undefined);
+  const statusTimer = window.setInterval(() => {
+    if (user.ref.value) void systemStatus.refresh(true).catch(() => undefined);
+  }, 15000);
+  onScopeDispose(() => window.clearInterval(statusTimer));
 
   let curToast: Toast | undefined = undefined;
-  const syncEnabled = computed(() => Boolean(user.ref.value && !user.ref.value.must_change_password));
+  const syncEnabled = computed(() => {
+    const currentUser = user.ref.value;
+    const status = systemStatus.ref.value;
+    return Boolean(currentUser && status && !currentUser.must_change_password && (!status.maintenance_enabled || currentUser.urole >= RbUserRole.Admin));
+  });
 
   function removeSyncToast() {
     if (curToast && toast.toasts.value.find(x => x.id === curToast?.id)) {

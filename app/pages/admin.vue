@@ -111,7 +111,7 @@ const nav = computed(() => {
     ]);
   }
 
-  result.push([
+  const systemNav = [
     {
       value: 'admin-users',
       label: '用户管理',
@@ -129,9 +129,11 @@ const nav = computed(() => {
       value: 'admin-settings',
       label: '系统设置',
       icon: 'material-symbols:settings-outline-rounded',
-      // to: '/admin/users',
+      to: '/admin/settings',
     },
-  ]);
+  ] satisfies NavigationMenuItem[];
+  if (user.value?.urole !== RbUserRole.Root) systemNav.pop();
+  result.push(systemNav);
 
   return result;
 });
