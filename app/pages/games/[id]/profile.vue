@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as v from 'valibot';
-import type { FormSubmitEvent, TableColumn } from '@nuxt/ui';
+import type { FormSubmitEvent } from '@nuxt/ui';
 
 definePageMeta({
   layout: 'game',
@@ -25,6 +25,25 @@ useHead({
 
 const member = computed(() => teamData.value?.members.find(it => it.id === user.value?.id));
 const isCaptain = computed(() => member.value?.is_captain);
+const teamLocked = computed(() => Boolean(teamData.value?.is_locked));
+const disabledTeamFeatures = computed(() => {
+  const labels: Record<RbTeamFeature, string> = {
+    direct_message: '封禁站内信',
+    puzzle_ticket: '封禁人工提示',
+    leaderboard: '封禁排行榜',
+  };
+  return (teamData.value?.features ?? []).filter(feature => !feature.enabled).map(feature => labels[feature.feature]);
+});
+const teamRestrictionDescription = computed(() => {
+  const banned = Boolean(teamData.value?.is_banned);
+  const penalties = disabledTeamFeatures.value;
+  if (!banned && penalties.length === 0) return '';
+
+  const contact = '如有异议，请联系比赛工作人员。';
+  if (banned && penalties.length > 0) return `队伍已封禁，并受到以下处罚：${penalties.join('、')}。${contact}`;
+  if (banned) return `队伍已封禁。${contact}`;
+  return `队伍受到以下处罚：${penalties.join('、')}。${contact}`;
+});
 
 async function reloadTeamInfo() {
   team.updateData().catch(error => handleError(error, '队伍信息获取失败'));
@@ -114,85 +133,57 @@ async function userSubmit(event: FormSubmitEvent<UserProfileSchema>) {
   }
 }
 
-/* has team */
-const Icon = resolveComponent('icon');
-const UButton = resolveComponent('u-button');
-const UTooltip = resolveComponent('u-tooltip');
-const UPopover = resolveComponent('u-popover');
-const RBUser = resolveComponent('rb-user');
-const UBadge = resolveComponent('u-badge');
-
-const memberSorted = computed(() => {
-  const data = teamData.value;
-  if (!data || !data.members) return [];
-  return [...data.members].sort((a, b) => {
-    if (a.is_captain !== b.is_captain) {
-      return a.is_captain ? -1 : 1;
-    }
-    return new Date(a.ctime_at) < new Date(b.ctime_at) ? -1 : 1;
-  });
+const passwordSchema = v.object({
+  current_password: v.pipe(v.string(), v.minLength(8, '至少需要 8 个字符'), v.maxLength(64, '最多可用 64 个字符'), v.regex(/^[!-~]{8,64}$/, '存在无效字符')),
+  new_password: v.pipe(v.string(), v.minLength(8, '至少需要 8 个字符'), v.maxLength(64, '最多可用 64 个字符'), v.regex(/^[!-~]{8,64}$/, '存在无效字符')),
+  confirm_password: v.pipe(v.string(), v.minLength(8, '至少需要 8 个字符'), v.maxLength(64, '最多可用 64 个字符'), v.regex(/^[!-~]{8,64}$/, '存在无效字符')),
 });
+type PasswordSchema = v.InferOutput<typeof passwordSchema>;
 
-const memberColumns: TableColumn<RbTeamMember>[] = [
-  {
-    accessorKey: 'is_captain',
-    header: '',
-    cell: ({ getValue }) => (getValue() ? h(UTooltip, { text: '队长' }, () => h(Icon, { name: 'material-symbols:flag-outline-rounded', size: 20, class: 'align-sub' })) : ''),
-    meta: {
-      class: {
-        td: 'w-0 text-center',
-        th: 'w-0 text-center',
+const passwordState = reactive({
+  current_password: '',
+  new_password: '',
+  confirm_password: '',
+});
+const passwordLoading = ref(false);
+const passwordOpen = ref(false);
+const showPasswords = ref(false);
+const passwordReady = computed(() => passwordState.current_password.length >= 8 && passwordState.new_password.length >= 8 && passwordState.new_password === passwordState.confirm_password);
+
+async function passwordSubmit(event: FormSubmitEvent<PasswordSchema>) {
+  if (event.data.new_password !== event.data.confirm_password) {
+    toast.add({ title: '两次输入的新密码不一致', icon: 'material-symbols:error-outline-rounded', color: 'error' });
+    return;
+  }
+
+  passwordLoading.value = true;
+  try {
+    await api.patch(
+      '/user/password',
+      {
+        current_password: event.data.current_password,
+        new_password: event.data.new_password,
       },
-    },
-  },
-  {
-    accessorKey: 'nickname',
-    header: '用户',
-    cell: ({ getValue }) => h(RBUser, { name: getValue(), email: user.value?.email, avatar: { icon: 'material-symbols:person-2-rounded' } }),
-  },
-  {
-    accessorKey: 'id',
-    header: '',
-    cell: ({ getValue }) => {
-      const id = getValue<number>();
-      const warn = (handler: () => void) =>
-        h('div', { class: 'py-2 px-4 text-xs' }, [
-          h(Icon, { name: 'material-symbols:warning-outline-rounded', class: 'align-middle' }),
-          h('span', { class: 'text-xs' }, '这个操作不可撤销。'),
-          h(UButton, { loading: submitLoading.value, class: 'cursor-pointer', color: 'error', variant: 'soft', size: 'xs', onClick: handler }, () => '确定'),
-        ]);
-      return [
-        member.value?.is_captain && id !== member.value?.id
-          ? [
-              h(
-                UPopover,
-                { arrow: true },
-                {
-                  default: () => h(UTooltip, { text: '设为队长' }, h(UButton, { icon: 'material-symbols:award-star-outline-rounded', color: 'neutral', variant: 'link', class: 'cursor-pointer', disabled: submitLoading.value })),
-                  content: () => warn(() => promoteSubmit(id)),
-                },
-              ),
-              h(
-                UPopover,
-                { arrow: true },
-                {
-                  default: () => h(UTooltip, { text: '移除成员' }, h(UButton, { icon: 'material-symbols:person-remove-outline-rounded', color: 'error', variant: 'link', class: 'cursor-pointer', disabled: submitLoading.value })),
-                  content: () => warn(() => kickSubmit(id)),
-                },
-              ),
-            ]
-          : [],
-        id === member.value?.id ? h(UBadge, {}, () => '你') : '',
-      ];
-    },
-    meta: {
-      class: {
-        td: 'w-0 text-center',
-        th: 'w-0 text-center',
+      {
+        errorHints: {
+          [-3]: '密码格式不合法。',
+          [-2]: '新密码不能与当前密码相同。',
+          [-1]: '当前密码错误。',
+        },
       },
-    },
-  },
-];
+    );
+    passwordState.current_password = '';
+    passwordState.new_password = '';
+    passwordState.confirm_password = '';
+    showPasswords.value = false;
+    passwordOpen.value = false;
+    toast.add({ title: '密码已修改', icon: 'material-symbols:check-rounded', color: 'success' });
+  } catch (error) {
+    handleError(error, '修改密码失败', true);
+  } finally {
+    passwordLoading.value = false;
+  }
+}
 
 const editSchema = v.object({
   id: v.pipe(v.number()),
@@ -492,79 +483,133 @@ watch(user, () => syncUserState(), { immediate: true });
 <template>
   <u-main class="py-8">
     <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 sm:px-6 lg:px-8">
-      <div>
-        <h1 class="text-2xl font-semibold text-highlighted">个人资料</h1>
-      </div>
-
-      <div class="grid gap-6 xl:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
-        <u-card variant="subtle" class="w-full">
-          <div class="mb-6 flex items-center gap-3">
-            <u-icon name="material-symbols:person-2-outline-rounded" class="size-6 text-primary" />
+      <div class="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,24rem)_auto_minmax(0,1fr)]">
+        <div class="flex min-w-0 flex-col gap-8">
+          <section class="space-y-4">
             <div>
-              <h2 class="text-lg font-semibold text-highlighted">用户信息</h2>
+              <h2 class="text-xl font-semibold text-highlighted">用户信息</h2>
             </div>
-          </div>
 
-          <u-form :schema="userProfileSchema" :state="userState" class="space-y-4" @submit="userSubmit">
-            <u-form-field label="UID" name="id">
-              <u-input v-model="userState.id" class="w-full" icon="material-symbols:tag-rounded" disabled type="number" />
-            </u-form-field>
-            <u-form-field label="邮箱" name="email">
-              <u-input v-model="userState.email" class="w-full" icon="material-symbols:alternate-email-rounded" disabled />
-            </u-form-field>
-            <u-form-field label="用户名" name="nickname">
-              <u-input v-model="userState.nickname" class="w-full" :maxlength="60" icon="material-symbols:badge-outline-rounded" :disabled="userSubmitLoading">
-                <template #trailing>
-                  <div class="text-xs text-muted tabular-nums" role="status">{{ userState.nickname.length }}/60</div>
-                </template>
-              </u-input>
-            </u-form-field>
-            <u-form-field label="个人简介" name="bio">
-              <u-textarea v-model="userState.bio" class="w-full" :ui="{ base: 'resize-none' }" :rows="5" :maxrows="5" :maxlength="200" :disabled="userSubmitLoading" />
-            </u-form-field>
-            <u-button type="submit" :loading="userSubmitLoading" class="w-full justify-center cursor-pointer" size="lg" :disabled="!userDirty"> 更新用户信息 </u-button>
-          </u-form>
-        </u-card>
+            <u-form :schema="userProfileSchema" :state="userState" class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default" @submit="userSubmit">
+              <rb-form-field row narrow-label label="头像" icon="material-symbols:account-circle-outline">
+                <u-avatar :src="user?.avatar" :text="user?.nickname" icon="material-symbols:person-2-rounded" size="xl" />
+              </rb-form-field>
+              <u-separator />
+              <rb-form-field row narrow-label label="UID" icon="material-symbols:tag-rounded">
+                <u-input v-model="userState.id" class="w-full" disabled type="number" />
+              </rb-form-field>
+              <u-separator />
+              <rb-form-field row narrow-label label="邮箱" icon="material-symbols:alternate-email-rounded">
+                <u-input v-model="userState.email" class="w-full" disabled />
+              </rb-form-field>
+              <u-separator />
+              <rb-form-field name="nickname" row narrow-label label="用户名" icon="material-symbols:badge-outline-rounded">
+                <u-input v-model="userState.nickname" class="w-full" :maxlength="60" :disabled="userSubmitLoading">
+                  <template #trailing>
+                    <div class="text-xs text-muted tabular-nums" role="status">{{ userState.nickname.length }}/60</div>
+                  </template>
+                </u-input>
+              </rb-form-field>
+              <u-separator />
+              <rb-form-field name="bio" row narrow-label label="个人简介" icon="material-symbols:notes-rounded">
+                <u-textarea v-model="userState.bio" class="w-full" :ui="{ base: 'resize-none' }" :rows="4" :maxrows="4" :maxlength="200" :disabled="userSubmitLoading" />
+              </rb-form-field>
+              <div class="flex justify-end">
+                <u-button type="submit" :loading="userSubmitLoading" class="min-w-36 justify-center cursor-pointer" :disabled="!userDirty">更新用户信息</u-button>
+              </div>
+            </u-form>
+          </section>
 
-        <div class="flex min-w-0 flex-col gap-6">
+          <section>
+            <u-collapsible v-model:open="passwordOpen" :unmount-on-hide="false">
+              <button type="button" class="group flex w-full cursor-pointer items-center justify-between gap-3 text-start">
+                <h2 class="text-xl font-semibold text-highlighted">修改密码</h2>
+                <u-icon name="material-symbols:expand-more-rounded" class="size-5 shrink-0 text-muted transition-transform duration-200 group-data-[state=open]:rotate-180" />
+              </button>
+
+              <template #content>
+                <u-form :schema="passwordSchema" :state="passwordState" class="mt-4 space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default" @submit="passwordSubmit">
+                  <rb-form-field name="current_password" row narrow-label label="当前密码" icon="material-symbols:password-rounded">
+                    <u-input v-model="passwordState.current_password" class="w-full" :type="showPasswords ? 'text' : 'password'" :disabled="passwordLoading" autocomplete="current-password" />
+                  </rb-form-field>
+                  <u-separator />
+                  <rb-form-field name="new_password" row narrow-label label="新密码" icon="material-symbols:password-rounded">
+                    <u-input v-model="passwordState.new_password" class="w-full" :type="showPasswords ? 'text' : 'password'" :disabled="passwordLoading" autocomplete="new-password" />
+                  </rb-form-field>
+                  <u-separator />
+                  <rb-form-field name="confirm_password" row narrow-label label="确认密码" icon="material-symbols:password-rounded">
+                    <u-input v-model="passwordState.confirm_password" class="w-full" :type="showPasswords ? 'text' : 'password'" :disabled="passwordLoading" autocomplete="new-password" />
+                  </rb-form-field>
+                  <div class="flex items-center justify-between gap-3">
+                    <u-button
+                      type="button"
+                      color="neutral"
+                      variant="ghost"
+                      size="sm"
+                      :icon="showPasswords ? 'material-symbols:visibility-off-outline-rounded' : 'material-symbols:visibility-outline-rounded'"
+                      :label="showPasswords ? '隐藏密码' : '显示密码'"
+                      @click="showPasswords = !showPasswords"
+                    />
+                    <u-button type="submit" :loading="passwordLoading" class="min-w-28 justify-center" :disabled="!passwordReady">修改密码</u-button>
+                  </div>
+                </u-form>
+              </template>
+            </u-collapsible>
+          </section>
+        </div>
+
+        <u-separator class="xl:hidden" />
+        <u-separator orientation="vertical" class="hidden h-full xl:block" />
+
+        <div class="flex min-w-0 flex-col gap-8">
           <template v-if="teamData">
-            <u-card variant="subtle" class="w-full">
-              <div class="mb-6 flex items-center gap-3">
-                <u-icon name="material-symbols:groups-2-outline-rounded" class="size-6 text-primary" />
-                <div>
-                  <h2 class="text-lg font-semibold text-highlighted">队伍信息</h2>
+            <section class="space-y-4">
+              <div class="flex items-center gap-3">
+                <div class="flex min-w-0 flex-wrap items-center gap-2">
+                  <h2 class="text-xl font-semibold text-highlighted">队伍信息</h2>
+                  <u-badge v-if="teamData.is_locked" class="mt-0.5" color="warning" variant="soft" icon="material-symbols:lock-outline">已锁定</u-badge>
                 </div>
               </div>
 
-              <u-form :schema="editSchema" :state="editState" class="space-y-4" @submit="editSubmit">
-                <div class="grid gap-4 md:grid-cols-2">
-                  <u-form-field label="队伍 ID" name="id">
-                    <u-input v-model="editState.id" class="w-full" :maxlength="40" icon="material-symbols:cards-stack-rounded" disabled type="number" />
-                  </u-form-field>
-                  <u-form-field label="队伍名称" name="name">
-                    <u-input v-model="editState.name" class="w-full" :maxlength="40" icon="material-symbols:group-outline-rounded" :disabled="!isCaptain">
-                      <template #trailing>
-                        <div class="text-xs text-muted tabular-nums" role="status">{{ editState.name.length }}/40</div>
-                      </template>
-                    </u-input>
-                  </u-form-field>
-                </div>
-                <u-form-field label="队伍密码" name="pass">
-                  <u-input v-model="editState.pass" class="w-full" icon="material-symbols:password-rounded" :disabled="!isCaptain">
+              <u-alert v-if="teamRestrictionDescription" color="error" variant="subtle" icon="material-symbols:gpp-bad-outline-rounded" title="队伍状态受限" :description="teamRestrictionDescription" />
+
+              <u-form :schema="editSchema" :state="editState" class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default" @submit="editSubmit">
+                <rb-form-field row narrow-label label="队伍 ID" icon="material-symbols:cards-stack-rounded">
+                  <u-input v-model="editState.id" class="w-full sm:w-96" disabled type="number" />
+                </rb-form-field>
+                <u-separator />
+                <rb-form-field name="name" row narrow-label label="队伍名称" icon="material-symbols:group-outline-rounded">
+                  <u-input v-model="editState.name" class="w-full sm:w-96" :maxlength="40" :disabled="!isCaptain">
+                    <template #trailing>
+                      <div class="text-xs text-muted tabular-nums" role="status">{{ editState.name.length }}/40</div>
+                    </template>
+                  </u-input>
+                </rb-form-field>
+                <u-separator />
+                <rb-form-field name="pass" row narrow-label label="队伍密码" icon="material-symbols:password-rounded">
+                  <u-input v-model="editState.pass" class="w-full sm:w-96" :disabled="!isCaptain">
                     <template v-if="isCaptain" #trailing>
                       <u-button class="-me-2 cursor-pointer" color="neutral" variant="link" icon="material-symbols:casino-outline" @click="editRandomPass" />
                     </template>
                   </u-input>
-                </u-form-field>
-                <u-form-field label="队伍简介" name="bio">
-                  <u-textarea v-model="editState.bio" class="w-full" :ui="{ base: 'resize-none' }" :rows="5" :maxrows="5" :disabled="!isCaptain" />
-                </u-form-field>
-                <div class="flex flex-wrap gap-3">
-                  <u-button type="submit" :loading="submitLoading" class="min-w-40 justify-center cursor-pointer" size="lg" :disabled="!isCaptain">
+                </rb-form-field>
+                <u-separator />
+                <rb-form-field name="bio" row narrow-label label="队伍简介" icon="material-symbols:notes-rounded">
+                  <u-textarea v-model="editState.bio" class="w-full sm:w-96" :ui="{ base: 'resize-none' }" :rows="4" :maxrows="4" :disabled="!isCaptain" />
+                </rb-form-field>
+                <div class="flex flex-wrap justify-end gap-3">
+                  <u-button type="submit" :loading="submitLoading" class="min-w-36 justify-center cursor-pointer" :disabled="!isCaptain">
                     {{ isCaptain ? '更新队伍信息' : '只有队长才能更新信息' }}
                   </u-button>
-                  <u-popover arrow>
-                    <u-button :loading="submitLoading" class="min-w-32 justify-center cursor-pointer" variant="outline" color="error" size="lg">
+                  <u-tooltip v-if="teamData.is_locked" :text="member?.is_captain ? '队伍已锁定，不能解散队伍' : '队伍已锁定，不能退出队伍'">
+                    <span class="inline-flex">
+                      <u-button disabled class="min-w-32 justify-center" variant="outline" color="error">
+                        {{ member?.is_captain ? '解散队伍' : '退出队伍' }}
+                      </u-button>
+                    </span>
+                  </u-tooltip>
+                  <u-popover v-else arrow>
+                    <u-button :loading="submitLoading" class="min-w-32 justify-center cursor-pointer" variant="outline" color="error">
                       {{ member?.is_captain ? '解散队伍' : '退出队伍' }}
                     </u-button>
                     <template #content>
@@ -577,30 +622,20 @@ watch(user, () => syncUserState(), { immediate: true });
                   </u-popover>
                 </div>
               </u-form>
-            </u-card>
+            </section>
 
-            <u-card variant="subtle" class="w-full">
-              <div class="mb-6 flex items-center gap-3">
-                <u-icon name="material-symbols:group-outline-rounded" class="size-6 text-primary" />
-                <div>
-                  <h2 class="text-lg font-semibold text-highlighted">队伍成员</h2>
-                </div>
+            <section class="space-y-4">
+              <div>
+                <h2 class="text-xl font-semibold text-highlighted">队伍成员</h2>
               </div>
-              <u-table :data="memberSorted" :columns="memberColumns" class="flex-1" />
-            </u-card>
+              <rbph-team-member-list :members="teamData.members" :current-user-id="user?.id" :can-manage="Boolean(isCaptain)" :locked="teamLocked" :busy="submitLoading" @promote="promoteSubmit($event.id)" @remove="kickSubmit($event.id)" />
+            </section>
           </template>
 
           <template v-else>
             <div class="flex flex-col gap-6">
               <u-alert variant="subtle" color="info" icon="material-symbols:info-outline-rounded" title="参与比赛前需要加入或创建队伍，个人参赛也要创建队伍。" />
-              <u-alert
-                v-if="!teamOpen"
-                variant="subtle"
-                color="warning"
-                icon="material-symbols:schedule-outline-rounded"
-                title="组队尚未开放"
-                description="请参考赛程安排确认开放时间。"
-              />
+              <u-alert v-if="!teamOpen" variant="subtle" color="warning" icon="material-symbols:schedule-outline-rounded" title="组队尚未开放" description="请参考赛程安排确认开放时间。" />
 
               <div v-if="teamOpen" class="hidden team-profile-desktop-grid gap-6 lg:flex" :class="teamProfileGridMode === 'join' ? 'team-profile-desktop-grid-join' : 'team-profile-desktop-grid-create'">
                 <div class="team-profile-slot team-profile-slot-left">

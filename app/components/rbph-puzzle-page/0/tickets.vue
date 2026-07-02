@@ -195,7 +195,7 @@ const cooldown = computed(() => {
       v-else-if="isStaff && staffView === 'team' && !selectedTeamId"
       icon="material-symbols:group-search-outline-rounded"
       :title="isAdmin ? '请选择队伍' : '你当前没有加入队伍'"
-      :description="isAdmin ? '输入队伍名称搜索，选择后可查看其人工提示状态并发起人工提示。' : 'Moderator 只能查看本队视图。'"
+      :description="isAdmin ? '输入队伍名称搜索，选择后可查看其人工提示状态并发起人工提示。' : '你只能查看本队视图。'"
     />
     <div v-else-if="pageData" class="flex flex-col gap-4">
       <u-alert
@@ -207,7 +207,7 @@ const cooldown = computed(() => {
         color="warning"
       />
       <u-alert v-else-if="pageData.open_block === TicketOpenBlock.Disabled" variant="subtle" title="暂时不能请求人工提示。" description="本题未启用人工提示。" icon="material-symbols:near-me-disabled-outline-rounded" color="error" />
-      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.FeatureClosed" variant="subtle" title="人工提示暂未开放" description="比赛当前不允许创建新的人工提示工单。" icon="material-symbols:near-me-disabled-outline-rounded" color="warning" />
+      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.FeatureClosed" variant="subtle" title="暂时不能请求人工提示。" description="人工提示功能已关闭。" icon="material-symbols:near-me-disabled-outline-rounded" color="warning" />
       <u-alert
         v-else-if="pageData.open_block === TicketOpenBlock.CurrentPuzzlePending"
         variant="subtle"

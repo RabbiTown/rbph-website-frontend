@@ -46,7 +46,8 @@ const tabs = computed(() => {
     {
       label: '队伍管理',
       icon: 'material-symbols:groups-2-outline-rounded',
-      // to: `/admin/games/${game.value.id}/teams`,
+      to: `/admin/games/${game.value.id}/teams`,
+      active: route.path.startsWith(`/admin/games/${game.value.id}/teams`),
     },
     {
       label: '工单管理',

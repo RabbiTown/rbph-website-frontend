@@ -105,7 +105,8 @@ const nav = computed(() => {
         value: 'admin-game-teams',
         label: '队伍管理',
         icon: 'material-symbols:groups-2-outline-rounded',
-        // to: `/admin/games/${game.ref.value.id}/teams`,
+        to: `/admin/games/${game.ref.value.id}/teams`,
+        active: route.path.startsWith(`/admin/games/${game.ref.value.id}/teams`),
       },
       {
         value: 'admin-game-tickets',

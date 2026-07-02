@@ -162,7 +162,6 @@ onBeforeUnmount(() => dirtyToast.clear());
       <div class="flex items-center justify-between gap-3">
         <div>
           <h2 class="text-xl font-semibold text-highlighted">比赛功能</h2>
-          <p class="mt-1 text-sm text-muted">可以手动修改比赛功能的开放状态，保存后立即生效。</p>
         </div>
         <u-button size="sm" variant="ghost" icon="material-symbols:refresh-rounded" :loading="loading" :disabled="dirty || saving" @click="fetchFeatures()" />
       </div>

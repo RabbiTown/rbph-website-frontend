@@ -152,7 +152,7 @@ const userNav = computed(() => {
       label: '用户',
       icon: 'material-symbols:deployed-code-account-outline-rounded',
       avatar: {
-        src: buildCravatarUrl(user.value.email),
+        src: user.value.avatar,
         chip: notificationUnread.value > 0 ? { color: 'error' } : undefined,
       },
       slot: 'user-menu',

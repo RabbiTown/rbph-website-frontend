@@ -48,7 +48,7 @@ function onReset() {
   <u-form-field v-bind="{ ...attrs, ...formFieldProps }" :class="fieldClass">
     <template #label="{ label }">
       <span :class="labelClass">
-        <u-icon v-if="icon" :name="icon" class="pointer-events-none absolute inset-s-0 top-1/2 size-5 left-2 -translate-y-1/2 text-muted" />
+        <u-icon v-if="icon" :name="icon" class="pointer-events-none absolute inset-s-0 top-1/2 size-5 left-2 -translate-y-1/2 text-muted mt-0.25" />
         <span class="min-w-0">
           <slot name="label" :label="label">
             {{ label }}

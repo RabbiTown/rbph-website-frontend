@@ -286,7 +286,7 @@ const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
   [RbTicketSendBlock.NoAccess]: { icon: 'material-symbols:error-med-outline-rounded', color: 'error', desc: '没有发送权限。' },
   [RbTicketSendBlock.Closed]: { icon: 'material-symbols:check-rounded', color: 'success', desc: '人工提示已关闭，不再接受新的回复。' },
   [RbTicketSendBlock.Pending]: { icon: 'material-symbols:more-horiz', color: 'warning', desc: '请等待工作人员回复。' },
-  [RbTicketSendBlock.FeatureClosed]: { icon: 'material-symbols:lock-outline-rounded', color: 'warning', desc: '比赛人工提示已关闭，暂时不能发送消息。' },
+  [RbTicketSendBlock.FeatureClosed]: { icon: 'material-symbols:lock-outline', color: 'warning', desc: '人工提示功能已关闭，暂时不能发送消息。' },
 };
 
 const tabItems = computed(

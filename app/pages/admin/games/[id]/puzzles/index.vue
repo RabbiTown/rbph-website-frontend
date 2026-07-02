@@ -233,7 +233,7 @@ function clearPuzzleSelection() {
 
 function togglePuzzleSelection(puzzle: AdminPuzzle) {
   if (!isPuzzleBatchEligible(puzzle)) {
-    toast.add({ title: '该谜题不能批量修改', description: '请先取消所属区域的删除操作。', icon: 'material-symbols:lock-outline-rounded', color: 'warning' });
+    toast.add({ title: '该谜题不能批量修改', description: '请先取消所属区域的删除操作。', icon: 'material-symbols:lock-outline', color: 'warning' });
     return;
   }
 
@@ -1482,7 +1482,7 @@ onBeforeUnmount(cleanupSelectionGesture);
       <u-skeleton v-for="item in 3" :key="item" class="h-32 w-full" />
     </div>
 
-    <u-empty v-else-if="groupedRounds.length === 0" icon="material-symbols:extension-off-outline-rounded" title="暂无区域" description="当前比赛还没有区域或谜题" />
+    <u-empty v-else-if="groupedRounds.length === 0" icon="material-symbols:extension-off-outline-rounded" title="暂无谜题" description="新建区域以开始添加谜题" />
 
     <template v-else>
       <section
@@ -1595,7 +1595,7 @@ onBeforeUnmount(cleanupSelectionGesture);
                   class="pointer-events-none absolute start-2 top-2 z-20 flex size-6 items-center justify-center rounded-full ring ring-default"
                   :class="isPuzzleSelected(puzzle.id) ? 'bg-primary text-inverted' : 'bg-default/90 text-muted'"
                 >
-                  <u-icon :name="isPuzzleSelected(puzzle.id) ? 'material-symbols:check-rounded' : isPuzzleBatchEligible(puzzle) ? 'material-symbols:circle-outline' : 'material-symbols:lock-outline-rounded'" class="size-4" />
+                  <u-icon :name="isPuzzleSelected(puzzle.id) ? 'material-symbols:check-rounded' : isPuzzleBatchEligible(puzzle) ? 'material-symbols:circle-outline' : 'material-symbols:lock-outline'" class="size-4" />
                 </div>
                 <div v-if="isPuzzleOriginPlaceholderVisible(puzzle)" class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-md transition" :class="originPlaceholderClass(puzzle)">
                   <div class="flex items-center justify-center rounded-full border-2 transition-all duration-100" :class="originPlaceholderIconClass(puzzle)">
@@ -1646,7 +1646,6 @@ onBeforeUnmount(cleanupSelectionGesture);
           </div>
         </div>
       </section>
-
     </template>
 
     <div v-if="!loading" class="sticky bottom-4 z-30 flex justify-start" data-selection-ignore="true">

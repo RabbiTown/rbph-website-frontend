@@ -11,5 +11,6 @@ export interface RbUser {
   urole: RbUserRole;
   nickname: string;
   bio?: string;
+  avatar: string;
   ctime_at: string;
 }

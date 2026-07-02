@@ -15,17 +15,22 @@ export interface RbTeamMember {
   id: number;
   is_captain: boolean;
   nickname: string;
+  avatar: string;
   ctime_at: string;
 }
 
 export interface RbTeam {
   id: number;
   name: string;
-  state: RbTeamState;
+  state?: RbTeamState;
+  is_banned?: boolean;
+  is_locked?: boolean;
   pass: string;
   bio: string;
   ctime_at: string;
+  finish_at?: string | null;
   members: RbTeamMember[];
+  features?: RbTeamFeatureData[];
 }
 
 export enum RbPuzzleType {
@@ -183,6 +188,7 @@ export interface RbTeamCurrency {
   init_amount: number;
   prec: number;
   amount: number;
+  current_amount?: number;
   max_amount: number;
   hidden?: boolean;
   utime_at: string;
@@ -300,6 +306,47 @@ export interface RbGameAggreInfo {
 export type RbGameFeature = 'team_formation' | 'direct_message' | 'puzzle_ticket' | 'leaderboard';
 export type RbGameFeatureState = 'closed' | 'existing_only' | 'open' | 'live' | 'locked';
 export type RbGameFeatures = Record<RbGameFeature, RbGameFeatureState>;
+export type RbTeamFeature = Exclude<RbGameFeature, 'team_formation'>;
+
+export interface RbTeamFeatureData {
+  feature: RbTeamFeature;
+  enabled: boolean;
+}
+
+export type AdminTeamFeatureData = RbTeamFeatureData;
+
+export interface AdminTeamListItem {
+  id: number;
+  name: string;
+  is_banned: boolean;
+  is_locked: boolean;
+  finish_at?: string | null;
+  member_count: number;
+  captain_id?: number | null;
+  captain_name?: string | null;
+}
+
+export interface AdminUserOption {
+  id: number;
+  email: string;
+  nickname: string;
+  in_team_id?: number | null;
+  in_team_name?: string | null;
+}
+
+export interface AdminTeamDetail extends Omit<RbTeam, 'state'> {
+  is_banned: boolean;
+  is_locked: boolean;
+  game_id: number;
+  finish_at?: string | null;
+  features: AdminTeamFeatureData[];
+  currency: AdminTeamCurrency[];
+}
+
+export interface AdminTeamCurrency extends RbTeamCurrency {
+  game_growth: number;
+  team_growth: number;
+}
 
 export interface RbFeatureChange {
   feature: RbGameFeature;
