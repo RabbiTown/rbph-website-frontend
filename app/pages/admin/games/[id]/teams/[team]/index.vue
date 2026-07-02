@@ -283,20 +283,18 @@ onBeforeUnmount(() => dirtyToast.clear());
 
       <u-form v-if="team" :state="draft" class="flex flex-col gap-8" @submit.prevent="saveTeam">
         <section class="space-y-4">
-          <div>
-            <h2 class="text-xl font-semibold text-highlighted">基本信息</h2>
-          </div>
-          <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
+          <h3 class="text-lg font-semibold text-highlighted">基本信息</h3>
+          <div class="space-y-3 rounded-md bg-elevated/60 p-4 ring ring-default">
             <rb-form-field row narrow-label label="队伍名称" icon="material-symbols:groups-2-outline-rounded" :dirty="draft.name !== team.name" :reset="() => (draft.name = team!.name)">
-              <u-input v-model="draft.name" class="w-full sm:w-96" :disabled="saving" />
+              <u-input v-model="draft.name" class="w-full" :disabled="saving" />
             </rb-form-field>
             <u-separator />
             <rb-form-field row narrow-label label="队伍密码" icon="material-symbols:password-rounded" :dirty="draft.pass !== team.pass" :reset="() => (draft.pass = team!.pass)">
-              <u-input v-model="draft.pass" class="w-full sm:w-96" :disabled="saving" />
+              <u-input v-model="draft.pass" class="w-full" :disabled="saving" />
             </rb-form-field>
             <u-separator />
             <rb-form-field row narrow-label label="队伍简介" icon="material-symbols:notes-rounded" :dirty="draft.bio !== team.bio" :reset="() => (draft.bio = team!.bio)">
-              <u-textarea v-model="draft.bio" class="w-full sm:w-96" :rows="3" :disabled="saving" />
+              <u-textarea v-model="draft.bio" class="w-full" :rows="3" :disabled="saving" />
             </rb-form-field>
           </div>
         </section>

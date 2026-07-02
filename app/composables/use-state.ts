@@ -8,8 +8,11 @@ let userUpdatePromise: Promise<void> | null = null;
 export function useUser(activate: boolean = true) {
   const user = useState<RbUser | undefined>('user');
 
-  async function updateData() {
-    if (userUpdatePromise) return userUpdatePromise;
+  async function updateData(force = false) {
+    if (userUpdatePromise) {
+      await userUpdatePromise;
+      if (!force) return;
+    }
 
     async function inner() {
       try {
@@ -24,7 +27,13 @@ export function useUser(activate: boolean = true) {
       }
     }
 
-    userUpdatePromise = inner().finally(() => (userUpdatePromise = null));
+    const updatePromise = inner();
+    userUpdatePromise = updatePromise;
+    try {
+      await updatePromise;
+    } finally {
+      if (userUpdatePromise === updatePromise) userUpdatePromise = null;
+    }
   }
 
   async function waitUpdate() {
@@ -169,7 +178,10 @@ export async function updateGameState(new_id: string | undefined = undefined, fo
   const api = useApi();
 
   if (forceUpdate || game.value?.id !== id) {
-    if ((await useUser().waitUpdate()).value) {
+    const user = (await useUser().waitUpdate()).value;
+    if (user?.must_change_password) return;
+
+    if (user) {
       useAggreInfo().updateState(id);
     } else {
       try {

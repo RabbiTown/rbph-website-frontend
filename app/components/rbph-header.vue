@@ -131,7 +131,7 @@ const userNav = computed(() => {
       });
     }
 
-    if (user.value.urole === RbUserRole.Admin) {
+    if (user.value.urole >= RbUserRole.Admin) {
       children.push({
         label: '管理后台',
         icon: 'material-symbols:space-dashboard-outline-rounded',
@@ -225,7 +225,7 @@ const userNavMobile = computed(() => {
 
     const lastSpecial = [] as NavigationMenuItem[];
 
-    if (user.value.urole === RbUserRole.Admin) {
+    if (user.value.urole >= RbUserRole.Admin) {
       lastSpecial.push({
         label: '管理后台',
         icon: 'material-symbols:space-dashboard-outline-rounded',

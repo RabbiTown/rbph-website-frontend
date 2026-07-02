@@ -7,7 +7,7 @@ const team = useTeam().ref;
 const game = useGame().ref;
 const user = useUser().ref;
 const isStaff = computed(() => (user.value?.urole ?? RbUserRole.User) >= RbUserRole.Moderator);
-const isAdmin = computed(() => user.value?.urole === RbUserRole.Admin);
+const isAdmin = computed(() => (user.value?.urole ?? RbUserRole.User) >= RbUserRole.Admin);
 
 type StaffView = 'staff' | 'team';
 

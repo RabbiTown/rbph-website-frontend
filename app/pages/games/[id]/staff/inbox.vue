@@ -135,9 +135,7 @@ async function loadThreadHistory() {
       thread.value = {
         ...thread.value,
         messages,
-        history: puzzle
-          ? { ...thread.value.history, after: data.history.after, has_more: data.history.has_more }
-          : { ...data.history, newer: thread.value.history.newer },
+        history: puzzle ? { ...thread.value.history, after: data.history.after, has_more: data.history.has_more } : { ...data.history, newer: thread.value.history.newer },
       };
     }
   } catch (error) {
@@ -176,12 +174,16 @@ onMounted(() => {
     distance: 80,
     canLoadMore: () => listHasMore.value && !listLoading.value,
   });
-  useInfiniteScroll(window, () => {
-    if (thread.value?.ticket && !thread.value.ticket.puzzle) return loadThreadHistory();
-  }, {
-    distance: 80,
-    canLoadMore: () => Boolean(thread.value?.ticket && !thread.value.ticket.puzzle && thread.value.history.has_more) && !threadHistoryLoading.value,
-  });
+  useInfiniteScroll(
+    window,
+    () => {
+      if (thread.value?.ticket && !thread.value.ticket.puzzle) return loadThreadHistory();
+    },
+    {
+      distance: 80,
+      canLoadMore: () => Boolean(thread.value?.ticket && !thread.value.ticket.puzzle && thread.value.history.has_more) && !threadHistoryLoading.value,
+    },
+  );
 });
 
 function conflictAssignee(error: unknown): TicketAggreInfoUser | undefined {

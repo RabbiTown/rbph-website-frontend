@@ -7,6 +7,7 @@ const api = useApi();
 const userMgr = useUser();
 const games = ref<RbGame[]>([]);
 const enteringGameId = ref<number>();
+const loading = ref(true);
 
 async function enterGame(game: RbGame) {
   if (enteringGameId.value) return;
@@ -38,7 +39,7 @@ try {
     const { data } = await api.get<RbGame[]>('/games/active');
     games.value = data;
 
-    if (data.length === 0 && userMgr.ref.value?.urole === RbUserRole.Admin) {
+    if (data.length === 0 && (userMgr.ref.value?.urole ?? RbUserRole.User) >= RbUserRole.Admin) {
       await navigateTo('/admin');
     } else if (data.length === 1 && data[0]) {
       await enterGame(data[0]);
@@ -46,12 +47,16 @@ try {
   }
 } catch (error) {
   showError(error instanceof Error ? error : String(error));
+} finally {
+  loading.value = false;
 }
 </script>
 
 <template>
   <main class="mx-auto flex min-h-screen w-full max-w-5xl items-center px-4 py-10 sm:px-6">
-    <section v-if="games.length > 1" class="w-full space-y-5">
+    <u-icon v-if="loading" name="material-symbols:progress-activity-rounded" class="size-8 animate-spin text-muted" />
+
+    <section v-else-if="games.length > 1" class="w-full space-y-5">
       <div>
         <h1 class="text-2xl font-semibold text-highlighted">选择比赛</h1>
       </div>
@@ -66,7 +71,7 @@ try {
           @click="enterGame(game)"
         >
           <div class="aspect-16/7 overflow-hidden bg-muted">
-            <img v-if="game.cover" :src="game.cover" :alt="game.title" class="size-full object-cover transition duration-300 group-hover:scale-[1.02]" />
+            <img v-if="game.cover" :src="game.cover" :alt="game.title" class="size-full object-cover transition duration-300 group-hover:scale-[1.02]">
             <div v-else class="flex size-full items-center justify-center text-dimmed">
               <u-icon name="material-symbols:sports-esports-outline-rounded" class="size-10" />
             </div>

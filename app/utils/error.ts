@@ -4,6 +4,7 @@ export interface RbError {
 }
 
 export enum RbErrorCode {
+  PasswordChangeRequired = -106,
   NotFound = -104,
   Forbidden = -103,
   Unauthorized = -101,
@@ -15,4 +16,5 @@ export const defaultErrorHints: Record<number, string> = {
   [RbErrorCode.Forbidden]: '权限不足。',
   [RbErrorCode.Unauthorized]: '登录失效，请重新登录。',
   [RbErrorCode.InternalServerError]: '出现内部错误，请联系管理员。',
+  [RbErrorCode.PasswordChangeRequired]: '必须先修改临时密码。',
 };

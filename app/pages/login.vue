@@ -29,14 +29,12 @@ const route = useRoute();
 async function submit(event: FormSubmitEvent<Schema>) {
   loginLoading.value = true;
   try {
-    const { code } = await api.post('/auth/login', event.data, {
+    const { code, data } = await api.post<{ uid: number; must_change_password: boolean }>('/auth/login', event.data, {
       errorHints: {
         [-2]: '用户不存在。',
         [-1]: '用户名或密码错误。',
       },
     });
-
-    useUser().updateData();
 
     if (code == 0) {
       toast.add({
@@ -46,6 +44,12 @@ async function submit(event: FormSubmitEvent<Schema>) {
         color: 'success',
       });
 
+      if (data.must_change_password) {
+        const target = typeof route.query.url === 'string' ? route.query.url : '/';
+        await navigateTo(`/change-password?url=${encodeURIComponent(target)}`);
+        return;
+      }
+      await useUser().updateData(true);
       const currentPath = route.fullPath;
       setTimeout(() => {
         if (route.fullPath === currentPath) {

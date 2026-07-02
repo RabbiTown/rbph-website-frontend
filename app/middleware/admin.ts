@@ -6,7 +6,7 @@ export default defineNuxtRouteMiddleware(async () => {
     return navigateToLogin();
   }
 
-  if (user.ref.value.urole !== RbUserRole.Admin) {
+  if (user.ref.value.urole < RbUserRole.Admin) {
     return abortNavigation(
       createError({
         statusCode: 403,

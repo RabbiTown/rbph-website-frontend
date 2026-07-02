@@ -116,7 +116,8 @@ const nav = computed(() => {
       value: 'admin-users',
       label: '用户管理',
       icon: 'material-symbols:deployed-code-account-outline-rounded',
-      // to: '/admin/users',
+      to: '/admin/users',
+      active: route.path.startsWith('/admin/users'),
     },
     {
       value: 'admin-logs',

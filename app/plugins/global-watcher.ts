@@ -9,7 +9,7 @@ export default defineNuxtPlugin(() => {
     user.ref,
     newUser => {
       if (syncing.value) return;
-      if (newUser) updateGameState(undefined, true);
+      if (newUser && !newUser.must_change_password) updateGameState(undefined, true);
     },
     { immediate: true }
   );

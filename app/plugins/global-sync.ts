@@ -11,12 +11,20 @@ export default defineNuxtPlugin(() => {
   releaseSync.start();
 
   let curToast: Toast | undefined = undefined;
+  const syncEnabled = computed(() => Boolean(user.ref.value && !user.ref.value.must_change_password));
+
+  function removeSyncToast() {
+    if (curToast && toast.toasts.value.find(x => x.id === curToast?.id)) {
+      toast.remove(curToast.id);
+    }
+    curToast = undefined;
+  }
 
   watch(
-    user.ref,
-    () => {
-      if (user.ref.value) {
-        if (curToast) toast.remove(curToast.id);
+    syncEnabled,
+    enabled => {
+      if (enabled) {
+        removeSyncToast();
         curToast = toast.add({
           title: '连接同步服务中…',
           description: '请耐心等待',
@@ -27,6 +35,7 @@ export default defineNuxtPlugin(() => {
 
         sync.connect();
       } else {
+        removeSyncToast();
         sync.disconnect();
       }
     },
@@ -52,7 +61,7 @@ export default defineNuxtPlugin(() => {
         color: 'success',
         duration: 3000,
       };
-    } else if (user.ref.value) {
+    } else if (syncEnabled.value) {
       toastData = {
         title: '从同步服务断开',
         description: '正在积极重连中…',
