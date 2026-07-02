@@ -16,6 +16,7 @@ const toast = useToast();
 const game = useGame().ref;
 
 const pageData = ref<TicketThread>();
+const historyGapIndex = ref(1);
 const ticket = computed(() => pageData.value?.ticket);
 const sendBlock = computed(() => {
   const block = pageData.value?.perm.send_block;
@@ -37,12 +38,63 @@ async function updateData(new_id: string | undefined = undefined) {
   try {
     const { data } = await useApi().get<TicketThread>(`/tickets/${id}`);
     pageData.value = data;
+    historyGapIndex.value = 1;
 
     if (data.ticket?.game_id) {
       updateGameState(data.ticket.game_id.toString());
     }
   } catch (error) {
     showError(error instanceof Error ? error : String(error));
+  }
+}
+
+const historyLoading = ref(false);
+
+async function loadHistory() {
+  const after = pageData.value?.history.after;
+  if (!after || historyLoading.value) return;
+  historyLoading.value = true;
+  try {
+    const { data } = await api.get<TicketThread>(`/tickets/${ticket_id.value}`, {
+      query: { after, stop: pageData.value?.history.stop },
+    });
+    if (pageData.value) {
+      const previousLength = pageData.value.messages.length;
+      const messages = mergeTicketThreadItems(pageData.value.messages, data.messages);
+      historyGapIndex.value += messages.length - previousLength;
+      pageData.value = {
+        ...pageData.value,
+        messages,
+        history: {
+          ...pageData.value.history,
+          after: data.history.after,
+          has_more: data.history.has_more,
+        },
+      };
+    }
+  } catch (error) {
+    handleError(error, '加载更早人工提示记录失败');
+  } finally {
+    historyLoading.value = false;
+  }
+}
+
+async function loadNewer() {
+  const newer = pageData.value?.history.newer;
+  if (!newer) return updateData(ticket_id.value);
+  try {
+    const { data } = await api.get<TicketThread>(`/tickets/${ticket_id.value}`, { query: { after: newer } });
+    if (pageData.value) {
+      pageData.value = {
+        ...pageData.value,
+        ticket: data.ticket,
+        perm: data.perm,
+        messages: mergeTicketThreadItems(pageData.value.messages, data.messages),
+        history: { ...pageData.value.history, newer: data.history.newer ?? pageData.value.history.newer },
+      };
+    }
+  } catch (error) {
+    handleError(error, '更新人工提示失败');
   }
 }
 
@@ -56,7 +108,7 @@ watch(
 
 useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
   if (data.actor_id === user.value?.id && (data.event === 'assigned' || data.event === 'unassigned')) return;
-  if (data.ticket_id === Number(ticket_id.value)) updateData(ticket_id.value);
+  if (data.ticket_id === Number(ticket_id.value)) loadNewer();
 });
 
 const breadItems = computed<BreadcrumbItem[]>(() => [
@@ -126,7 +178,8 @@ async function submitMessage(senderType: RbTicketSenderType, forceAssignee = fal
           };
         pageData.value = {
           ticket: data.ticket ?? pageData.value?.ticket,
-          messages: (pageData.value?.messages ?? []).some(item => isTicketMessage(item) && item.id === data.msg.id) ? (pageData.value?.messages ?? []) : [...(pageData.value?.messages ?? []), data.msg],
+          messages: mergeTicketThreadItems(pageData.value?.messages ?? [], [data.msg]),
+          history: pageData.value?.history ?? { has_more: false },
           perm,
         };
         draftContentType.value = getDefaultTicketContentType(perm);
@@ -213,7 +266,8 @@ async function submitClose(forceAssignee = false) {
 
       pageData.value = {
         ticket: data.ticket ?? pageData.value?.ticket,
-        messages: data.thread.messages,
+        messages: mergeTicketThreadItems(pageData.value?.messages ?? [], data.thread.messages),
+        history: pageData.value?.history ?? data.thread.history,
         perm: data.perm ??
           pageData.value?.perm ?? {
             send_block: RbTicketSendBlock.Ok,
@@ -406,7 +460,19 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
         创建于 {{ formatDate(ticket.?.state.utime_at) }}
       </div> -->
     </div>
-    <rbph-ticket-timeline :items="pageData?.messages ?? []" :currency="teamCurrency" :can-view-locked="pageData?.perm.can_view_locked" :unlock-loading="unlockLoading" unlockable class="mt-6" @unlock="unlockMessage" />
+    <rbph-ticket-timeline
+      :items="pageData?.messages ?? []"
+      :currency="teamCurrency"
+      :can-view-locked="pageData?.perm.can_view_locked"
+      :unlock-loading="unlockLoading"
+      :show-history-gap="Boolean(pageData?.history.has_more && pageData.history.after)"
+      :history-loading="historyLoading"
+      :history-gap-index="historyGapIndex"
+      unlockable
+      class="mt-6"
+      @unlock="unlockMessage"
+      @load-history="loadHistory"
+    />
 
     <u-tabs :items="tabItems" variant="link" :ui="{ list: tabItems.length > 1 ? undefined : 'hidden' }">
       <template #as-team>

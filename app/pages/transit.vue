@@ -65,8 +65,8 @@ try {
           :disabled="Boolean(enteringGameId)"
           @click="enterGame(game)"
         >
-          <div class="aspect-[16/7] overflow-hidden bg-muted">
-            <img v-if="game.cover" :src="game.cover" :alt="game.title" class="size-full object-cover transition duration-300 group-hover:scale-[1.02]">
+          <div class="aspect-16/7 overflow-hidden bg-muted">
+            <img v-if="game.cover" :src="game.cover" :alt="game.title" class="size-full object-cover transition duration-300 group-hover:scale-[1.02]" />
             <div v-else class="flex size-full items-center justify-center text-dimmed">
               <u-icon name="material-symbols:sports-esports-outline-rounded" class="size-10" />
             </div>
@@ -80,12 +80,7 @@ try {
       </div>
     </section>
 
-    <u-empty
-      v-else-if="games.length === 0"
-      class="w-full"
-      icon="material-symbols:event-busy-outline-rounded"
-      title="暂无公开活动"
-    >
+    <u-empty v-else-if="games.length === 0" class="w-full" icon="material-symbols:event-busy-outline-rounded" title="暂无公开活动">
       <template v-if="!userMgr.ref.value" #actions>
         <u-button to="/login" color="neutral" variant="outline" icon="material-symbols:login-rounded" label="登录" />
       </template>

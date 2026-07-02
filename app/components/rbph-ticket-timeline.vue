@@ -8,17 +8,24 @@ const props = withDefaults(
     canViewLocked?: boolean;
     unlockable?: boolean;
     unlockLoading?: boolean;
+    showHistoryGap?: boolean;
+    historyLoading?: boolean;
+    historyGapIndex?: number;
   }>(),
   {
     currency: () => ({}),
     canViewLocked: false,
     unlockable: false,
     unlockLoading: false,
+    showHistoryGap: false,
+    historyLoading: false,
+    historyGapIndex: 1,
   },
 );
 
 const emit = defineEmits<{
   unlock: [message: TicketMessage];
+  loadHistory: [];
 }>();
 
 interface TicketTimelineItem extends TimelineItem {
@@ -27,6 +34,7 @@ interface TicketTimelineItem extends TimelineItem {
   action: string;
   senderType: RbTicketSenderType;
   message?: TicketMessage;
+  gap?: boolean;
 }
 
 const actionMeta: Record<RbTicketOperationAction, { icon: string; action: string }> = {
@@ -35,8 +43,8 @@ const actionMeta: Record<RbTicketOperationAction, { icon: string; action: string
   [RbTicketOperationAction.AutoCloseSolved]: { icon: 'material-symbols:check-rounded', action: '解出了谜题，人工提示自动关闭' },
 };
 
-const timelineItems = computed<TicketTimelineItem[]>(() =>
-  props.items.map(item => {
+const timelineItems = computed<TicketTimelineItem[]>(() => {
+  const items = props.items.map(item => {
     if (isTicketMessage(item)) {
       return {
         username: item.sender.nickname,
@@ -55,8 +63,19 @@ const timelineItems = computed<TicketTimelineItem[]>(() =>
       senderType: item.actor_type,
       message: item.message,
     };
-  }),
-);
+  });
+  if (props.showHistoryGap && items.length > 0) {
+    items.splice(Math.min(props.historyGapIndex, items.length), 0, {
+      username: '',
+      date: '',
+      action: '',
+      icon: 'material-symbols:more-horiz',
+      senderType: RbTicketSenderType.Team,
+      gap: true,
+    });
+  }
+  return items;
+});
 
 function costText(message: TicketMessage) {
   if (message.cost_id === null || message.cost_id === undefined) return '';
@@ -68,12 +87,15 @@ function costText(message: TicketMessage) {
 <template>
   <u-timeline :items="timelineItems" :ui="{ date: 'float-end ms-1' }" class="w-full" color="success">
     <template #title="{ item }">
-      <u-badge v-if="item.senderType === RbTicketSenderType.Host" variant="soft" color="warning" class="me-2">工作人员</u-badge>
-      <span class="me-1">{{ item.username }}</span>
-      <span class="font-normal text-muted">&nbsp;{{ item.action }}</span>
+      <u-button v-if="item.gap" :loading="historyLoading" color="neutral" variant="soft" size="sm" icon="material-symbols:unfold-more-rounded" label="加载更早记录" @click="emit('loadHistory')" />
+      <template v-else>
+        <u-badge v-if="item.senderType === RbTicketSenderType.Host" variant="soft" color="warning" class="me-2">工作人员</u-badge>
+        <span class="me-1">{{ item.username }}</span>
+        <span class="font-normal text-muted">&nbsp;{{ item.action }}</span>
+      </template>
     </template>
     <template #date="{ item }">
-      {{ formatDate(item.date) }}
+      {{ item.gap ? '' : formatDate(item.date) }}
     </template>
     <template #description="{ item }">
       <div v-if="item.message && (item.message.content !== undefined || (item.message.cost_id !== null && item.message.cost_id !== undefined))" class="px-4 py-4 ring ring-default mt-2 rounded-md text-default">

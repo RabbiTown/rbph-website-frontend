@@ -16,7 +16,8 @@ const toast = useToast();
 
 const pageData = ref<TicketThread>();
 const canSend = computed(() => canSendTicket(pageData.value?.perm));
-const messages = computed(() => pageData.value?.messages.filter(isTicketMessage) ?? []);
+const messages = computed(() => [...(pageData.value?.messages.filter(isTicketMessage) ?? [])].reverse());
+const historyLoading = ref(false);
 const draftContentType = ref(RbContentType.UnsafeMarkdown);
 
 async function updateData(newId: number | undefined = undefined): Promise<boolean> {
@@ -33,6 +34,47 @@ async function updateData(newId: number | undefined = undefined): Promise<boolea
   return false;
 }
 
+async function loadOlder() {
+  const gameId = game.value?.id;
+  const before = pageData.value?.history.before;
+  if (!gameId || !before || historyLoading.value) return;
+  historyLoading.value = true;
+  try {
+    const { data } = await api.get<TicketThread>(`/games/${gameId}/tickets/self`, { query: { before } });
+    if (pageData.value) {
+      pageData.value = {
+        ...pageData.value,
+        messages: mergeTicketThreadItems(data.messages, pageData.value.messages),
+        history: { ...data.history, newer: pageData.value.history.newer },
+      };
+    }
+  } catch (error) {
+    handleError(error, '加载更早站内信失败');
+  } finally {
+    historyLoading.value = false;
+  }
+}
+
+async function loadNewer() {
+  const gameId = game.value?.id;
+  const newer = pageData.value?.history.newer;
+  if (!gameId || !newer) return updateData();
+  try {
+    const { data } = await api.get<TicketThread>(`/games/${gameId}/tickets/self`, { query: { after: newer } });
+    if (pageData.value) {
+      pageData.value = {
+        ...pageData.value,
+        ticket: data.ticket,
+        perm: data.perm,
+        messages: mergeTicketThreadItems(pageData.value.messages, data.messages),
+        history: { ...pageData.value.history, newer: data.history.newer ?? pageData.value.history.newer },
+      };
+    }
+  } catch (error) {
+    handleError(error, '更新站内信失败');
+  }
+}
+
 watch(
   game,
   async newGame => {
@@ -43,7 +85,14 @@ watch(
 );
 
 useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
-  if (data.game_id === game.value?.id && data.team_id === useTeam(false).ref.value?.id) updateData();
+  if (data.game_id === game.value?.id && data.team_id === useTeam(false).ref.value?.id) loadNewer();
+});
+
+onMounted(() => {
+  useInfiniteScroll(window, loadOlder, {
+    distance: 80,
+    canLoadMore: () => Boolean(pageData.value?.history.before) && !historyLoading.value,
+  });
 });
 
 const submitLoading = ref(false);
@@ -58,7 +107,14 @@ async function submitMessage() {
   if (gameId) {
     try {
       const { code, data } = await api.post<TicketSendResponse>(`/games/${gameId}/tickets/self/send`, { content: draftMessage.value, content_type: draftContentType.value } satisfies TicketSendRequest, {
-        errorHints: { [-1]: '队伍站内信被禁用。', [-2]: '积压信息过多，请先等待工作人员回复。', [-3]: '内容类型无效或无权使用。', [-4]: '发送的信息过长。', [-5]: '信息要求的费用无效。' },
+        errorHints: {
+          [-1]: '队伍站内信被禁用。',
+          [-2]: '积压信息过多，请先等待工作人员回复。',
+          [-3]: '内容类型无效或无权使用。',
+          [-4]: '发送的信息过长。',
+          [-5]: '信息要求的费用无效。',
+          [-8]: '当前不可发起或发送站内信。',
+        },
       });
       draftMessage.value = '';
 
@@ -72,7 +128,8 @@ async function submitMessage() {
         const perm = data.perm ?? pageData.value?.perm ?? { send_block: RbTicketSendBlock.Ok, can_host: false, can_view_locked: false, content_type: [RbContentType.UnsafeMarkdown], currency: [] };
         pageData.value = {
           ticket: data.ticket ?? pageData.value?.ticket,
-          messages: (pageData.value?.messages ?? []).some(item => isTicketMessage(item) && item.id === data.msg.id) ? (pageData.value?.messages ?? []) : [...(pageData.value?.messages ?? []), data.msg],
+          messages: mergeTicketThreadItems(pageData.value?.messages ?? [], [data.msg]),
+          history: pageData.value?.history ?? { has_more: false },
           perm,
         };
         draftContentType.value = getDefaultTicketContentType(perm);
@@ -148,6 +205,7 @@ const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
           </template>
         </u-collapsible>
       </u-card>
+      <div v-if="historyLoading" class="flex w-full justify-center py-3"><u-icon name="material-symbols:progress-activity" class="size-5 animate-spin text-muted" /></div>
     </div>
     <u-empty v-else-if="pageData" icon="material-symbols:chat-info-outline-rounded" title="需要帮助？" description="发送站内信与主办方联系" />
     <div v-else class="h-full">

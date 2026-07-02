@@ -24,7 +24,7 @@ const UBadge = resolveComponent('u-badge');
 const columns = ref<TableColumn<LeaderBoardTeamInfo>[]>([
   {
     header: '#',
-    cell: ({ row }) => row.index + 1,
+    cell: ({ row }) => row.original.rank,
     meta: {
       class: {
         th: 'md:w-none w-0',
@@ -122,13 +122,17 @@ const columns = ref<TableColumn<LeaderBoardTeamInfo>[]>([
   },
 ]);
 
+const pageSize = 50;
+const loadingMore = ref(false);
+
 async function updateData(newId: number | undefined = undefined): Promise<boolean> {
   const gameId = newId || game.value?.id;
   if (gameId) {
     try {
-      const { data } = await api.get<LeaderBoardInfo>(`/games/${gameId}/leaderboard`, { query: { version: pageData.value?.version } });
+      const previousVersion = pageData.value?.version;
+      const { data } = await api.get<LeaderBoardInfo>(`/games/${gameId}/leaderboard`, { query: { version: previousVersion, offset: 0, limit: pageSize } });
       if (data) {
-        pageData.value = data;
+        pageData.value = previousVersion === data.version ? { ...data, data: pageData.value?.data ?? data.data } : data;
         if (data.state === 'locked' && timer) {
           clearInterval(timer);
           timer = null;
@@ -142,6 +146,28 @@ async function updateData(newId: number | undefined = undefined): Promise<boolea
   return false;
 }
 
+async function loadMore() {
+  if (!game.value?.id || !pageData.value?.has_more || loadingMore.value) return;
+  loadingMore.value = true;
+  try {
+    const current = pageData.value;
+    const { data } = await api.get<LeaderBoardInfo>(`/games/${game.value.id}/leaderboard`, {
+      query: { version: current.version, offset: current.data.length, limit: pageSize },
+    });
+    if (!data) return;
+    if (data.reset || data.version !== current.version) {
+      pageData.value = data;
+    } else {
+      const seen = new Set(current.data.map(item => item.id));
+      pageData.value = { ...data, data: [...current.data, ...data.data.filter(item => !seen.has(item.id))] };
+    }
+  } catch (error) {
+    handleError(error, '加载更多排行榜队伍失败');
+  } finally {
+    loadingMore.value = false;
+  }
+}
+
 watch(
   game,
   async newGame => {
@@ -151,9 +177,6 @@ watch(
   { immediate: true }
 );
 
-const showLength = ref(0);
-const showData = computed(() => pageData.value?.data.slice(0, showLength.value));
-
 const updateTime = ref(Date.now());
 
 let timer: number | null = null;
@@ -161,12 +184,10 @@ let timer: number | null = null;
 onMounted(() => {
   useInfiniteScroll(
     window,
-    () => {
-      showLength.value += 50;
-    },
+    loadMore,
     {
       distance: 50,
-      canLoadMore: () => showLength.value < (pageData.value?.data.length || 0),
+      canLoadMore: () => Boolean(pageData.value?.has_more) && !loadingMore.value,
     }
   );
 
@@ -204,8 +225,9 @@ onUnmounted(() => {
         title="排行榜已锁定"
         :description="pageData.locked_at ? `当前展示的是 ${formatDate(pageData.locked_at)} 的排名快照，之后的提交仍然有效但不会改变此处排名。` : '之后的提交仍然有效，但不会改变此处排名。'"
       />
-      <u-table v-if="pageData.data.length > 0" :data="showData" :columns="columns" :ui="{ base: 'md:table-auto table-fixed w-full' }" />
-      <u-empty v-else description="暂无有效队伍" />
+      <u-table v-if="pageData.data.length > 0" :data="pageData.data" :columns="columns" :ui="{ base: 'md:table-auto table-fixed w-full' }" />
+      <div v-if="loadingMore" class="flex justify-center py-4"><u-icon name="material-symbols:progress-activity" class="size-5 animate-spin text-muted" /></div>
+      <u-empty v-if="pageData.data.length === 0" description="暂无有效队伍" />
     </div>
     <div v-else class="h-full">
       <u-skeleton class="w-full h-full min-h-24" />

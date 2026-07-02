@@ -264,6 +264,7 @@ export interface RbLeaderBoardTeam {
 }
 
 export interface LeaderBoardTeamInfo {
+  rank: number;
   id: number;
   name: string;
   bio: string;
@@ -276,6 +277,9 @@ export interface LeaderBoardTeamInfo {
 export interface LeaderBoardInfo {
   data: LeaderBoardTeamInfo[];
   version: number;
+  total: number;
+  has_more: boolean;
+  reset: boolean;
   state: 'live' | 'locked';
   locked_at?: string;
 }
@@ -456,6 +460,18 @@ export function isTicketMessage(item: TicketThreadItem): item is TicketMessage {
   return item.type !== RbTicketThreadItemType.Operation;
 }
 
+export function mergeTicketThreadItems(...groups: TicketThreadItem[][]): TicketThreadItem[] {
+  const items = new Map<string, TicketThreadItem>();
+  for (const group of groups) {
+    for (const item of group) items.set(`${item.type ?? RbTicketThreadItemType.Message}:${item.id}`, item);
+  }
+  const rank = (item: TicketThreadItem) => {
+    if (isTicketMessage(item)) return 1;
+    return item.action === RbTicketOperationAction.Open ? 0 : 2;
+  };
+  return [...items.values()].sort((a, b) => Date.parse(a.ctime_at) - Date.parse(b.ctime_at) || rank(a) - rank(b) || a.id - b.id);
+}
+
 export interface TicketSummary {
   id: number;
   state: RbTicketState;
@@ -492,6 +508,13 @@ export function canUseTicketContentType(perm: Pick<TicketPerm, 'content_type'> |
 export interface TicketThread {
   ticket?: TicketSummary | null;
   messages: TicketThreadItem[];
+  history: {
+    before?: string;
+    after?: string;
+    stop?: string;
+    newer?: string;
+    has_more: boolean;
+  };
   perm: TicketPerm;
 }
 
@@ -553,6 +576,7 @@ export interface TicketSendRequest {
 
 export interface StaffTicketListResponse {
   tickets: TicketSummary[];
+  has_more: boolean;
 }
 
 export interface StaffTeamOption {

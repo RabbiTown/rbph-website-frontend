@@ -10,7 +10,11 @@ const tickets = ref<TicketSummary[]>([]);
 const selectedId = ref<number>();
 const thread = ref<TicketThread>();
 const listLoading = ref(false);
+const listHasMore = ref(false);
+const listScroll = ref<HTMLElement>();
 const threadLoading = ref(false);
+const threadHistoryLoading = ref(false);
+const threadHistoryGapIndex = ref(1);
 const submitLoading = ref(false);
 const assigneeLoading = ref(false);
 const assigneeConfirmOpen = ref(false);
@@ -61,9 +65,9 @@ const puzzleId = computed(() => {
 
 useHead({ titleTemplate: computed(() => buildTitleParts([{ text: '消息工作台' }, { text: useGame().ref.value?.title, sep: ' - ' }])) });
 
-async function loadTickets(silent = false) {
-  if (!gameId.value) return;
-  if (!silent) listLoading.value = true;
+async function loadTickets(_silent = false, append = false) {
+  if (!gameId.value || (append && (!listHasMore.value || listLoading.value))) return;
+  listLoading.value = true;
   try {
     const { data } = await api.get<StaffTicketListResponse>(`/games/${gameId.value}/tickets/staff`, {
       query: {
@@ -72,14 +76,21 @@ async function loadTickets(silent = false) {
         waiting_for: waitingFor.value,
         assignee: assigneeFilter.value,
         puzzle_id: puzzleId.value,
+        limit: 50,
+        offset: append ? tickets.value.length : 0,
       },
     });
-    tickets.value = data.tickets;
-    if (selectedId.value && !tickets.value.some(ticket => ticket.id === selectedId.value)) selectedId.value = undefined;
+    if (append) {
+      const seen = new Set(tickets.value.map(ticket => ticket.id));
+      tickets.value.push(...data.tickets.filter(ticket => !seen.has(ticket.id)));
+    } else {
+      tickets.value = data.tickets;
+    }
+    listHasMore.value = data.has_more;
   } catch (error) {
     handleError(error, '获取消息列表失败');
   } finally {
-    if (!silent) listLoading.value = false;
+    listLoading.value = false;
   }
 }
 
@@ -96,6 +107,7 @@ async function loadThread(ticketId = selectedId.value, silent = false, force = f
   try {
     const { data } = await api.get<TicketThread>(ticketEndpoint(ticketId));
     thread.value = data;
+    threadHistoryGapIndex.value = 1;
     contentType.value = getDefaultTicketContentType(data.perm);
     reqCurrencyId.value = null;
     reqCurrencyAmount.value = 0;
@@ -106,7 +118,71 @@ async function loadThread(ticketId = selectedId.value, silent = false, force = f
   }
 }
 
-watch([gameId, kind, state, waitingFor, assigneeFilter, puzzleId], loadTickets, { immediate: true });
+async function loadThreadHistory() {
+  if (!selectedId.value || !thread.value?.history.has_more || threadHistoryLoading.value) return;
+  const puzzle = Boolean(thread.value.ticket?.puzzle);
+  const cursor = puzzle ? thread.value.history.after : thread.value.history.before;
+  if (!cursor) return;
+  threadHistoryLoading.value = true;
+  try {
+    const { data } = await api.get<TicketThread>(ticketEndpoint(selectedId.value), {
+      query: puzzle ? { after: cursor, stop: thread.value.history.stop } : { before: cursor },
+    });
+    if (thread.value) {
+      const previousLength = thread.value.messages.length;
+      const messages = mergeTicketThreadItems(thread.value.messages, data.messages);
+      if (puzzle) threadHistoryGapIndex.value += messages.length - previousLength;
+      thread.value = {
+        ...thread.value,
+        messages,
+        history: puzzle
+          ? { ...thread.value.history, after: data.history.after, has_more: data.history.has_more }
+          : { ...data.history, newer: thread.value.history.newer },
+      };
+    }
+  } catch (error) {
+    handleError(error, '加载更早会话记录失败');
+  } finally {
+    threadHistoryLoading.value = false;
+  }
+}
+
+async function loadThreadNewer(ticketId: number) {
+  if (ticketId !== selectedId.value || !thread.value) return;
+  const newer = thread.value.history.newer;
+  if (!newer) return loadThread(ticketId, true, true);
+  try {
+    const { data } = await api.get<TicketThread>(ticketEndpoint(ticketId), { query: { after: newer } });
+    if (thread.value?.ticket?.id === ticketId) {
+      thread.value = {
+        ...thread.value,
+        ticket: data.ticket,
+        perm: data.perm,
+        messages: mergeTicketThreadItems(thread.value.messages, data.messages),
+        history: { ...thread.value.history, newer: data.history.newer ?? thread.value.history.newer },
+      };
+    }
+  } catch (error) {
+    handleError(error, '更新会话失败');
+  }
+}
+
+const dmThreadItems = computed(() => (thread.value?.ticket?.puzzle ? [] : [...(thread.value?.messages ?? [])].reverse()));
+
+watch([gameId, kind, state, waitingFor, assigneeFilter, puzzleId], () => loadTickets(), { immediate: true });
+
+onMounted(() => {
+  useInfiniteScroll(listScroll, () => loadTickets(true, true), {
+    distance: 80,
+    canLoadMore: () => listHasMore.value && !listLoading.value,
+  });
+  useInfiniteScroll(window, () => {
+    if (thread.value?.ticket && !thread.value.ticket.puzzle) return loadThreadHistory();
+  }, {
+    distance: 80,
+    canLoadMore: () => Boolean(thread.value?.ticket && !thread.value.ticket.puzzle && thread.value.history.has_more) && !threadHistoryLoading.value,
+  });
+});
 
 function conflictAssignee(error: unknown): TicketAggreInfoUser | undefined {
   return (error as { data?: { payload?: { assignee?: { id: number; nickname: string } } } }).data?.payload?.assignee;
@@ -152,7 +228,7 @@ async function sendMessage(forceAssignee = false) {
     draft.value = '';
     if (thread.value) {
       if (data.ticket) thread.value.ticket = data.ticket;
-      if (!thread.value.messages.some(item => isTicketMessage(item) && item.id === data.msg.id)) thread.value.messages.push(data.msg);
+      thread.value.messages = mergeTicketThreadItems(thread.value.messages, [data.msg]);
     }
     await loadTickets(true);
   } catch (error) {
@@ -186,7 +262,15 @@ async function closeWithMessage(forceAssignee = false) {
       { errorHints: { [-7]: '已有其他工作人员认领此会话。' } },
     );
     draft.value = '';
-    thread.value = data.thread;
+    if (thread.value) {
+      thread.value = {
+        ...data.thread,
+        messages: mergeTicketThreadItems(thread.value.messages, data.thread.messages),
+        history: thread.value.history,
+      };
+    } else {
+      thread.value = data.thread;
+    }
     await loadTickets(true);
   } catch (error) {
     const assignee = conflictAssignee(error);
@@ -246,10 +330,18 @@ async function sendDm() {
   if (!dmTeam.value || !dmDraft.value.trim()) return;
   submitLoading.value = true;
   try {
-    const { data } = await api.post<TicketSendResponse>(`/games/${gameId.value}/tickets/staff/dm/${dmTeam.value}/send`, {
-      content: dmDraft.value,
-      content_type: RbContentType.UnsafeMarkdown,
-    });
+    const { data } = await api.post<TicketSendResponse>(
+      `/games/${gameId.value}/tickets/staff/dm/${dmTeam.value}/send`,
+      {
+        content: dmDraft.value,
+        content_type: RbContentType.UnsafeMarkdown,
+      },
+      {
+        errorHints: {
+          [-8]: '站内信当前仅允许回复已有会话，无法向该队伍主动发起新会话。',
+        },
+      },
+    );
     dmDraft.value = '';
     dmOpen.value = false;
     kind.value = 'dm';
@@ -267,7 +359,7 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
   if (data.game_id !== gameId.value) return;
   loadTickets(true);
   const ownAssigneeChange = data.actor_id === user.value?.id && (data.event === 'assigned' || data.event === 'unassigned');
-  if (data.ticket_id === selectedId.value && !ownAssigneeChange) loadThread(data.ticket_id, true, true);
+  if (data.ticket_id === selectedId.value && !ownAssigneeChange) loadThreadNewer(data.ticket_id);
 });
 </script>
 
@@ -323,8 +415,8 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
             />
           </div>
           <u-separator />
-          <div class="min-h-0 flex-1 overflow-y-auto">
-            <div v-if="listLoading" class="p-3"><u-skeleton class="h-20" /></div>
+          <div ref="listScroll" class="min-h-0 flex-1 overflow-y-auto">
+            <div v-if="listLoading && tickets.length === 0" class="p-3"><u-skeleton class="h-20" /></div>
             <u-card
               v-for="ticket in tickets"
               :key="ticket.id"
@@ -358,6 +450,7 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
                 <div class="mt-1.5 text-xs text-muted text-right -mb-0.5">{{ ticket.last_at ? formatDate(ticket.last_at) : '暂无消息' }}</div>
               </div>
             </u-card>
+            <div v-if="listLoading && tickets.length > 0" class="flex justify-center py-3"><u-icon name="material-symbols:progress-activity" class="size-5 animate-spin text-muted" /></div>
             <u-empty v-if="!listLoading && tickets.length === 0" title="没有匹配的会话" icon="material-symbols:inbox-outline-rounded" />
           </div>
         </u-card>
@@ -419,10 +512,20 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
             </div>
           </div>
 
-          <rbph-ticket-timeline v-if="thread.ticket.puzzle" :items="thread.messages" :currency="threadCurrency" :can-view-locked="thread.perm.can_view_locked" class="mb-6" />
+          <rbph-ticket-timeline
+            v-if="thread.ticket.puzzle"
+            :items="thread.messages"
+            :currency="threadCurrency"
+            :can-view-locked="thread.perm.can_view_locked"
+            :show-history-gap="Boolean(thread.history.has_more && thread.history.after)"
+            :history-loading="threadHistoryLoading"
+            :history-gap-index="threadHistoryGapIndex"
+            class="mb-6"
+            @load-history="loadThreadHistory"
+          />
 
           <div v-else class="mb-6 space-y-3">
-            <div v-for="item in thread.messages" :key="`${item.type}-${item.id}`">
+            <div v-for="item in dmThreadItems" :key="`${item.type}-${item.id}`">
               <div v-if="isTicketMessage(item)" class="rounded-md border border-default p-3">
                 <div class="flex justify-between text-xs text-muted mb-2">
                   <span>
@@ -434,6 +537,7 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
                 <rbph-content v-if="item.content !== undefined && item.content_type !== undefined" :content="item as RbContent" />
               </div>
             </div>
+            <div v-if="threadHistoryLoading" class="flex justify-center py-3"><u-icon name="material-symbols:progress-activity" class="size-5 animate-spin text-muted" /></div>
           </div>
 
           <rbph-message-edit
