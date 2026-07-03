@@ -35,9 +35,7 @@ const status = computed(() => {
 
 const panelStyle = computed(() => {
   if (position.dragX !== undefined) return { top: `${position.y}px`, left: `${position.dragX}px` };
-  return position.side === 'left'
-    ? { top: `${position.y}px`, left: `${position.offset}px` }
-    : { top: `${position.y}px`, right: `${position.offset}px` };
+  return position.side === 'left' ? { top: `${position.y}px`, left: `${position.offset}px` } : { top: `${position.y}px`, right: `${position.offset}px` };
 });
 
 function viewportSize() {
@@ -59,10 +57,7 @@ function clampPosition(x: number, y: number) {
 }
 
 function savePosition() {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({ side: position.side, offset: position.offset, y: position.y }),
-  );
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ side: position.side, offset: position.offset, y: position.y }));
 }
 
 function anchorCurrentPosition() {
@@ -143,14 +138,8 @@ function clampSavedPosition() {
   const viewport = viewportSize();
   const width = rect?.width ?? 96;
   const height = rect?.height ?? 24;
-  position.offset = Math.min(
-    Math.max(position.offset, VIEWPORT_MARGIN),
-    Math.max(VIEWPORT_MARGIN, viewport.width - width - VIEWPORT_MARGIN),
-  );
-  position.y = Math.min(
-    Math.max(position.y, HEADER_OFFSET),
-    Math.max(HEADER_OFFSET, viewport.height - height - VIEWPORT_MARGIN),
-  );
+  position.offset = Math.min(Math.max(position.offset, VIEWPORT_MARGIN), Math.max(VIEWPORT_MARGIN, viewport.width - width - VIEWPORT_MARGIN));
+  position.y = Math.min(Math.max(position.y, HEADER_OFFSET), Math.max(HEADER_OFFSET, viewport.height - height - VIEWPORT_MARGIN));
   savePosition();
 }
 
@@ -205,8 +194,11 @@ onBeforeUnmount(() => {
   <transition enter-active-class="transition duration-200 ease-out" enter-from-class="translate-y-2 opacity-0" leave-active-class="transition duration-150 ease-in" leave-to-class="translate-y-2 opacity-0">
     <div v-if="status" ref="panel" role="status" :style="panelStyle" class="fixed z-50">
       <u-popover :open="popoverOpen" arrow :content="{ side: 'bottom', align: 'end', sideOffset: 8 }" @update:open="updatePopover">
-        <button type="button" class="cursor-grab touch-none rounded active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" aria-label="查看或拖动同步状态" @pointerdown="startDragging">
-          <u-badge size="sm" variant="soft" :color="status.color" :icon="status.icon">{{ status.label }}</u-badge>
+        <button type="button" class="grid cursor-grab touch-none rounded active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" aria-label="查看或拖动同步状态" @pointerdown="startDragging">
+          <u-badge aria-hidden="true" size="sm" variant="soft" color="error" icon="material-symbols:devices-off-outline-rounded" class="invisible col-start-1 row-start-1">连接受限</u-badge>
+          <transition enter-active-class="transition-all duration-150" enter-from-class="translate-y-1 opacity-0" leave-active-class="transition-all duration-150" leave-to-class="-translate-y-1 opacity-0">
+            <u-badge :key="sync.state.value" size="sm" variant="soft" :color="status.color" :icon="status.icon" class="col-start-1 row-start-1 justify-self-center">{{ status.label }}</u-badge>
+          </transition>
         </button>
         <template #content>
           <div class="w-72 p-3 text-sm">
