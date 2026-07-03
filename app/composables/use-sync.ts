@@ -1,77 +1,135 @@
 type Listener<T> = (msg: SyncMessage<T>) => void;
 type CloseListener = (event: CloseEvent) => void;
-
-let ws: WebSocket | null = null;
+export type SyncConnectionState = 'idle' | 'connecting' | 'online' | 'reconnecting' | 'limited' | 'unsupported';
 
 const listeners: { [K in SyncMessageType]?: Listener<SyncMessageMap[K]>[] } = {};
 const closeListeners: CloseListener[] = [];
 
-let heartbeatTimer: number | null = null;
-
-let autoReconnect = false;
+const clientId = crypto.randomUUID();
 const wsOnline = ref(false);
+const syncSupported = ref(import.meta.client && typeof SharedWorker !== 'undefined');
+const connectionState = ref<SyncConnectionState>('idle');
+const sharedClientCount = ref(0);
+const endpoint = ref<string>();
+const stateChangedAt = ref(Date.now());
+const lastClose = ref<{ code: number; reason: string; wasClean: boolean; at: number }>();
+let worker: SharedWorker | undefined;
+let workerHeartbeat: number | undefined;
+let shouldConnect = false;
 
-function disconnect() {
-  autoReconnect = false;
-  ws?.close();
+function socketUrl() {
+  const url = new URL(buildUrl('/sync'), window.location.href);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  return url.toString();
 }
 
-function connect() {
-  if (ws) return;
-
-  ws = new WebSocket(buildUrl('/sync'));
-
-  ws.onopen = () => {
-    startHeartBeat();
-  };
-
-  ws.onclose = event => {
-    ws = null;
-    stopHeartbeat();
-    closeListeners.forEach(l => l(event));
-
-    if (autoReconnect) {
-      setTimeout(() => {
-        connect();
-      }, 5000);
+function handleWorkerMessage(event: MessageEvent<SyncWorkerResponse>) {
+  const message = event.data;
+  if (message.type === 'status') {
+    sharedClientCount.value = message.clientCount;
+    wsOnline.value = shouldConnect && message.online;
+    if (shouldConnect) {
+      if (message.connectionLimited) connectionState.value = 'limited';
+      else if (message.online) connectionState.value = 'online';
     }
-  };
-
-  ws.onerror = err => {
-    console.error('WebSocket error', err);
-  };
-
-  ws.onmessage = ev => {
+  } else if (message.type === 'message' && shouldConnect) {
     try {
-      const data = JSON.parse(ev.data);
+      const data = JSON.parse(message.data);
       if (data.type) {
         const type = data.type in SyncMessageType ? (data.type as SyncMessageType) : SyncMessageType.Unknown;
-        (listeners[type] ?? []).forEach(l => l(data));
+        (listeners[type] ?? []).forEach(listener => listener(data));
       }
     } catch {
       /* ignored */
     }
-  };
-
-  autoReconnect = true;
-}
-
-function startHeartBeat() {
-  if (heartbeatTimer) return;
-  heartbeatTimer = window.setInterval(() => {
-    if (ws?.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({}));
-    }
-  }, 30_000);
-  wsOnline.value = true;
-}
-
-function stopHeartbeat() {
-  if (heartbeatTimer) {
-    clearInterval(heartbeatTimer);
-    heartbeatTimer = null;
+  } else if (message.type === 'close' && shouldConnect) {
+    lastClose.value = {
+      code: message.code,
+      reason: message.reason,
+      wasClean: message.wasClean,
+      at: Date.now(),
+    };
+    connectionState.value = message.code === SYNC_CONNECTION_LIMIT_CLOSE_CODE ? 'limited' : 'reconnecting';
+    closeListeners.forEach(listener =>
+      listener(
+        new CloseEvent('close', {
+          code: message.code,
+          reason: message.reason,
+          wasClean: message.wasClean,
+        }),
+      ),
+    );
+  } else if (message.type === 'error') {
+    console.error(message.message);
   }
+}
+
+function ensureWorker() {
+  if (worker) return true;
+  if (!syncSupported.value) return false;
+
+  try {
+    worker = new SharedWorker(new URL('../workers/sync.shared-worker.ts', import.meta.url), {
+      name: 'rbph-sync',
+      type: 'module',
+    });
+    worker.port.onmessage = handleWorkerMessage;
+    worker.onerror = event => {
+      console.error('Shared sync worker error', event);
+      syncSupported.value = false;
+      wsOnline.value = false;
+      connectionState.value = 'unsupported';
+    };
+    worker.port.start();
+    return true;
+  } catch (error) {
+    console.error('Shared sync worker unavailable', error);
+    syncSupported.value = false;
+    connectionState.value = 'unsupported';
+    return false;
+  }
+}
+
+function registerClient() {
+  const url = socketUrl();
+  endpoint.value = url;
+  worker?.port.postMessage({
+    type: 'connect',
+    clientId,
+    url,
+  } satisfies SyncWorkerRequest);
+}
+
+watch(connectionState, () => (stateChangedAt.value = Date.now()));
+
+function disconnect() {
+  shouldConnect = false;
   wsOnline.value = false;
+  connectionState.value = 'idle';
+  if (workerHeartbeat) window.clearInterval(workerHeartbeat);
+  workerHeartbeat = undefined;
+  worker?.port.postMessage({ type: 'disconnect', clientId } satisfies SyncWorkerRequest);
+}
+
+function connect() {
+  if (shouldConnect) return;
+  shouldConnect = true;
+  connectionState.value = syncSupported.value ? 'connecting' : 'unsupported';
+  if (!ensureWorker()) return;
+  registerClient();
+  workerHeartbeat = window.setInterval(registerClient, 30_000);
+}
+
+function reconnect() {
+  if (!shouldConnect || !worker || connectionState.value !== 'limited') return;
+  connectionState.value = 'connecting';
+  worker.port.postMessage({ type: 'reconnect', clientId } satisfies SyncWorkerRequest);
+}
+
+if (import.meta.client) {
+  window.addEventListener('pagehide', event => {
+    if (!event.persisted) disconnect();
+  });
 }
 
 export function useSync() {
@@ -96,7 +154,17 @@ export function useSync() {
     listen,
     listenClose,
     online: wsOnline,
+    supported: syncSupported,
+    state: connectionState,
+    debug: {
+      clientId,
+      endpoint,
+      sharedClientCount,
+      stateChangedAt,
+      lastClose,
+    },
     connect,
+    reconnect,
     disconnect,
   };
 }

@@ -310,7 +310,7 @@ defineExpose({
       <u-icon name="material-symbols:progress-activity" class="size-4 animate-spin" />
       <span>加载中</span>
     </div>
-    <div v-else-if="isCurrencyMode ? currencyRows.length === 0 : activities.length === 0" class="py-8 text-sm text-muted">暂无记录</div>
+    <div v-else-if="isCurrencyMode ? currencyRows.length === 0 : activities.length === 0" class="text-sm text-muted">暂无记录</div>
     <u-table v-else-if="isCurrencyMode" :loading="loading" :data="currencyRows" :columns="currencyColumns" :ui="{ base: 'table-fixed w-full' }" />
     <div v-else class="divide-y divide-default">
       <div v-for="activity in activities" :key="activity.id" :class="['flex gap-3 py-4 first:pt-0 last:pb-0', activityView(activity).details.length === 0 ? 'items-center' : 'items-start']">

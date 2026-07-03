@@ -4,6 +4,7 @@
       <NuxtLayout>
         <NuxtPage />
       </NuxtLayout>
+      <rb-sync-status />
     </UApp>
   </div>
 </template>

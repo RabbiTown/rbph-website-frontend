@@ -16,39 +16,15 @@ export default defineNuxtPlugin(() => {
   }, 15000);
   onScopeDispose(() => window.clearInterval(statusTimer));
 
-  let curToast: Toast | undefined = undefined;
   const syncEnabled = computed(() => {
     const currentUser = user.ref.value;
     const status = systemStatus.ref.value;
     return Boolean(currentUser && status && !currentUser.must_change_password && (!status.maintenance_enabled || currentUser.urole >= RbUserRole.Admin));
   });
 
-  function removeSyncToast() {
-    if (curToast && toast.toasts.value.find(x => x.id === curToast?.id)) {
-      toast.remove(curToast.id);
-    }
-    curToast = undefined;
-  }
-
   watch(
     syncEnabled,
-    enabled => {
-      if (enabled) {
-        removeSyncToast();
-        curToast = toast.add({
-          title: '连接同步服务中…',
-          description: '请耐心等待',
-          color: 'warning',
-          icon: 'material-symbols:more-horiz',
-          duration: Infinity,
-        });
-
-        sync.connect();
-      } else {
-        removeSyncToast();
-        sync.disconnect();
-      }
-    },
+    enabled => (enabled ? sync.connect() : sync.disconnect()),
     { immediate: true },
   );
 
@@ -62,31 +38,6 @@ export default defineNuxtPlugin(() => {
   watch([game.ref, team.ref], () => notificationUnread.refresh(), { immediate: true });
 
   watch(sync.online, newState => {
-    let toastData: Omit<Partial<Toast>, 'id'> | undefined = undefined;
-    if (newState) {
-      toastData = {
-        title: '已连接至同步服务',
-        description: '数据已同步，欢迎回来。',
-        icon: 'material-symbols:sync-rounded',
-        color: 'success',
-        duration: 3000,
-      };
-    } else if (syncEnabled.value) {
-      toastData = {
-        title: '从同步服务断开',
-        description: '正在积极重连中…',
-        icon: 'material-symbols:sync-disabled-rounded',
-        color: 'warning',
-        duration: Infinity,
-      };
-    }
-    if (toastData) {
-      if (curToast && toast.toasts.value.find(x => x.id === curToast?.id)) {
-        toast.update(curToast.id, toastData);
-      } else {
-        curToast = toast.add(toastData);
-      }
-    }
     if (newState) releaseSync.sync();
   });
 

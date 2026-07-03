@@ -5,6 +5,7 @@ interface AdminSystemSettings {
   captcha_login_required: boolean;
   captcha_registration_required: boolean;
   max_sessions: number;
+  max_websocket_connections: number;
   maintenance_enabled: boolean;
   maintenance_message: string;
   updated_by?: number | null;
@@ -34,6 +35,7 @@ const draft = reactive({
   captcha_login_required: false,
   captcha_registration_required: false,
   max_sessions: 3,
+  max_websocket_connections: 5,
   maintenance_enabled: false,
   maintenance_message: '',
 });
@@ -47,11 +49,20 @@ const dirty = computed(() => {
       draft.captcha_login_required !== current.captcha_login_required ||
       draft.captcha_registration_required !== current.captcha_registration_required ||
       draft.max_sessions !== current.max_sessions ||
+      draft.max_websocket_connections !== current.max_websocket_connections ||
       draft.maintenance_enabled !== current.maintenance_enabled ||
       draft.maintenance_message !== current.maintenance_message),
   );
 });
-const valid = computed(() => draft.max_sessions >= 1 && draft.max_sessions <= 20 && draft.maintenance_message.length <= 500 && (!draft.maintenance_enabled || draft.maintenance_message.trim().length > 0));
+const valid = computed(
+  () =>
+    draft.max_sessions >= 1 &&
+    draft.max_sessions <= 20 &&
+    draft.max_websocket_connections >= 1 &&
+    draft.max_websocket_connections <= 20 &&
+    draft.maintenance_message.length <= 500 &&
+    (!draft.maintenance_enabled || draft.maintenance_message.trim().length > 0),
+);
 
 function syncDraft(current: AdminSystemSettings) {
   draft.registration_open = current.registration_open;
@@ -59,6 +70,7 @@ function syncDraft(current: AdminSystemSettings) {
   draft.captcha_login_required = current.captcha_login_required;
   draft.captcha_registration_required = current.captcha_registration_required;
   draft.max_sessions = current.max_sessions;
+  draft.max_websocket_connections = current.max_websocket_connections;
   draft.maintenance_enabled = current.maintenance_enabled;
   draft.maintenance_message = current.maintenance_message;
 }
@@ -96,6 +108,7 @@ async function save() {
         captcha_login_required: draft.captcha_login_required,
         captcha_registration_required: draft.captcha_registration_required,
         max_sessions: draft.max_sessions,
+        max_websocket_connections: draft.max_websocket_connections,
         maintenance_enabled: draft.maintenance_enabled,
         maintenance_message: draft.maintenance_message.trim(),
       },
@@ -206,7 +219,7 @@ onBeforeUnmount(() => dirtyToast.clear());
 
               <section class="space-y-4">
                 <h3 class="text-lg font-semibold text-highlighted">会话策略</h3>
-                <div class="rounded-md bg-elevated/60 p-4 ring ring-default">
+                <div class="space-y-3 rounded-md bg-elevated/60 p-4 ring ring-default">
                   <rb-form-field
                     row
                     label="最大并发会话"
@@ -216,6 +229,17 @@ onBeforeUnmount(() => dirtyToast.clear());
                     :reset="() => (draft.max_sessions = settings!.max_sessions)"
                   >
                     <u-input-number v-model="draft.max_sessions" :min="1" :max="20" :disabled="saving" class="w-32" />
+                  </rb-form-field>
+                  <u-separator />
+                  <rb-form-field
+                    row
+                    label="最大并发连接"
+                    icon="material-symbols:device-hub-rounded"
+                    description="一个用户最多可同时保持的同步连接数，超限时新连接会替换最旧连接。"
+                    :dirty="draft.max_websocket_connections !== settings.max_websocket_connections"
+                    :reset="() => (draft.max_websocket_connections = settings!.max_websocket_connections)"
+                  >
+                    <u-input-number v-model="draft.max_websocket_connections" :min="1" :max="20" :disabled="saving" class="w-32" />
                   </rb-form-field>
                 </div>
               </section>

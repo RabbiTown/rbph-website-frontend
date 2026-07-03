@@ -376,7 +376,7 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
 
     <div class="grid min-h-[calc(100vh-10rem)] items-start gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
       <aside class="w-full lg:sticky lg:top-20">
-        <u-card variant="subtle" class="shadow-xl" :ui="{ body: 'flex min-h-0 flex-col gap-3 p-2 sm:p-2 lg:max-h-[calc(100vh-6rem)]' }">
+        <u-card variant="subtle" :ui="{ body: 'flex min-h-0 flex-col gap-3 p-2 sm:p-2 lg:max-h-[calc(100vh-6rem)]' }">
           <div class="flex items-center gap-2 font-semibold text-highlighted">
             <u-icon name="material-symbols:inbox-outline-rounded" />
             会话选择

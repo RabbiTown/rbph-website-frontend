@@ -179,8 +179,8 @@ onMounted(loadTeams);
               <u-badge v-for="badge in statusBadges(team)" :key="badge.label" size="sm" :color="badge.color" variant="soft" :icon="badge.icon">{{ badge.label }}</u-badge>
             </div>
             <div class="mt-1 flex flex-wrap gap-1.5">
-              <u-badge size="sm" color="neutral" variant="soft" icon="material-symbols:group-outline-rounded">{{ team.member_count }} 名成员</u-badge>
-              <u-badge size="sm" color="neutral" variant="soft" icon="material-symbols:award-star-outline-rounded">{{ team.captain_name ?? '无队长' }}</u-badge>
+              <u-badge size="sm" :color="team.member_count > 0 ? 'neutral' : 'warning'" variant="soft" icon="material-symbols:group-outline-rounded">{{ team.member_count }} 名成员</u-badge>
+              <u-badge size="sm" :color="team.captain_name ? 'neutral' : 'warning'" variant="soft" icon="material-symbols:award-star-outline-rounded">{{ team.captain_name ?? '无队长' }}</u-badge>
               <u-badge v-if="team.finish_at" size="sm" color="success" variant="soft" icon="material-symbols:flag-outline-rounded">完赛于 {{ formatDate(team.finish_at) }}</u-badge>
             </div>
           </div>

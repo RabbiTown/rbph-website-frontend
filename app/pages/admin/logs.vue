@@ -133,6 +133,7 @@ function logView(log: AdminLogData) {
           captcha_login_required: '登录验证码',
           captcha_registration_required: '注册验证码',
           max_sessions: '最大并发会话',
+          max_websocket_connections: '最大并发连接',
           maintenance_enabled: '维护模式',
           maintenance_message: '维护提示',
         }),
