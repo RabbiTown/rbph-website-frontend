@@ -54,15 +54,7 @@ const dirty = computed(() => {
       draft.maintenance_message !== current.maintenance_message),
   );
 });
-const valid = computed(
-  () =>
-    draft.max_sessions >= 1 &&
-    draft.max_sessions <= 20 &&
-    draft.max_websocket_connections >= 1 &&
-    draft.max_websocket_connections <= 20 &&
-    draft.maintenance_message.length <= 500 &&
-    (!draft.maintenance_enabled || draft.maintenance_message.trim().length > 0),
-);
+const valid = computed(() => draft.max_sessions >= 1 && draft.max_sessions <= 20 && draft.max_websocket_connections >= 1 && draft.max_websocket_connections <= 20 && draft.maintenance_message.length <= 500);
 
 function syncDraft(current: AdminSystemSettings) {
   draft.registration_open = current.registration_open;
