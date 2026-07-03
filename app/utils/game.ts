@@ -53,7 +53,7 @@ export interface RbPuzzle {
   content_type: RbContentType;
   round: Pick<RbRound, 'id' | 'slug' | 'title'>;
   game_id: number;
-  announcements: Omit<RbAnnouncementInfo, 'is_pinned' | 'game_id' | 'puzzle_id'>[];
+  announcements: RbAnnouncementInfo[];
 }
 
 export enum RbTeamPuzzleState {
@@ -290,10 +290,24 @@ export interface RbAnnouncementInfo {
   content: string;
   content_type: RbContentType;
   is_pinned: boolean;
-  game_id?: number;
-  puzzle_id?: number;
-  puzzle_slug?: string | null;
+  game_id?: number | null;
+  puzzles: RbAnnouncementPuzzle[];
   utime_at: string;
+}
+
+export interface RbAnnouncementPuzzle {
+  id: number;
+  slug?: string | null;
+  title: string;
+  round_id: number;
+  round_slug?: string | null;
+  is_round_puzzle: boolean;
+}
+
+export interface AdminAnnouncementData extends RbAnnouncementInfo {
+  is_shown: boolean;
+  game_id: number | null;
+  ctime_at: string;
 }
 
 export interface RbGameAggreInfo {

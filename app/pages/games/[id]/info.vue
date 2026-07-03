@@ -73,6 +73,11 @@ watch(
   },
   { immediate: true },
 );
+
+useSync().listen(SyncMessageType.GameNewAnnouncement, ({ data }) => {
+  const gameId = game.value?.id;
+  if (gameId && (data.game_id === null || data.game_id === gameId)) updateData(gameId);
+});
 </script>
 
 <template>

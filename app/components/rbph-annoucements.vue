@@ -2,6 +2,7 @@
 const props = defineProps<{
   data?: (Partial<RbAnnouncementInfo> & Pick<RbAnnouncementInfo, 'id' | 'content' | 'content_type' | 'utime_at'>)[];
   tag?: string;
+  currentPuzzleId?: number;
 }>();
 
 const processedData = computed(() => {
@@ -22,9 +23,12 @@ const processedData = computed(() => {
     });
 });
 
-function announcementPuzzleRoute(anmt: Partial<RbAnnouncementInfo>): string | undefined {
-  if (!anmt.puzzle_id) return undefined;
-  return gamePuzzleSimpleRoute(anmt.game_id, { id: anmt.puzzle_id, slug: anmt.puzzle_slug });
+function puzzleRoute(anmt: Partial<RbAnnouncementInfo>, puzzle: RbAnnouncementPuzzle) {
+  const gameId = anmt.game_id ?? undefined;
+  if (puzzle.is_round_puzzle) {
+    return gameRoundSimpleRoute(gameId, { id: puzzle.round_id, slug: puzzle.round_slug });
+  }
+  return gamePuzzleSimpleRoute(gameId, puzzle);
 }
 </script>
 
@@ -45,7 +49,14 @@ function announcementPuzzleRoute(anmt: Partial<RbAnnouncementInfo>): string | un
               更新于 {{ formatDate(anmt.utime_at) }}
             </div>
           </div>
-          <u-button v-if="announcementPuzzleRoute(anmt)" variant="soft" size="xs" class="-my-8 mx-2" icon="material-symbols:arrow-forward-rounded" :to="announcementPuzzleRoute(anmt)">
+          <u-button
+            v-if="!currentPuzzleId && anmt.puzzles?.length === 1"
+            variant="soft"
+            size="xs"
+            class="-my-8 mx-2"
+            icon="material-symbols:arrow-forward-rounded"
+            :to="puzzleRoute(anmt, anmt.puzzles[0]!)"
+          >
             <span class="hidden md:inline">前往题目</span>
           </u-button>
           <u-icon name="material-symbols:expand-more-rounded" class="-me-1 size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
@@ -53,6 +64,18 @@ function announcementPuzzleRoute(anmt: Partial<RbAnnouncementInfo>): string | un
         <template #content>
           <div class="px-4 py-4 border-t dark:border-t-slate-700 border-t-slate-200 text-sm">
             <rbph-content :content="anmt" />
+            <div v-if="anmt.puzzles && anmt.puzzles.length > 1" class="mt-4 flex flex-wrap gap-2">
+              <u-button
+                v-for="puzzle in anmt.puzzles"
+                :key="puzzle.id"
+                size="xs"
+                variant="soft"
+                :icon="puzzle.id === currentPuzzleId ? 'material-symbols:location-on-outline-rounded' : 'material-symbols:arrow-forward-rounded'"
+                :label="puzzle.title"
+                :disabled="puzzle.id === currentPuzzleId"
+                :to="puzzle.id === currentPuzzleId ? undefined : puzzleRoute(anmt, puzzle)"
+              />
+            </div>
           </div>
         </template>
       </u-collapsible>

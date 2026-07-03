@@ -29,7 +29,7 @@ export interface SyncMessageMap {
   [SyncMessageType.Unknown]: unknown;
 
   // 100 - game
-  [SyncMessageType.GameNewAnnouncement]: object;
+  [SyncMessageType.GameNewAnnouncement]: { game_id: number | null };
   [SyncMessageType.GameReleaseUpdated]: { game_id: number; cursor: number };
 
   // 200 - team

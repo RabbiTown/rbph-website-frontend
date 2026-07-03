@@ -63,7 +63,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
 
 <template>
   <div v-if="puzzle">
-    <rbph-annoucements v-if="puzzle.data.announcements.length > 0" class="mb-4" :data="puzzle.data.announcements" />
+    <rbph-annoucements v-if="puzzle.data.announcements.length > 0" class="mb-4" :data="puzzle.data.announcements" :current-puzzle-id="puzzle.data.id" />
     <u-card variant="soft" :ui="{ body: 'py-4' }">
       <rbph-content :content="puzzle.data" />
     </u-card>

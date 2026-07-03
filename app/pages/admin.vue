@@ -108,6 +108,12 @@ const nav = computed(() => {
         to: `/admin/games/${game.ref.value.id}/teams`,
         active: route.path.startsWith(`/admin/games/${game.ref.value.id}/teams`),
       },
+      {
+        value: 'admin-game-announcements',
+        label: '比赛公告',
+        icon: 'material-symbols:campaign-outline-rounded',
+        to: `/admin/games/${game.ref.value.id}/announcements`,
+      },
     ]);
   }
 
@@ -118,6 +124,12 @@ const nav = computed(() => {
       icon: 'material-symbols:deployed-code-account-outline-rounded',
       to: '/admin/users',
       active: route.path.startsWith('/admin/users'),
+    },
+    {
+      value: 'admin-announcements',
+      label: '全局公告',
+      icon: 'material-symbols:campaign-outline-rounded',
+      to: '/admin/announcements',
     },
     {
       value: 'admin-logs',

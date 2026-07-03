@@ -49,6 +49,11 @@ const tabs = computed(() => {
       to: `/admin/games/${game.value.id}/teams`,
       active: route.path.startsWith(`/admin/games/${game.value.id}/teams`),
     },
+    {
+      label: '比赛公告',
+      icon: 'material-symbols:campaign-outline-rounded',
+      to: `/admin/games/${game.value.id}/announcements`,
+    },
   ] satisfies NavigationMenuItem[];
 });
 </script>

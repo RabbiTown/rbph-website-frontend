@@ -22,6 +22,13 @@ watch(
   },
   { immediate: true },
 );
+
+useSync().listen(SyncMessageType.GameNewAnnouncement, ({ data }) => {
+  const currentGameId = Number(gameId.value);
+  if (data.game_id === null || data.game_id === currentGameId) {
+    usePuzzle().updateStateByGameRef(gameId.value, puzzleRef.value);
+  }
+});
 </script>
 
 <template>
