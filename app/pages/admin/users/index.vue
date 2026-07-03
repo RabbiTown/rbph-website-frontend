@@ -123,9 +123,11 @@ onMounted(loadUsers);
 <template>
   <u-dashboard-panel id="admin-users">
     <template #header>
-      <u-dashboard-navbar title="用户管理"
-        ><template #leading><u-dashboard-sidebar-collapse /></template
-      ></u-dashboard-navbar>
+      <u-dashboard-navbar title="用户管理">
+        <template #leading>
+          <u-dashboard-sidebar-collapse />
+        </template>
+      </u-dashboard-navbar>
     </template>
     <template #body>
       <div class="grid min-h-0 gap-6 xl:grid-cols-[minmax(14rem,18rem)_minmax(0,64rem)_minmax(14rem,18rem)]">

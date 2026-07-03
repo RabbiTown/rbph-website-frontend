@@ -116,121 +116,134 @@ onBeforeUnmount(() => dirtyToast.clear());
 
 <template>
   <u-dashboard-panel id="admin-user-detail">
-    <template #header
-      ><u-dashboard-navbar title="用户管理"
-        ><template #leading><u-dashboard-sidebar-collapse /></template></u-dashboard-navbar
-    ></template>
+    <template #header>
+      <u-dashboard-navbar title="用户管理">
+        <template #leading>
+          <u-dashboard-sidebar-collapse />
+        </template>
+      </u-dashboard-navbar>
+    </template>
     <template #body>
-      <div class="grid min-h-0 gap-6 xl:grid-cols-[minmax(14rem,18rem)_minmax(0,64rem)_minmax(14rem,18rem)]">
-        <aside class="hidden xl:block" />
-        <main class="min-w-0">
-          <div class="mb-6 flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <div class="flex items-center gap-2">
-                <u-button to="/admin/users" icon="material-symbols:arrow-back-rounded" variant="ghost" color="neutral" />
-                <h2 class="truncate text-xl font-semibold text-highlighted">{{ user?.nickname ?? '用户设置' }}</h2>
+      <div>
+        <div class="grid min-h-0 gap-6 xl:grid-cols-[minmax(14rem,18rem)_minmax(0,64rem)_minmax(14rem,18rem)]">
+          <aside class="hidden xl:block" />
+          <main class="min-w-0">
+            <div class="mb-6 flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <u-button to="/admin/users" icon="material-symbols:arrow-back-rounded" variant="ghost" color="neutral" />
+                  <h2 class="truncate text-xl font-semibold text-highlighted">{{ user?.nickname ?? '用户设置' }}</h2>
+                </div>
+                <div v-if="user" class="mt-1 flex flex-wrap gap-1.5 pl-10">
+                  <u-badge color="neutral" variant="soft" icon="material-symbols:id-card-outline-rounded">用户 #{{ user.id }}</u-badge>
+                  <u-badge color="neutral" variant="soft" icon="material-symbols:calendar-today-outline-rounded">注册于 {{ formatDate(user.ctime_at) }}</u-badge>
+                  <u-badge v-if="user.must_change_password" color="warning" variant="soft" icon="material-symbols:password-rounded">待修改密码</u-badge>
+                </div>
               </div>
-              <div v-if="user" class="mt-1 flex flex-wrap gap-1.5 pl-10">
-                <u-badge color="neutral" variant="soft" icon="material-symbols:id-card-outline-rounded">用户 #{{ user.id }}</u-badge>
-                <u-badge color="neutral" variant="soft" icon="material-symbols:calendar-today-outline-rounded">注册于 {{ formatDate(user.ctime_at) }}</u-badge>
-                <u-badge v-if="user.must_change_password" color="warning" variant="soft" icon="material-symbols:password-rounded">待修改密码</u-badge>
-              </div>
+              <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" :loading="loading" :disabled="dirty || saving" @click="loadUser" />
             </div>
-            <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" :loading="loading" :disabled="dirty || saving" @click="loadUser" />
-          </div>
 
-          <div v-if="loading && !user" class="space-y-3"><u-skeleton class="h-64 w-full" /><u-skeleton class="h-32 w-full" /></div>
-          <div v-else-if="user" class="space-y-8">
-            <section class="space-y-4">
-              <h3 class="text-lg font-semibold text-highlighted">账号信息</h3>
-              <div class="space-y-3 rounded-md bg-elevated/60 p-4 ring ring-default">
-                <rb-form-field row narrow-label label="邮箱" icon="material-symbols:alternate-email-rounded" :dirty="draft.email !== user.email" :reset="() => (draft.email = user!.email)"
-                  ><u-input v-model="draft.email" type="email" class="w-full" :disabled="saving"
-                /></rb-form-field>
-                <u-separator />
-                <rb-form-field row narrow-label label="昵称" icon="material-symbols:badge-outline-rounded" :dirty="draft.nickname !== user.nickname" :reset="() => (draft.nickname = user!.nickname)"
-                  ><u-input v-model="draft.nickname" class="w-full" :maxlength="60" :disabled="saving"
-                /></rb-form-field>
-                <u-separator />
-                <rb-form-field row narrow-label label="个人简介" icon="material-symbols:notes-rounded" :dirty="draft.bio !== (user.bio ?? '')" :reset="() => (draft.bio = user!.bio ?? '')"
-                  ><u-textarea v-model="draft.bio" class="w-full" :maxlength="200" :rows="4" :disabled="saving"
-                /></rb-form-field>
-                <u-separator />
-                <rb-form-field row narrow-label label="用户角色" icon="material-symbols:manage-accounts-outline-rounded" :dirty="draft.role !== user.urole" :reset="() => (draft.role = user!.urole)">
-                  <u-badge v-if="user.urole === RbUserRole.Root" color="info" class="mt-0.5" variant="soft" icon="material-symbols:security-rounded">超级管理员</u-badge>
-                  <u-field-group v-else class="flex-wrap">
-                    <u-button
-                      v-for="item in roleItems"
-                      :key="item.value"
-                      :icon="item.icon"
-                      color="neutral"
-                      :active="draft.role === item.value"
-                      :active-color="item.color"
-                      variant="soft"
-                      :disabled="roleDisabled(item.value)"
-                      @click="draft.role = item.value"
-                    >
-                      {{ item.label }}
-                    </u-button>
-                  </u-field-group>
-                </rb-form-field>
-              </div>
-            </section>
+            <div v-if="loading && !user" class="space-y-3">
+              <u-skeleton class="h-64 w-full" />
+              <u-skeleton class="h-32 w-full" />
+            </div>
+            <u-form v-else-if="user" :state="draft" class="flex flex-col gap-8" @submit.prevent="save">
+              <section class="space-y-4">
+                <h2 class="text-xl font-semibold text-highlighted">账号信息</h2>
+                <div class="space-y-3 rounded-md bg-elevated/60 p-4 ring ring-default">
+                  <rb-form-field row narrow-label label="邮箱" icon="material-symbols:alternate-email-rounded" :dirty="draft.email !== user.email" :reset="() => (draft.email = user!.email)"
+                    ><u-input v-model="draft.email" type="email" class="w-full" :disabled="saving"
+                  /></rb-form-field>
+                  <u-separator />
+                  <rb-form-field row narrow-label label="昵称" icon="material-symbols:badge-outline-rounded" :dirty="draft.nickname !== user.nickname" :reset="() => (draft.nickname = user!.nickname)"
+                    ><u-input v-model="draft.nickname" class="w-full" :maxlength="60" :disabled="saving"
+                  /></rb-form-field>
+                  <u-separator />
+                  <rb-form-field row narrow-label label="个人简介" icon="material-symbols:notes-rounded" :dirty="draft.bio !== (user.bio ?? '')" :reset="() => (draft.bio = user!.bio ?? '')"
+                    ><u-textarea v-model="draft.bio" class="w-full" :maxlength="200" :rows="4" :disabled="saving"
+                  /></rb-form-field>
+                  <u-separator />
+                  <rb-form-field row narrow-label label="用户角色" icon="material-symbols:manage-accounts-outline-rounded" :dirty="draft.role !== user.urole" :reset="() => (draft.role = user!.urole)">
+                    <u-badge v-if="user.urole === RbUserRole.Root" color="info" class="mt-0.5" variant="soft" icon="material-symbols:security-rounded">超级管理员</u-badge>
+                    <u-field-group v-else class="flex-wrap">
+                      <u-button
+                        v-for="item in roleItems"
+                        :key="item.value"
+                        :icon="item.icon"
+                        color="neutral"
+                        :active="draft.role === item.value"
+                        :active-color="item.color"
+                        variant="soft"
+                        :disabled="roleDisabled(item.value)"
+                        @click="draft.role = item.value"
+                      >
+                        {{ item.label }}
+                      </u-button>
+                    </u-field-group>
+                  </rb-form-field>
+                </div>
+              </section>
 
-            <section class="space-y-4">
-              <h3 class="text-lg font-semibold text-highlighted">所属队伍</h3>
-              <u-empty v-if="user.teams.length === 0" title="未加入任何队伍" icon="material-symbols:group-off-outline-rounded" />
-              <div v-else class="divide-y divide-default rounded-md border border-default bg-default px-4">
-                <nuxt-link v-for="team in user.teams" :key="`${team.game_id}:${team.team_id}`" :to="`/admin/games/${team.game_id}/teams/${team.team_id}`" class="group flex items-center gap-3 py-4">
-                  <u-icon name="material-symbols:groups-2-outline-rounded" class="size-6 text-muted" />
-                  <div class="min-w-0 flex-1">
-                    <div class="font-medium text-highlighted">{{ team.team_name }}</div>
-                    <div class="mt-1 text-sm text-muted">{{ team.game_title }}</div>
-                  </div>
-                  <u-badge v-if="team.is_captain" color="warning" variant="soft" icon="material-symbols:award-star-outline-rounded">队长</u-badge>
-                  <u-icon name="material-symbols:chevron-right-rounded" class="size-5 text-dimmed transition-transform group-hover:translate-x-0.5" />
-                </nuxt-link>
-              </div>
-            </section>
+              <u-separator />
 
-            <section>
-              <u-collapsible :unmount-on-hide="false">
-                <button type="button" class="group flex w-full cursor-pointer items-center justify-between gap-3 text-start">
-                  <h3 class="text-lg font-semibold text-highlighted">重置密码</h3>
-                  <u-icon name="material-symbols:expand-more-rounded" class="size-5 text-muted transition-transform group-data-[state=open]:rotate-180" />
-                </button>
-                <template #content
-                  ><div class="mt-4 flex items-center justify-between gap-4 rounded-md bg-elevated/60 p-4 ring ring-default">
-                    <p class="text-sm text-muted">{{ canResetPassword ? '生成一次性随机密码，注销该用户所有会话，并要求下次登录后立即修改。' : '不能重置同级或更高权限账号的密码。' }}</p>
-                    <u-button color="warning" variant="soft" icon="material-symbols:password-rounded" label="生成临时密码" :disabled="!canResetPassword" @click="resetOpen = true" /></div
-                ></template>
-              </u-collapsible>
-            </section>
-          </div>
-        </main>
-        <aside class="hidden xl:block" />
+              <section class="space-y-4">
+                <h2 class="text-xl font-semibold text-highlighted">所属队伍</h2>
+                <u-empty v-if="user.teams.length === 0" title="未加入任何队伍" icon="material-symbols:group-off-outline-rounded" />
+                <div v-else class="divide-y divide-default rounded-md border border-default bg-default px-4">
+                  <nuxt-link v-for="team in user.teams" :key="`${team.game_id}:${team.team_id}`" :to="`/admin/games/${team.game_id}/teams/${team.team_id}`" class="group flex items-center gap-3 py-4">
+                    <u-icon name="material-symbols:groups-2-outline-rounded" class="size-6 text-muted" />
+                    <div class="min-w-0 flex-1">
+                      <div class="font-medium text-highlighted">{{ team.team_name }}</div>
+                      <div class="mt-1 text-sm text-muted">{{ team.game_title }}</div>
+                    </div>
+                    <u-badge v-if="team.is_captain" color="warning" variant="soft" icon="material-symbols:award-star-outline-rounded">队长</u-badge>
+                    <u-icon name="material-symbols:chevron-right-rounded" class="size-5 text-dimmed transition-transform group-hover:translate-x-0.5" />
+                  </nuxt-link>
+                </div>
+              </section>
+
+              <u-separator />
+
+              <section class="space-y-4">
+                <u-collapsible :unmount-on-hide="false">
+                  <button type="button" class="group flex w-full cursor-pointer items-center justify-between gap-3 text-start">
+                    <h2 class="text-xl font-semibold text-highlighted">重置密码</h2>
+                    <u-icon name="material-symbols:expand-more-rounded" class="size-5 text-muted transition-transform group-data-[state=open]:rotate-180" />
+                  </button>
+                  <template #content
+                    ><div class="mt-4 flex items-center justify-between gap-4 rounded-md bg-elevated/60 p-4 ring ring-default">
+                      <p class="text-sm text-muted">{{ canResetPassword ? '生成一次性随机密码，注销该用户所有会话，并要求下次登录后立即修改。' : '不能重置同级或更高权限账号的密码。' }}</p>
+                      <u-button color="warning" variant="soft" icon="material-symbols:password-rounded" label="生成临时密码" :disabled="!canResetPassword" @click="resetOpen = true" /></div
+                  ></template>
+                </u-collapsible>
+              </section>
+            </u-form>
+          </main>
+
+          <aside class="hidden xl:block" />
+
+          <rb-confirm-modal
+            v-model:open="resetOpen"
+            title="重置用户密码"
+            description="该用户的所有登录会话将立即失效。"
+            confirm-label="确认重置"
+            confirm-color="warning"
+            confirm-icon="material-symbols:password-rounded"
+            :busy="resetting"
+            @confirm="resetPassword"
+          />
+          <u-modal v-model:open="passwordOpen" title="一次性临时密码" description="关闭后将不再显示，可再次重置。" :dismissible="false">
+            <template #body
+              ><div class="space-y-4">
+                <u-alert color="warning" variant="subtle" icon="material-symbols:warning-outline-rounded" title="用户登录后必须立即修改密码" /><rb-form-field label="临时密码"
+                  ><u-input :model-value="temporaryPassword" readonly class="w-full font-mono"
+                    ><template #trailing><u-button icon="material-symbols:content-copy-outline-rounded" color="neutral" variant="link" @click="copyPassword" /></template></u-input
+                ></rb-form-field>
+                <div class="flex justify-end"><u-button label="我已记录" @click="passwordOpen = false" /></div></div
+            ></template>
+          </u-modal>
+        </div>
       </div>
-
-      <rb-confirm-modal
-        v-model:open="resetOpen"
-        title="重置用户密码"
-        description="该用户的所有登录会话将立即失效。"
-        confirm-label="确认重置"
-        confirm-color="warning"
-        confirm-icon="material-symbols:password-rounded"
-        :busy="resetting"
-        @confirm="resetPassword"
-      />
-      <u-modal v-model:open="passwordOpen" title="一次性临时密码" description="关闭后将不再显示，可再次重置。" :dismissible="false">
-        <template #body
-          ><div class="space-y-4">
-            <u-alert color="warning" variant="subtle" icon="material-symbols:warning-outline-rounded" title="用户登录后必须立即修改密码" /><rb-form-field label="临时密码"
-              ><u-input :model-value="temporaryPassword" readonly class="w-full font-mono"
-                ><template #trailing><u-button icon="material-symbols:content-copy-outline-rounded" color="neutral" variant="link" @click="copyPassword" /></template></u-input
-            ></rb-form-field>
-            <div class="flex justify-end"><u-button label="我已记录" @click="passwordOpen = false" /></div></div
-        ></template>
-      </u-modal>
     </template>
   </u-dashboard-panel>
 </template>

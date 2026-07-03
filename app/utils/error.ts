@@ -4,6 +4,8 @@ export interface RbError {
 }
 
 export enum RbErrorCode {
+  CaptchaUnavailable = -109,
+  CaptchaInvalid = -108,
   Maintenance = -107,
   PasswordChangeRequired = -106,
   NotFound = -104,
@@ -13,6 +15,8 @@ export enum RbErrorCode {
 }
 
 export const defaultErrorHints: Record<number, string> = {
+  [RbErrorCode.CaptchaUnavailable]: '验证码服务暂时不可用。',
+  [RbErrorCode.CaptchaInvalid]: '验证码验证失败，请重试。',
   [RbErrorCode.Maintenance]: '系统正在维护。',
   [RbErrorCode.NotFound]: '请求的资源不存在。',
   [RbErrorCode.Forbidden]: '权限不足。',

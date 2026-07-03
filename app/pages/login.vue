@@ -27,16 +27,26 @@ const api = useApi();
 const route = useRoute();
 const systemStatus = useSystemStatus();
 await systemStatus.refresh();
+const authConfig = useAuthConfig();
+await authConfig.refresh();
+const captcha = useTemplateRef<{ reset: () => void }>('captcha');
+const captchaToken = ref<string>();
+const captchaConfig = computed(() => authConfig.ref.value?.captcha ?? undefined);
+const captchaRequired = computed(() => Boolean(captchaConfig.value?.login_required));
 
 async function submit(event: FormSubmitEvent<Schema>) {
   loginLoading.value = true;
   try {
-    const { code, data } = await api.post<{ uid: number; must_change_password: boolean }>('/auth/login', event.data, {
+    const { code, data } = await api.post<{ uid: number; must_change_password: boolean }>(
+      '/auth/login',
+      { ...event.data, captcha_token: captchaToken.value },
+      {
       errorHints: {
         [-2]: '用户不存在。',
         [-1]: '用户名或密码错误。',
       },
-    });
+      },
+    );
 
     if (code == 0) {
       toast.add({
@@ -61,7 +71,9 @@ async function submit(event: FormSubmitEvent<Schema>) {
       }, 1000);
     }
   } catch (error) {
+    captcha.value?.reset();
     handleError(error, '登录失败', true);
+  } finally {
     loginLoading.value = false;
   }
 }
@@ -95,8 +107,9 @@ async function submit(event: FormSubmitEvent<Schema>) {
               </template>
             </u-input>
           </u-form-field>
+          <rb-captcha v-if="captchaRequired && captchaConfig" ref="captcha" v-model="captchaToken" :config="captchaConfig" action="login" />
           <div class="mt-8">
-            <u-button type="submit" :loading="loginLoading" class="w-full justify-center cursor-pointer" size="lg">登录</u-button>
+            <u-button type="submit" :loading="loginLoading" :disabled="captchaRequired && !captchaToken" class="w-full justify-center cursor-pointer" size="lg">登录</u-button>
           </div>
           <div class="">
             <u-button v-if="systemStatus.ref.value?.registration_open" class="w-full justify-center cursor-pointer" variant="outline" size="md" to="/register">注册</u-button>

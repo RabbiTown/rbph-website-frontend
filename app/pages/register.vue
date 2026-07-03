@@ -28,11 +28,17 @@ const toast = useToast();
 const api = useApi();
 const systemStatus = useSystemStatus();
 await systemStatus.refresh();
+const authConfig = useAuthConfig();
+await authConfig.refresh();
+const captcha = useTemplateRef<{ reset: () => void }>('captcha');
+const captchaToken = ref<string>();
+const captchaConfig = computed(() => authConfig.ref.value?.captcha ?? undefined);
+const captchaRequired = computed(() => Boolean(captchaConfig.value?.registration_required));
 
 async function submit(event: FormSubmitEvent<Schema>) {
   loginLoading.value = true;
   try {
-    const { code } = await api.post('/auth/register', event.data, {
+    const { code } = await api.post('/auth/register', { ...event.data, captcha_token: captchaToken.value }, {
       errorHints: {
         [-3]: '系统已关闭注册。',
         [-2]: '请求无效。',
@@ -71,6 +77,7 @@ async function submit(event: FormSubmitEvent<Schema>) {
       });
     }
   } catch (error) {
+    captcha.value?.reset();
     handleError(error, '注册失败', true);
   } finally {
     loginLoading.value = false;
@@ -110,8 +117,9 @@ async function submit(event: FormSubmitEvent<Schema>) {
                 </template>
               </u-input>
             </u-form-field>
+            <rb-captcha v-if="captchaRequired && captchaConfig" ref="captcha" v-model="captchaToken" :config="captchaConfig" action="register" />
             <div class="mt-8">
-              <u-button type="submit" :loading="loginLoading" class="w-full justify-center cursor-pointer" size="lg">注册</u-button>
+              <u-button type="submit" :loading="loginLoading" :disabled="captchaRequired && !captchaToken" class="w-full justify-center cursor-pointer" size="lg">注册</u-button>
             </div>
             <div>
               <u-button class="w-full justify-center cursor-pointer" variant="outline" size="md" to="/login">前往登录页面</u-button>

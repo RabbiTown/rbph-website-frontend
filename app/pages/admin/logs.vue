@@ -130,6 +130,8 @@ function logView(log: AdminLogData) {
         details: fieldDetails(data.fields, {
           registration_open: '开放注册',
           require_email_verification: '邮箱验证',
+          captcha_login_required: '登录验证码',
+          captcha_registration_required: '注册验证码',
           max_sessions: '最大并发会话',
           maintenance_enabled: '维护模式',
           maintenance_message: '维护提示',

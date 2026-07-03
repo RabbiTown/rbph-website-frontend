@@ -39,10 +39,9 @@ const teamRestrictionDescription = computed(() => {
   const penalties = disabledTeamFeatures.value;
   if (!banned && penalties.length === 0) return '';
 
-  const contact = '如有异议，请联系比赛工作人员。';
-  if (banned && penalties.length > 0) return `队伍已封禁，并受到以下处罚：${penalties.join('、')}。${contact}`;
-  if (banned) return `队伍已封禁。${contact}`;
-  return `队伍受到以下处罚：${penalties.join('、')}。${contact}`;
+  if (banned && penalties.length > 0) return `队伍已封禁，并受到以下处罚：${penalties.join('、')}。`;
+  if (banned) return '队伍已封禁。';
+  return `队伍受到以下处罚：${penalties.join('、')}。`;
 });
 
 async function reloadTeamInfo() {
@@ -571,7 +570,12 @@ watch(user, () => syncUserState(), { immediate: true });
                 </div>
               </div>
 
-              <u-alert v-if="teamRestrictionDescription" color="error" variant="subtle" icon="material-symbols:gpp-bad-outline-rounded" title="队伍状态受限" :description="teamRestrictionDescription" />
+              <u-alert v-if="teamRestrictionDescription" color="error" variant="subtle" icon="material-symbols:gpp-bad-outline-rounded" title="队伍状态受限">
+                <template #description>
+                  {{ teamRestrictionDescription }}
+                  <span class="whitespace-nowrap">如有异议，请联系比赛工作人员。</span>
+                </template>
+              </u-alert>
 
               <u-form :schema="editSchema" :state="editState" class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default" @submit="editSubmit">
                 <rb-form-field row narrow-label label="队伍 ID" icon="material-symbols:cards-stack-rounded">
