@@ -6,6 +6,11 @@ export enum RbUserRole {
   Root = 4,
 }
 
+export enum AvatarProvider {
+  Cravatar = 'cravatar',
+  Catavatar = 'catavatar',
+}
+
 export interface RbUser {
   id: number;
   email: string;
@@ -14,6 +19,7 @@ export interface RbUser {
   bio?: string;
   must_change_password: boolean;
   avatar: string;
+  avatar_provider: AvatarProvider;
   ctime_at: string;
 }
 
@@ -21,6 +27,7 @@ export interface AdminUserListItem {
   id: number;
   email: string;
   nickname: string;
+  avatar: string;
   urole: RbUserRole;
   must_change_password: boolean;
   team_count: number;
@@ -35,7 +42,7 @@ export interface AdminUserTeam {
   is_captain: boolean;
 }
 
-export interface AdminUserDetail extends Omit<RbUser, 'avatar'> {
+export interface AdminUserDetail extends RbUser {
   teams: AdminUserTeam[];
 }
 

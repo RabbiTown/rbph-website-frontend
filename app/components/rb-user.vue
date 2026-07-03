@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { UserProps } from '@nuxt/ui';
 
-const props = withDefaults(defineProps<UserProps & { email?: string }>(), {
+const props = withDefaults(defineProps<UserProps & { email?: string; avatarProvider?: AvatarProvider }>(), {
   email: '',
+  avatarProvider: AvatarProvider.Cravatar,
 });
 
 const attrs = useAttrs();
@@ -11,12 +12,12 @@ const avatar = computed(() => {
   const rawAvatar = props.avatar ?? {};
   if (rawAvatar.src) return rawAvatar;
 
-  const src = buildCravatarUrl(props.email ?? '');
+  const src = buildAvatarUrl(props.email ?? '', props.avatarProvider);
   return src ? { ...rawAvatar, src } : rawAvatar;
 });
 
 const userProps = computed(() => {
-  const { email: _email, avatar: _avatar, ...rest } = props;
+  const { email: _email, avatarProvider: _avatarProvider, avatar: _avatar, ...rest } = props;
   return { ...rest, avatar: avatar.value };
 });
 </script>

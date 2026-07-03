@@ -89,15 +89,22 @@ const userState = reactive({
   email: '',
   nickname: '',
   bio: '',
+  avatar_provider: AvatarProvider.Cravatar,
 });
 
-const userDirty = computed(() => Boolean(user.value && (userState.nickname !== user.value.nickname || userState.bio !== (user.value.bio ?? ''))));
+const userDirty = computed(() => Boolean(user.value && (userState.nickname !== user.value.nickname || userState.bio !== (user.value.bio ?? '') || userState.avatar_provider !== user.value.avatar_provider)));
+const avatarPreview = computed(() => buildAvatarUrl(userState.email, userState.avatar_provider));
+const avatarProviderItems = [
+  { label: 'Cravatar', value: AvatarProvider.Cravatar, icon: 'material-symbols:account-circle-outline' },
+  { label: 'Catavatar', value: AvatarProvider.Catavatar, icon: 'material-symbols:pets' },
+];
 
 function syncUserState() {
   userState.id = user.value?.id ?? 0;
   userState.email = user.value?.email ?? '';
   userState.nickname = user.value?.nickname ?? '';
   userState.bio = user.value?.bio ?? '';
+  userState.avatar_provider = user.value?.avatar_provider ?? AvatarProvider.Cravatar;
 }
 
 async function userSubmit(event: FormSubmitEvent<UserProfileSchema>) {
@@ -110,6 +117,7 @@ async function userSubmit(event: FormSubmitEvent<UserProfileSchema>) {
       {
         nickname: event.data.nickname.trim(),
         bio: event.data.bio.trim() || null,
+        avatar_provider: userState.avatar_provider,
       },
       {
         errorHints: {
@@ -490,8 +498,18 @@ watch(user, () => syncUserState(), { immediate: true });
             </div>
 
             <u-form :schema="userProfileSchema" :state="userState" class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default" @submit="userSubmit">
-              <rb-form-field row narrow-label label="头像" icon="material-symbols:account-circle-outline">
-                <u-avatar :src="user?.avatar" :text="user?.nickname" icon="material-symbols:person-2-rounded" size="xl" />
+              <rb-form-field
+                row
+                narrow-label
+                label="头像"
+                icon="material-symbols:account-circle-outline"
+                :dirty="userState.avatar_provider !== user?.avatar_provider"
+                :reset="() => (userState.avatar_provider = user?.avatar_provider ?? AvatarProvider.Cravatar)"
+              >
+                <div class="flex flex-wrap items-center gap-3">
+                  <u-avatar :src="avatarPreview" :text="userState.nickname" icon="material-symbols:person-2-rounded" size="xl" />
+                  <u-select v-model="userState.avatar_provider" :items="avatarProviderItems" class="w-44" :disabled="userSubmitLoading" />
+                </div>
               </rb-form-field>
               <u-separator />
               <rb-form-field row narrow-label label="UID" icon="material-symbols:tag-rounded">

@@ -88,10 +88,11 @@ export function md5Hex(input: string) {
   return md5HexFallback(input);
 }
 
-export function buildCravatarUrl(email: string) {
+export function buildAvatarUrl(email: string, provider: AvatarProvider) {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return '';
 
   const hash = md5Hex(normalized);
+  if (provider === AvatarProvider.Catavatar) return `https://puzzle.cat/api/users/avatar/public/${hash}`;
   return `https://cn.cravatar.com/avatar/${hash}.png?d=identicon`;
 }

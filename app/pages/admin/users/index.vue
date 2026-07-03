@@ -170,7 +170,7 @@ onMounted(loadUsers);
           <u-empty v-else-if="users.length === 0" icon="material-symbols:person-search-outline-rounded" title="暂无用户" description="调整筛选条件，或新建一个用户。" />
           <div v-else class="divide-y divide-default rounded-md border border-default bg-default px-4">
             <nuxt-link v-for="item in users" :key="item.id" :to="`/admin/users/${item.id}`" class="group flex items-center gap-3 py-4">
-              <u-avatar :src="buildCravatarUrl(item.email)" :text="item.nickname" size="md" />
+              <u-avatar :src="item.avatar" :text="item.nickname" size="md" />
               <div class="min-w-0 flex-1">
                 <div class="flex min-w-0 flex-wrap items-center gap-2">
                   <span class="truncate font-medium text-highlighted">{{ item.nickname }}</span>

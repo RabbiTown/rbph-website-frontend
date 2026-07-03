@@ -3,7 +3,7 @@ import type { AvatarProps, BadgeProps } from '@nuxt/ui';
 
 const props = withDefaults(
   defineProps<{
-    user: { nickname: string; email?: string | null };
+    user: { nickname: string; email?: string | null; avatar?: string | null };
     avatar?: AvatarProps;
     color?: BadgeProps['color'];
     variant?: BadgeProps['variant'];
@@ -21,7 +21,7 @@ const avatar = computed<AvatarProps>(() => {
   const rawAvatar = props.avatar ?? {};
   if (rawAvatar.src) return rawAvatar;
 
-  const src = buildCravatarUrl(props.user.email ?? '');
+  const src = props.user.avatar ?? '';
   return src ? { ...rawAvatar, src, alt: props.user.nickname } : { ...rawAvatar, text: props.user.nickname };
 });
 </script>

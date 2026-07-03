@@ -432,7 +432,7 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
 
           <u-button v-else-if="ticket.assignee.id === user?.id" :class="assigneeActionButtonClass" size="xs" color="neutral" variant="soft" :loading="assigneeLoading" @click="unassign">
             <span :class="assigneeActionNormalClass">
-              <u-avatar :src="buildCravatarUrl(ticket.assignee.email ?? '')" :text="ticket.assignee.nickname" size="3xs" />
+              <u-avatar :src="ticket.assignee.avatar" :text="ticket.assignee.nickname" size="3xs" />
               <span class="min-w-0 truncate">{{ ticket.assignee.nickname }}</span>
             </span>
             <span :class="assigneeActionHoverClass">
@@ -444,7 +444,7 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
           <u-popover v-else v-model:open="assigneeConfirmOpen" arrow>
             <u-button :class="assigneeActionButtonClass" size="xs" color="neutral" variant="soft">
               <span :class="assigneeActionNormalClass">
-                <u-avatar :src="buildCravatarUrl(ticket.assignee.email ?? '')" :text="ticket.assignee.nickname" size="3xs" />
+                <u-avatar :src="ticket.assignee.avatar" :text="ticket.assignee.nickname" size="3xs" />
                 <span class="min-w-0 truncate">{{ ticket.assignee.nickname }}</span>
               </span>
               <span :class="assigneeActionHoverClass">

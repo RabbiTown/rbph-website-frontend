@@ -478,7 +478,7 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
 
                 <u-button v-else-if="thread.ticket.assignee.id === user?.id" :class="assigneeActionButtonClass" size="xs" color="neutral" variant="soft" :loading="assigneeLoading" @click="unassign">
                   <span :class="assigneeActionNormalClass">
-                    <u-avatar :src="buildCravatarUrl(thread.ticket.assignee.email ?? '')" :text="thread.ticket.assignee.nickname" size="3xs" />
+                    <u-avatar :src="thread.ticket.assignee.avatar" :text="thread.ticket.assignee.nickname" size="3xs" />
                     <span class="min-w-0 truncate">{{ thread.ticket.assignee.nickname }}</span>
                   </span>
                   <span :class="assigneeActionHoverClass">
@@ -490,7 +490,7 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
                 <u-popover v-else v-model:open="assigneeConfirmOpen" arrow>
                   <u-button :class="assigneeActionButtonClass" size="xs" color="neutral" variant="soft">
                     <span :class="assigneeActionNormalClass">
-                      <u-avatar :src="buildCravatarUrl(thread.ticket.assignee.email ?? '')" :text="thread.ticket.assignee.nickname" size="3xs" />
+                      <u-avatar :src="thread.ticket.assignee.avatar" :text="thread.ticket.assignee.nickname" size="3xs" />
                       <span class="min-w-0 truncate">{{ thread.ticket.assignee.nickname }}</span>
                     </span>
                     <span :class="assigneeActionHoverClass">

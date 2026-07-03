@@ -435,7 +435,7 @@ export enum RbTicketThreadItemType {
 export interface TicketMessage {
   type?: RbTicketThreadItemType.Message;
   id: number;
-  sender: { id: number; nickname: string };
+  sender: { id: number; nickname: string; avatar?: string };
   sender_type: RbTicketSenderType;
   cost_id?: number;
   cost_amount: number;
@@ -452,7 +452,7 @@ export interface TicketOperation {
   type: RbTicketThreadItemType.Operation;
   id: number;
   action: RbTicketOperationAction;
-  actor: { id: number; nickname: string };
+  actor: { id: number; nickname: string; avatar?: string };
   actor_type: RbTicketSenderType;
   message?: TicketMessage;
   ctime_at: string;
@@ -485,7 +485,7 @@ export interface TicketSummary {
   msg_count?: number;
   last_at: string | null;
   last_by?: RbTicketSenderType;
-  assignee?: { id: number; nickname: string; email?: string };
+  assignee?: { id: number; nickname: string; email?: string; avatar?: string };
 }
 
 export interface TicketPerm {
@@ -590,7 +590,7 @@ export interface StaffTeamOption {
 }
 
 export interface TicketAssignResponse {
-  assignee?: { id: number; nickname: string; email?: string } | null;
+  assignee?: { id: number; nickname: string; email?: string; avatar?: string } | null;
 }
 
 export enum NotificationKind {
