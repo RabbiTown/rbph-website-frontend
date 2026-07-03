@@ -251,7 +251,7 @@ onBeforeUnmount(() => dirtyToast.clear());
                   </rb-form-field>
                   <u-separator />
                   <rb-form-field row label="维护提示" icon="material-symbols:notes-rounded" :dirty="draft.maintenance_message !== settings.maintenance_message" :reset="() => (draft.maintenance_message = settings!.maintenance_message)">
-                    <u-textarea v-model="draft.maintenance_message" :rows="4" :maxlength="500" :disabled="saving" />
+                    <u-textarea v-model="draft.maintenance_message" class="w-full sm:w-64" :rows="4" :maxlength="500" :disabled="saving" />
                   </rb-form-field>
                 </div>
               </section>
