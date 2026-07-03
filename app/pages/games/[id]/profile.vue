@@ -573,7 +573,11 @@ watch(user, () => syncUserState(), { immediate: true });
               <u-alert v-if="teamRestrictionDescription" color="error" variant="subtle" icon="material-symbols:gpp-bad-outline-rounded" title="队伍状态受限">
                 <template #description>
                   {{ teamRestrictionDescription }}
-                  <span class="whitespace-nowrap">如有异议，请联系比赛工作人员。</span>
+                  <span class="whitespace-nowrap">
+                    具体原因可在
+                    <u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" label="队伍动态" class="p-0 align-middle mb-0.5" />
+                    中查看。
+                  </span>
                 </template>
               </u-alert>
 

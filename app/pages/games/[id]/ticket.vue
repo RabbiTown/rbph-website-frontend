@@ -6,6 +6,7 @@ definePageMeta({
 useUser().required();
 
 const game = useGame().ref;
+const team = useTeam().ref;
 
 useHead({
   titleTemplate: computed(() => buildTitleParts([{ text: '站内信' }, { text: game.value?.title, sep: ' - ' }])),
@@ -114,6 +115,8 @@ async function submitMessage() {
           [-4]: '发送的信息过长。',
           [-5]: '信息要求的费用无效。',
           [-8]: '当前不可发起或发送站内信。',
+          [-9]: '本队伍的站内信功能已被封禁。',
+          [-10]: '比赛当前仅允许回复已有站内信会话。',
         },
       });
       draftMessage.value = '';
@@ -150,14 +153,17 @@ const sendBlock = computed(() => {
 interface SendBlockConst {
   icon: string;
   color: 'error' | 'warning' | 'success' | 'primary' | 'secondary' | 'info' | 'neutral' | undefined;
-  desc: string;
+  title: string;
+  teamRestriction?: boolean;
 }
 
 const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
-  [RbTicketSendBlock.NoAccess]: { icon: 'material-symbols:error-med-outline-rounded', color: 'error', desc: '没有发送权限。' },
-  [RbTicketSendBlock.Closed]: { icon: 'material-symbols:check-rounded', color: 'success', desc: '本队伍站内信功能已被禁用。如果你认为这是一个错误，请通过其他渠道联系工作人员。' },
-  [RbTicketSendBlock.Pending]: { icon: 'material-symbols:more-horiz', color: 'warning', desc: '积压信息过多，请等待工作人员回复。' },
-  [RbTicketSendBlock.FeatureClosed]: { icon: 'material-symbols:lock-outline', color: 'warning', desc: '站内信功能已关闭，暂时不能发送消息。' },
+  [RbTicketSendBlock.NoAccess]: { icon: 'material-symbols:error-med-outline-rounded', color: 'error', title: '没有发送权限。' },
+  [RbTicketSendBlock.Closed]: { icon: 'material-symbols:check-rounded', color: 'success', title: '站内信会话已关闭。' },
+  [RbTicketSendBlock.Pending]: { icon: 'material-symbols:more-horiz', color: 'warning', title: '积压信息过多，请等待工作人员回复。' },
+  [RbTicketSendBlock.FeatureClosed]: { icon: 'material-symbols:lock-outline', color: 'warning', title: '比赛当前已关闭站内信功能。' },
+  [RbTicketSendBlock.FeatureExistingOnly]: { icon: 'material-symbols:history-rounded', color: 'warning', title: '比赛当前仅允许回复已有站内信会话。' },
+  [RbTicketSendBlock.TeamFeatureBanned]: { icon: 'material-symbols:block-outline', color: 'error', title: '本队伍的站内信功能已被封禁。', teamRestriction: true },
 };
 </script>
 
@@ -168,7 +174,24 @@ const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
         <div class="text-3xl font-bold">站内信</div>
       </div>
     </div>
-    <u-alert v-if="sendBlock" class="my-6" variant="subtle" :title="sendBlock.desc" :icon="sendBlock.icon" :color="sendBlock.color" />
+    <u-alert v-if="team?.is_banned && canSend" class="mt-6" variant="subtle" title="队伍当前处于封禁状态，但仍可使用站内信。" icon="material-symbols:warning-outline-rounded" color="warning">
+      <template #description>
+        <span class="whitespace-nowrap">
+          具体原因可在
+          <u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" label="队伍动态" class="p-0 align-middle mb-0.5" />
+          中查看。
+        </span>
+      </template>
+    </u-alert>
+    <u-alert v-if="sendBlock" class="my-6" variant="subtle" :title="sendBlock.title" :icon="sendBlock.icon" :color="sendBlock.color">
+      <template v-if="sendBlock.teamRestriction" #description>
+        <span class="whitespace-nowrap">
+          具体原因可在
+          <u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" label="队伍动态" class="p-0 align-middle mb-0.5" />
+          中查看。
+        </span>
+      </template>
+    </u-alert>
     <rbph-message-edit
       v-else
       v-model:draft="draftMessage"

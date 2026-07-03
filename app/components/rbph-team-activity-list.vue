@@ -139,12 +139,34 @@ function activityView(activity: RbTeamActivity) {
   const currencyText = formatActivityLogCurrency(activity);
   const targetUser = activityUserLabel(data.target_user, activity.target_user_id);
   const actorTitle = (action: string) => activityActorTitle(activity, action, true);
+  const accessChangeLabels: Record<string, string> = {
+    'team:banned': '封禁了队伍',
+    'team:unbanned': '解封了队伍',
+    'team:locked': '锁定了队伍',
+    'team:unlocked': '解锁了队伍',
+    'direct_message:banned': '封禁了站内信',
+    'direct_message:unbanned': '解封了站内信',
+    'puzzle_ticket:banned': '封禁了人工提示',
+    'puzzle_ticket:unbanned': '解封了人工提示',
+    'leaderboard:banned': '封禁了排行榜',
+    'leaderboard:unbanned': '解封了排行榜',
+  };
 
   switch (activity.type) {
     case 'team.created':
       return { icon: 'material-symbols:group-add-outline-rounded', color: 'success' as const, title: actorTitle(`创建了队伍${data.team?.name ? teamTitle : ''}`), details: [] };
     case 'team.updated':
       return { icon: 'material-symbols:edit-outline-rounded', color: 'neutral' as const, title: actorTitle('更新了队伍信息'), details: [] };
+    case 'team.access_changed': {
+      const changes = (data.changes ?? []).map(change => accessChangeLabels[`${change.target === 'feature' ? change.feature : 'team'}:${change.action}`]).filter(Boolean);
+      const reason = typeof data.reason === 'string' ? data.reason.trim() : '';
+      return {
+        icon: 'material-symbols:admin-panel-settings-outline-rounded',
+        color: changes.some(change => change.startsWith('封禁') || change.startsWith('锁定')) ? ('warning' as const) : ('primary' as const),
+        title: actorTitle(changes.length > 0 ? changes.join('、') : '调整了队伍权限'),
+        details: reason ? [`原因：${reason}`] : [],
+      };
+    }
     case 'team.member.joined':
       return { icon: 'material-symbols:person-add-outline-rounded', color: 'success' as const, title: actorTitle('加入了队伍'), details: [] };
     case 'team.member.left':

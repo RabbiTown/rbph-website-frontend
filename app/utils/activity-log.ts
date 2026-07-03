@@ -44,6 +44,12 @@ export interface ActivityLogCost {
   amount?: number | null;
 }
 
+export interface ActivityLogAccessChange {
+  target?: 'team' | 'feature' | null;
+  feature?: RbTeamFeature | null;
+  action?: 'banned' | 'unbanned' | 'locked' | 'unlocked' | null;
+}
+
 export interface ActivityLogPayload {
   user?: ActivityLogUserRef | null;
   target_user?: ActivityLogUserRef | null;
@@ -66,6 +72,7 @@ export interface ActivityLogPayload {
   cooldown_till?: string | null;
   email?: string | null;
   reason?: string | null;
+  changes?: ActivityLogAccessChange[] | null;
   [key: string]: unknown;
 }
 

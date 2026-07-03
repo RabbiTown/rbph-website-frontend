@@ -18,6 +18,7 @@ const game = useGame().ref;
 const pageData = ref<TicketThread>();
 const historyGapIndex = ref(1);
 const ticket = computed(() => pageData.value?.ticket);
+const teamBanned = computed(() => ticket.value?.team?.state === RbTeamState.Banned);
 const sendBlock = computed(() => {
   const block = pageData.value?.perm.send_block;
   return block ? sendBlockConsts[block] : undefined;
@@ -156,7 +157,15 @@ async function submitMessage(senderType: RbTicketSenderType, forceAssignee = fal
         force_assignee: forceAssignee,
       } satisfies TicketSendRequest;
       const { code, data } = await api.post<TicketSendResponse>(`/tickets/${ticketId}/send`, payload, {
-        errorHints: { [-1]: '这条人工提示已关闭。', [-2]: '积压信息过多，请先等待工作人员回复。', [-3]: '内容类型无效或无权使用。', [-4]: '发送的信息过长。', [-5]: '信息要求的费用无效。' },
+        errorHints: {
+          [-1]: '这条人工提示已关闭。',
+          [-2]: '积压信息过多，请先等待工作人员回复。',
+          [-3]: '内容类型无效或无权使用。',
+          [-4]: '发送的信息过长。',
+          [-5]: '信息要求的费用无效。',
+          [-8]: '比赛当前已关闭人工提示功能。',
+          [-9]: '本队伍的人工提示功能已被封禁。',
+        },
       });
       draftMessage.value = '';
 
@@ -333,14 +342,17 @@ async function unlockMessage(message: TicketMessage) {
 interface SendBlockConst {
   icon: string;
   color: 'error' | 'warning' | 'success' | 'primary' | 'secondary' | 'info' | 'neutral' | undefined;
-  desc: string;
+  title: string;
+  teamRestriction?: boolean;
 }
 
 const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
-  [RbTicketSendBlock.NoAccess]: { icon: 'material-symbols:error-med-outline-rounded', color: 'error', desc: '没有发送权限。' },
-  [RbTicketSendBlock.Closed]: { icon: 'material-symbols:check-rounded', color: 'success', desc: '人工提示已关闭，不再接受新的回复。' },
-  [RbTicketSendBlock.Pending]: { icon: 'material-symbols:more-horiz', color: 'warning', desc: '请等待工作人员回复。' },
-  [RbTicketSendBlock.FeatureClosed]: { icon: 'material-symbols:lock-outline', color: 'warning', desc: '人工提示功能已关闭，暂时不能发送消息。' },
+  [RbTicketSendBlock.NoAccess]: { icon: 'material-symbols:error-med-outline-rounded', color: 'error', title: '没有发送权限。' },
+  [RbTicketSendBlock.Closed]: { icon: 'material-symbols:check-rounded', color: 'success', title: '人工提示已关闭，不再接受新的回复。' },
+  [RbTicketSendBlock.Pending]: { icon: 'material-symbols:more-horiz', color: 'warning', title: '请等待工作人员回复。' },
+  [RbTicketSendBlock.FeatureClosed]: { icon: 'material-symbols:lock-outline', color: 'warning', title: '比赛当前已关闭人工提示功能。' },
+  [RbTicketSendBlock.FeatureExistingOnly]: { icon: 'material-symbols:history-rounded', color: 'warning', title: '比赛当前仅允许回复已有人工提示。' },
+  [RbTicketSendBlock.TeamFeatureBanned]: { icon: 'material-symbols:block-outline', color: 'error', title: '本队伍的人工提示功能已被封禁。', teamRestriction: true },
 };
 
 const tabItems = computed(
@@ -476,6 +488,15 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
 
     <u-tabs :items="tabItems" variant="link" :ui="{ list: tabItems.length > 1 ? undefined : 'hidden' }">
       <template #as-team>
+        <u-alert v-if="teamBanned && canSend" class="mb-2" variant="subtle" title="队伍当前处于封禁状态，但仍可回复人工提示。" icon="material-symbols:warning-outline-rounded" color="warning">
+          <template #description>
+            <span class="whitespace-nowrap">
+              具体原因可在
+              <u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" label="队伍动态" class="p-0 align-middle mb-0.5" />
+              中查看。
+            </span>
+          </template>
+        </u-alert>
         <rbph-message-edit
           v-if="canSend"
           v-model:draft="draftMessage"
@@ -486,7 +507,15 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
           :loading="!pageData || submitLoading"
           @submit="submitTeamMessage"
         />
-        <u-alert v-if="sendBlock" variant="subtle" :title="sendBlock.desc" :icon="sendBlock.icon" :color="sendBlock.color" />
+        <u-alert v-if="sendBlock" variant="subtle" :title="sendBlock.title" :icon="sendBlock.icon" :color="sendBlock.color">
+          <template v-if="sendBlock.teamRestriction" #description>
+            <span class="whitespace-nowrap">
+              具体原因可在
+              <u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" label="队伍动态" class="p-0 align-middle mb-0.5" />
+              中查看。
+            </span>
+          </template>
+        </u-alert>
       </template>
       <template #as-host>
         <u-alert v-if="pageData?.ticket?.state === RbTicketState.Closed" class="mb-2" variant="subtle" title="工单已关闭。" description="你仍然可以作为工作人员回复，但是该队伍无法再追问。" icon="material-symbols:check-rounded" color="success" />

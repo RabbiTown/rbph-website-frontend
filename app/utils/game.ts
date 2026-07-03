@@ -407,6 +407,8 @@ export enum TicketOpenBlock {
   Cooldown = -3,
   Disabled = -4,
   FeatureClosed = -5,
+  FeatureExistingOnly = -6,
+  TeamFeatureBanned = -7,
 }
 
 export enum RbTicketSendBlock {
@@ -415,6 +417,8 @@ export enum RbTicketSendBlock {
   Closed = -2,
   Pending = -3,
   FeatureClosed = -4,
+  FeatureExistingOnly = -5,
+  TeamFeatureBanned = -6,
 }
 
 export enum RbTicketOperationAction {

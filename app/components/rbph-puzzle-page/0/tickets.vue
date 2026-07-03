@@ -128,7 +128,16 @@ async function submitMessage() {
       const staffTarget = isStaff.value && staffView.value === 'team' ? selectedTeam.value : undefined;
       const endpoint = staffTarget ? `/games/${gameId}/tickets/staff/puzzle/${puzzleId}/teams/${staffTarget.id}` : `/puzzles/${puzzleId}/tickets`;
       const { code, data } = await api.post<TicketOpenResponse>(endpoint, { content: draftMessage.value, content_type: draftContentType.value } satisfies TicketSendRequest, {
-        errorHints: { [-1]: '无法处理请求。', [-2]: '同时只能请求一个人工提示。', [-3]: '题目人工提示暂未开放。', [-4]: '内容类型无效或无权使用。', [-5]: '发送的信息过长。' },
+        errorHints: {
+          [-1]: '无法处理请求。',
+          [-2]: '同时只能请求一个人工提示。',
+          [-3]: '题目人工提示暂未开放。',
+          [-4]: '内容类型无效或无权使用。',
+          [-5]: '发送的信息过长。',
+          [-6]: '比赛当前已关闭人工提示功能。',
+          [-7]: '比赛当前仅允许回复已有人工提示。',
+          [-8]: '本队伍的人工提示功能已被封禁。',
+        },
       });
       draftMessage.value = '';
 
@@ -198,6 +207,15 @@ const cooldown = computed(() => {
       :description="isAdmin ? '输入队伍名称搜索，选择后可查看其人工提示状态并发起人工提示。' : '你只能查看本队视图。'"
     />
     <div v-else-if="pageData" class="flex flex-col gap-4">
+      <u-alert v-if="!isStaff && team?.is_banned && canOpenTicket" variant="subtle" title="队伍当前处于封禁状态，但仍可使用人工提示。" icon="material-symbols:warning-outline-rounded" color="warning">
+        <template #description>
+          <span class="whitespace-nowrap">
+            具体原因可在
+            <u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" label="队伍动态" class="p-0 align-middle mb-0.5" />
+            中查看。
+          </span>
+        </template>
+      </u-alert>
       <u-alert
         v-if="canOpenTicket"
         variant="subtle"
@@ -207,7 +225,17 @@ const cooldown = computed(() => {
         color="warning"
       />
       <u-alert v-else-if="pageData.open_block === TicketOpenBlock.Disabled" variant="subtle" title="暂时不能请求人工提示。" description="本题未启用人工提示。" icon="material-symbols:near-me-disabled-outline-rounded" color="error" />
-      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.FeatureClosed" variant="subtle" title="暂时不能请求人工提示。" description="人工提示功能已关闭。" icon="material-symbols:near-me-disabled-outline-rounded" color="warning" />
+      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.FeatureClosed" variant="subtle" title="暂时不能请求人工提示。" description="比赛当前已关闭人工提示功能。" icon="material-symbols:near-me-disabled-outline-rounded" color="warning" />
+      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.FeatureExistingOnly" variant="subtle" title="暂时不能请求新的人工提示。" description="比赛当前仅允许回复已有人工提示。" icon="material-symbols:history-rounded" color="warning" />
+      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.TeamFeatureBanned" variant="subtle" title="本队伍的人工提示功能已被封禁。" icon="material-symbols:block-outline" color="error">
+        <template #description>
+          <span class="whitespace-nowrap">
+            具体原因可在
+            <u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" label="队伍动态" class="p-0 align-middle mb-0.5" />
+            中查看。
+          </span>
+        </template>
+      </u-alert>
       <u-alert
         v-else-if="pageData.open_block === TicketOpenBlock.CurrentPuzzlePending"
         variant="subtle"

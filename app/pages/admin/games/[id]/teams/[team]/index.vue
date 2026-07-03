@@ -5,6 +5,13 @@ interface CurrencyDraft {
   hidden: boolean;
 }
 
+interface AccessChangePreview {
+  key: string;
+  label: string;
+  icon: string;
+  color: 'error' | 'warning' | 'primary';
+}
+
 const route = useRoute();
 const api = useApi();
 const toast = useToast();
@@ -22,6 +29,8 @@ const selectedAddUser = ref<AdminUserOption>();
 const addUserId = ref<number>();
 const deleteOpen = ref(false);
 const deleteConfirmName = ref('');
+const reasonOpen = ref(false);
+const accessChangeReason = ref('');
 const currencyDrafts = reactive<Record<number, CurrencyDraft>>({});
 
 const draft = reactive({
@@ -82,6 +91,40 @@ function currencyDirty(currency: AdminTeamCurrency) {
 const currenciesDirty = computed(() => Boolean(team.value?.currency.some(currencyDirty)));
 const dirty = computed(() => teamFieldsDirty.value || currenciesDirty.value);
 const deleteConfirmValid = computed(() => deleteConfirmName.value === team.value?.name);
+const accessChanges = computed<AccessChangePreview[]>(() => {
+  const current = team.value;
+  if (!current) return [];
+
+  const changes: AccessChangePreview[] = [];
+  if (draft.is_banned !== current.is_banned) {
+    changes.push({
+      key: 'team-banned',
+      label: draft.is_banned ? '封禁队伍' : '解封队伍',
+      icon: draft.is_banned ? 'material-symbols:block-outline' : 'material-symbols:check-rounded',
+      color: draft.is_banned ? 'error' : 'primary',
+    });
+  }
+  if (draft.is_locked !== current.is_locked) {
+    changes.push({
+      key: 'team-locked',
+      label: draft.is_locked ? '锁定队伍' : '解锁队伍',
+      icon: draft.is_locked ? 'material-symbols:lock-outline' : 'material-symbols:lock-open-outline-rounded',
+      color: draft.is_locked ? 'warning' : 'primary',
+    });
+  }
+  for (const feature of current.features) {
+    const enabled = draft.features[feature.feature];
+    if (enabled !== feature.enabled) {
+      changes.push({
+        key: feature.feature,
+        label: `${enabled ? '解封' : '封禁'}${featureMeta[feature.feature].label}`,
+        icon: enabled ? 'material-symbols:check-rounded' : 'material-symbols:block-outline',
+        color: enabled ? 'primary' : 'error',
+      });
+    }
+  }
+  return changes;
+});
 
 function syncDrafts(next: AdminTeamDetail) {
   draft.name = next.name;
@@ -134,11 +177,16 @@ function resetCurrency(currency: AdminTeamCurrency) {
   };
 }
 
-async function saveTeam() {
+async function saveTeam(reasonConfirmed = false) {
   const current = team.value;
   if (!current || !dirty.value || saving.value) return;
   if (!draft.name.trim() || !draft.pass.trim()) {
     toast.add({ title: '队伍名称和密码不能为空', icon: 'material-symbols:error-outline-rounded', color: 'error' });
+    return;
+  }
+  if (accessChanges.value.length > 0 && !reasonConfirmed) {
+    accessChangeReason.value = '';
+    reasonOpen.value = true;
     return;
   }
 
@@ -156,6 +204,7 @@ async function saveTeam() {
           is_banned: draft.is_banned,
           is_locked: draft.is_locked,
           features: Object.entries(draft.features).map(([feature, enabled]) => ({ feature, enabled })),
+          reason: accessChanges.value.length > 0 ? accessChangeReason.value.trim() || undefined : undefined,
         },
         { errorHints },
       );
@@ -168,6 +217,7 @@ async function saveTeam() {
     }
 
     applyTeam(next);
+    reasonOpen.value = false;
     dirtyToast.clear();
     toast.add({ title: '队伍设置已保存', icon: 'material-symbols:check-circle-outline-rounded', color: 'success' });
   } catch (error) {
@@ -281,7 +331,7 @@ onBeforeUnmount(() => dirtyToast.clear());
 
       <u-skeleton v-if="loading && !team" class="h-96 w-full" />
 
-      <u-form v-if="team" :state="draft" class="flex flex-col gap-8" @submit.prevent="saveTeam">
+      <u-form v-if="team" :state="draft" class="flex flex-col gap-8" @submit.prevent="saveTeam()">
         <section class="space-y-4">
           <h3 class="text-lg font-semibold text-highlighted">基本信息</h3>
           <div class="space-y-3 rounded-md bg-elevated/60 p-4 ring ring-default">
@@ -421,6 +471,27 @@ onBeforeUnmount(() => dirtyToast.clear());
     </main>
 
     <aside class="hidden xl:block" />
+
+    <rb-confirm-modal
+      v-model:open="reasonOpen"
+      title="确认队伍权限变更"
+      description="这些变更将记录在队伍动态中，可为本次变更提供一条原因。"
+      confirm-label="保存变更"
+      confirm-icon="material-symbols:save-outline-rounded"
+      :busy="saving"
+      @confirm="saveTeam(true)"
+    >
+      <template #body>
+        <div class="flex flex-wrap gap-2">
+          <u-badge v-for="change in accessChanges" :key="change.key" :color="change.color" variant="soft" :icon="change.icon">
+            {{ change.label }}
+          </u-badge>
+        </div>
+        <rb-form-field label="原因" class="mt-4">
+          <u-textarea v-model="accessChangeReason" class="w-full" :rows="4" :maxlength="500" :disabled="saving" placeholder="选填，说明本次权限变更的原因" />
+        </rb-form-field>
+      </template>
+    </rb-confirm-modal>
 
     <rb-confirm-modal
       v-model:open="addMemberOpen"
