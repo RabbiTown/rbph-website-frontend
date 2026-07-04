@@ -89,7 +89,7 @@ useSync().listen(SyncMessageType.GameNewAnnouncement, ({ data }) => {
 
       <rbph-annoucements v-if="activeTab === 'announcements'" :data="rawData" />
 
-      <div v-else class="max-w-4xl">
+      <div v-else>
         <u-timeline v-if="timelineItems.length" :items="timelineItems" color="success" class="ms-8 mt-2">
           <template #description="{ item }">
             <rbph-content v-if="item.phase.description" class="mt-3 text-sm" :content="{ content: item.phase.description, content_type: item.phase.content_type }" />
