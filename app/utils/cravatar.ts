@@ -80,11 +80,6 @@ function md5HexFallback(input: string) {
 }
 
 export function md5Hex(input: string) {
-  const runtimeCrypto = (globalThis as any).process?.getBuiltinModule?.('crypto');
-  if (runtimeCrypto?.createHash) {
-    return runtimeCrypto.createHash('md5').update(input).digest('hex');
-  }
-
   return md5HexFallback(input);
 }
 

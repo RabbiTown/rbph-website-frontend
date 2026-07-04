@@ -258,7 +258,7 @@ const navItems = computed<NavigationMenuItem[]>(() => [
                   :disabled="headerSaving"
                   @keydown.enter.prevent="focusContentEditor"
                   @keydown.down.prevent="focusContentEditor"
-                />
+                >
               </label>
               <div v-else class="flex min-w-0 flex-1 items-center gap-3 py-1.5">
                 <span class="shrink-0 text-3xl/10 font-bold text-muted">#</span>
@@ -283,7 +283,7 @@ const navItems = computed<NavigationMenuItem[]>(() => [
                     placeholder="slug"
                     aria-label="区域 slug"
                     :disabled="headerSaving"
-                  />
+                  >
                   <span v-else>{{ round.slug }}</span>
                 </label>
                 <u-badge variant="soft" color="neutral">#{{ round.id }}</u-badge>

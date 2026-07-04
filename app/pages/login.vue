@@ -42,7 +42,6 @@ async function submit(event: FormSubmitEvent<Schema>) {
       { ...event.data, captcha_token: captchaToken.value },
       {
       errorHints: {
-        [-2]: '用户不存在。',
         [-1]: '用户名或密码错误。',
       },
       },

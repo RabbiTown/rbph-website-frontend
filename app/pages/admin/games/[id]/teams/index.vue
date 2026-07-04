@@ -34,7 +34,7 @@ const filters = [
   { label: '已完赛', value: 'finished', icon: 'material-symbols:flag-outline-rounded' },
 ] as const;
 
-const createValid = computed(() => Boolean(createDraft.name.trim() && createDraft.pass.trim() && createDraft.captain_user_id));
+const createValid = computed(() => Boolean(createDraft.name.trim() && createDraft.pass.trim() && createDraft.captain_user_id != null));
 
 function teamQuery() {
   return {

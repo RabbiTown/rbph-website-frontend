@@ -1,9 +1,12 @@
 export interface RbError {
   code: number;
   message?: string;
+  retry_after?: number;
 }
 
 export enum RbErrorCode {
+  ServiceUnavailable = -111,
+  TooManyRequests = -110,
   CaptchaUnavailable = -109,
   CaptchaInvalid = -108,
   Maintenance = -107,
@@ -15,6 +18,8 @@ export enum RbErrorCode {
 }
 
 export const defaultErrorHints: Record<number, string> = {
+  [RbErrorCode.ServiceUnavailable]: '认证服务暂时不可用，请稍后重试。',
+  [RbErrorCode.TooManyRequests]: '操作过于频繁，请稍后重试。',
   [RbErrorCode.CaptchaUnavailable]: '验证码服务暂时不可用。',
   [RbErrorCode.CaptchaInvalid]: '验证码验证失败，请重试。',
   [RbErrorCode.Maintenance]: '系统正在维护。',

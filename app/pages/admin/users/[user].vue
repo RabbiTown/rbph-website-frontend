@@ -40,7 +40,7 @@ function syncDraft(next: AdminUserDetail) {
 }
 
 async function loadUser() {
-  if (!userId.value || dirty.value) return;
+  if (!Number.isInteger(userId.value) || userId.value < 0 || dirty.value) return;
   loading.value = true;
   try {
     const { data } = await api.get<{ user: AdminUserDetail }>(`/admin/users/${userId.value}`);

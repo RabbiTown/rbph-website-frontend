@@ -2,7 +2,7 @@
 import { Compartment, EditorSelection, EditorState, countColumn } from '@codemirror/state';
 import { EditorView, lineNumbers, placeholder as cmPlaceholder, keymap } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentLess, indentMore } from '@codemirror/commands';
-import { bracketMatching, indentOnInput, syntaxHighlighting, foldGutter, HighlightStyle, indentUnit, indentString } from '@codemirror/language';
+import { bracketMatching, indentOnInput, syntaxHighlighting, foldGutter, HighlightStyle, indentUnit } from '@codemirror/language';
 import { javascript } from '@codemirror/lang-javascript';
 import { html } from '@codemirror/lang-html';
 import { tags } from '@lezer/highlight';
@@ -121,7 +121,6 @@ function handleTab(view: EditorView) {
 
 function handleShiftTab(view: EditorView) {
   const { state } = view;
-  const spaces = Math.max(1, Math.min(8, Math.trunc(props.indent ?? 2)));
 
   if (state.selection.ranges.some(range => !range.empty)) {
     return indentLess(view);

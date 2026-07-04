@@ -92,8 +92,8 @@ export interface ActivityLogCurrencyInfo {
 export function activityUserLabel(value: ActivityLogUserRef | null | undefined, fallbackId?: number | null) {
   if (value?.nickname) return value.nickname;
   if (value?.name) return value.name;
-  if (value?.id) return `UID ${value.id}`;
-  if (fallbackId) return `UID ${fallbackId}`;
+  if (value?.id != null) return `UID ${value.id}`;
+  if (fallbackId != null) return `UID ${fallbackId}`;
   return '';
 }
 

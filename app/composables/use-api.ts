@@ -104,7 +104,8 @@ export function useApi() {
           const envelope = payload as ApiEnvelope<TResponse> & Record<string, unknown>;
           const code = typeof envelope.code === 'number' ? envelope.code : 0;
           if (code === RbErrorCode.Maintenance && import.meta.client) void navigateTo('/maintenance');
-          const resolvedMessage = envelope.message ?? errorHints?.[code];
+          const hint = errorHints?.[code] ?? defaultErrorHints[code];
+          const resolvedMessage = envelope.message ?? hint;
           const statusMessage = resolvedMessage ?? fetchError.message;
 
           throw createError({
@@ -113,7 +114,7 @@ export function useApi() {
             data: {
               code,
               message: resolvedMessage,
-              hint: errorHints?.[code],
+              hint,
               payload: envelope,
             },
           });

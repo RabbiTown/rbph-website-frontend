@@ -234,7 +234,7 @@ function openAddMember() {
 }
 
 async function addMember() {
-  if (!addUserId.value) return;
+  if (addUserId.value == null) return;
   memberBusy.value = true;
   try {
     const { data } = await api.post<{ team: AdminTeamDetail }>(`/admin/games/${gameId.value}/teams/${teamId.value}/members`, { user_id: addUserId.value }, { errorHints });
@@ -499,7 +499,7 @@ onBeforeUnmount(() => dirtyToast.clear());
       description="输入邮箱或昵称搜索用户。"
       confirm-label="添加成员"
       confirm-icon="material-symbols:person-add-outline-rounded"
-      :confirm-disabled="!addUserId"
+      :confirm-disabled="addUserId == null"
       :busy="memberBusy"
       @confirm="addMember"
     >
