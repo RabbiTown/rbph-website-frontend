@@ -33,6 +33,12 @@ const status = computed(() => {
   }
 });
 
+const transportLabel = computed(() => {
+  if (sync.debug.transport.value === 'shared-worker') return `SharedWorker (${sync.debug.sharedClientCount.value})`;
+  if (sync.debug.transport.value === 'direct') return 'Direct WebSocket';
+  return '尚未选择';
+});
+
 const panelStyle = computed(() => {
   if (position.dragX !== undefined) return { top: `${position.y}px`, left: `${position.dragX}px` };
   return position.side === 'left' ? { top: `${position.y}px`, left: `${position.offset}px` } : { top: `${position.y}px`, right: `${position.offset}px` };
@@ -222,7 +228,7 @@ onBeforeUnmount(() => {
                   <dt class="text-muted">状态</dt>
                   <dd class="font-mono text-toned">{{ sync.state.value }}</dd>
                   <dt class="text-muted">本地同步</dt>
-                  <dd class="font-mono text-toned">SharedWorker ({{ sync.debug.sharedClientCount.value }})</dd>
+                  <dd class="font-mono text-toned">{{ transportLabel }}</dd>
                   <dt class="text-muted">服务地址</dt>
                   <dd class="break-all font-mono text-toned">{{ sync.debug.endpoint.value ?? '尚未生成' }}</dd>
                   <dt class="text-muted">客户端 ID</dt>
