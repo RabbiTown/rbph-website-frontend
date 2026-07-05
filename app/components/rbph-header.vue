@@ -48,6 +48,7 @@ const navItems = computed(() => {
   });
 
   if (team.value && game.value.rounds && game.value.rounds.length > 0) {
+    const inPuzzlePage = route.path.startsWith(`/games/${game.value?.id}/puzzles`) || route.path.startsWith('/puzzles');
     result.push({
       value: 'game-puzzles',
       label: '谜题',
@@ -59,10 +60,10 @@ const navItems = computed(() => {
           description: '谜题区域',
           icon: 'material-symbols:grid-view-outline-rounded',
           to: gameRoundSimpleRoute(game.value?.id, x),
-          active: route.path.startsWith(`/games/${game.value?.id}/rounds/${x.slug || x.id}`) || route.path.startsWith(`/rounds/${x.id}`) || currentPuzzle.value?.data.round.id === x.id,
+          active: route.path.startsWith(`/games/${game.value?.id}/rounds/${x.slug || x.id}`) || route.path.startsWith(`/rounds/${x.id}`) || (inPuzzlePage && currentPuzzle.value?.data.round.id === x.id),
         };
       }),
-      active: route.path.startsWith(`/games/${game.value.id}/puzzles`) || route.path.startsWith(`/games/${game.value.id}/rounds`) || route.path.startsWith('/puzzles') || route.path.startsWith('/rounds'),
+      active: inPuzzlePage || route.path.startsWith(`/games/${game.value.id}/rounds`) || route.path.startsWith('/rounds'),
     });
   } else if (!team.value) {
     result.push({
