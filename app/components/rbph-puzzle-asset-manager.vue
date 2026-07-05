@@ -28,6 +28,13 @@ interface AdminAssetGroupItem {
   files: AdminAssetFileData[];
 }
 
+interface AssetStorageBackendData {
+  backend: string;
+  kind: 'local' | 'cos';
+  label: string;
+  recommended: boolean;
+}
+
 interface AssetTreeItem {
   label: string;
   path: string;
@@ -57,6 +64,10 @@ const deletingFileId = ref<number | null>(null);
 const uploadConfirmOpen = ref(false);
 const infoOpen = ref(false);
 const uploadChoice = ref<'group' | 'file'>('group');
+const uploadBackend = ref('local');
+const storageBackends = ref<AssetStorageBackendData[]>([
+  { backend: 'local', kind: 'local', label: '本地存储', recommended: true },
+]);
 const infoTarget = ref<AdminAssetGroupItem | null>(null);
 const groups = ref<AdminAssetGroupItem[]>([]);
 const files = ref<File | null>(null);
@@ -79,6 +90,31 @@ const hasScope = computed(() => Boolean(gameId.value) && !(puzzleId.value && rou
 const infoDirty = computed(() => Boolean(infoTarget.value && infoState.originalName.trim() !== infoTarget.value.group.original_name));
 const infoFileTree = computed(() => (infoTarget.value ? buildAssetFileTree(infoTarget.value.files) : []));
 const infoFileTreeKey = computed(() => infoTarget.value?.files.map(file => `${file.id}:${file.relative_path}`).join('|') ?? 'empty');
+const uploadIsZip = computed(() => Boolean(files.value && shouldUploadAsGroup(files.value)));
+
+const storageKindMeta = {
+  local: {
+    label: '本地存储',
+    icon: 'material-symbols:hard-drive-outline',
+    description: '适合谜题后端需要读取的资源。',
+  },
+  cos: {
+    label: 'COS 对象存储',
+    icon: 'material-symbols:cloud-outline',
+    description: '适合图片、音视频和附件等公开静态资源。',
+  },
+} as const;
+
+function storageLabel(backend: string) {
+  return storageBackends.value.find(item => item.backend === backend)?.label ?? backend;
+}
+
+function storageIcon(backend: string) {
+  const kind = storageBackends.value.find(item => item.backend === backend)?.kind;
+  return kind ? storageKindMeta[kind].icon : 'material-symbols:storage-rounded';
+}
+
+const selectedStorageBackend = computed(() => storageBackends.value.find(item => item.backend === uploadBackend.value));
 
 function formatBytes(size: number) {
   if (!size) return '0 B';
@@ -259,6 +295,17 @@ function refreshAssets() {
     .finally(() => {
       loading.value = false;
     });
+}
+
+async function fetchStorageBackends() {
+  try {
+    const { data } = await api.get<{ backends: AssetStorageBackendData[] }>('/admin/assets/storage-backends');
+    if (!data.backends.length) return;
+    storageBackends.value = data.backends;
+    uploadBackend.value = data.backends.find(item => item.recommended)?.backend ?? data.backends[0]!.backend;
+  } catch (error) {
+    handleError(error, '获取可用存储位置失败');
+  }
 }
 
 async function copyUrl(url: string) {
@@ -498,6 +545,7 @@ async function uploadFiles() {
     if (puzzleId.value) form.append('puzzle_id', String(puzzleId.value));
     if (roundId.value) form.append('round_id', String(roundId.value));
     form.append('mode', uploadChoice.value);
+    form.append('backend', uploadBackend.value);
     form.append('file', value, value.name);
 
     await api.post('/admin/assets', form, {
@@ -508,6 +556,7 @@ async function uploadFiles() {
     });
 
     files.value = null;
+    uploadConfirmOpen.value = false;
     await refreshAssets();
     toast.add({
       title: '资产组已上传',
@@ -530,30 +579,17 @@ function shouldUploadAsGroup(file: File) {
 function onUploadChange() {
   const value = files.value;
   if (!value || uploading.value) return;
-  if (shouldUploadAsGroup(value)) {
-    uploadChoice.value = 'group';
-    uploadConfirmOpen.value = true;
-  } else {
-    uploadChoice.value = 'file';
-    void uploadFiles();
-  }
-}
-
-async function confirmUploadAsGroup() {
-  uploadConfirmOpen.value = false;
-  uploadChoice.value = 'group';
-  await uploadFiles();
-}
-
-async function confirmUploadAsFile() {
-  uploadConfirmOpen.value = false;
-  uploadChoice.value = 'file';
-  await uploadFiles();
+  uploadChoice.value = shouldUploadAsGroup(value) ? 'group' : 'file';
+  uploadConfirmOpen.value = true;
 }
 
 function clearUpload() {
   files.value = null;
   uploadConfirmOpen.value = false;
+}
+
+function onUploadModalOpenChange(open: boolean) {
+  if (!open && !uploading.value) clearUpload();
 }
 
 watch(
@@ -563,6 +599,8 @@ watch(
   },
   { immediate: true },
 );
+
+onMounted(fetchStorageBackends);
 </script>
 
 <template>
@@ -597,6 +635,7 @@ watch(
             <div class="min-w-0 flex-1">
               <div class="truncate text-sm font-medium text-highlighted">{{ item.group.original_name }}</div>
               <div class="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+                <u-badge color="neutral" variant="soft" size="sm" :icon="storageIcon(item.group.backend)">{{ storageLabel(item.group.backend) }}</u-badge>
                 <span>{{ formatBytes(assetDisplaySize(item)) }}</span>
                 <span>·</span>
                 <span class="truncate">{{ assetDisplayMimeType(item) }}</span>
@@ -643,6 +682,10 @@ watch(
           </rb-form-field>
 
           <div v-if="infoTarget" class="space-y-3 rounded-md bg-elevated/50 p-3 text-sm">
+            <div class="grid grid-cols-[5rem_minmax(0,1fr)] gap-2">
+              <span class="text-muted">存储位置</span>
+              <u-badge color="neutral" variant="soft" class="w-fit" :icon="storageIcon(infoTarget.group.backend)">{{ storageLabel(infoTarget.group.backend) }}</u-badge>
+            </div>
             <div class="grid grid-cols-[5rem_minmax(0,1fr)] gap-2">
               <span class="text-muted">Object Key</span>
               <code class="truncate font-mono text-xs text-highlighted">{{ infoTarget.group.object_key }}</code>
@@ -744,22 +787,72 @@ watch(
       </template>
     </u-modal>
 
-    <rb-confirm-modal
+    <u-modal
       v-model:open="uploadConfirmOpen"
-      title="上传 ZIP"
-      :description="files ? `检测到 ZIP 文件「${files.name}」，请选择上传方式。` : ''"
-      confirm-label="作为资产组上传"
-      confirm-color="primary"
-      confirm-icon="material-symbols:folder-zip-outline-rounded"
-      @confirm="confirmUploadAsGroup"
+      title="上传资产"
+      :description="files ? `配置「${files.name}」的上传方式和存储位置。` : ''"
+      :dismissible="!uploading"
+      :close="!uploading"
+      @update:open="onUploadModalOpenChange"
     >
+      <template #body>
+        <div class="space-y-5">
+          <div v-if="uploadIsZip" class="space-y-2">
+            <div class="text-sm font-medium text-highlighted">上传方式</div>
+            <u-field-group class="w-full">
+              <u-button
+                color="neutral"
+                variant="soft"
+                active-color="primary"
+                icon="material-symbols:folder-zip-outline-rounded"
+                label="资产组"
+                class="flex-1 justify-center"
+                :active="uploadChoice === 'group'"
+                :disabled="uploading"
+                @click="uploadChoice = 'group'"
+              />
+              <u-button
+                color="neutral"
+                variant="soft"
+                active-color="primary"
+                icon="material-symbols:upload-file-outline-rounded"
+                label="普通文件"
+                class="flex-1 justify-center"
+                :active="uploadChoice === 'file'"
+                :disabled="uploading"
+                @click="uploadChoice = 'file'"
+              />
+            </u-field-group>
+          </div>
+
+          <div class="space-y-2">
+            <div class="text-sm font-medium text-highlighted">存储位置</div>
+            <u-field-group class="flex w-full">
+              <u-button
+                v-for="backend in storageBackends"
+                :key="backend.backend"
+                color="neutral"
+                variant="soft"
+                active-color="primary"
+                :icon="storageKindMeta[backend.kind].icon"
+                :label="backend.label"
+                class="flex-1 justify-center"
+                :active="uploadBackend === backend.backend"
+                :disabled="uploading"
+                @click="uploadBackend = backend.backend"
+              />
+            </u-field-group>
+            <p v-if="selectedStorageBackend" class="text-xs text-muted">{{ storageKindMeta[selectedStorageBackend.kind].description }}</p>
+          </div>
+        </div>
+      </template>
+
       <template #footer>
         <div class="flex w-full justify-end gap-2">
           <u-button color="neutral" variant="soft" :disabled="uploading" @click="clearUpload"> 取消 </u-button>
-          <u-button color="neutral" variant="soft" icon="material-symbols:upload-file-outline-rounded" :disabled="uploading" @click="confirmUploadAsFile"> 作为普通文件上传 </u-button>
-          <u-button color="primary" icon="material-symbols:folder-zip-outline-rounded" :loading="uploading" :disabled="uploading" @click="confirmUploadAsGroup"> 作为资产组上传 </u-button>
+          <u-button color="primary" icon="material-symbols:upload-2-outline-rounded" :loading="uploading" :disabled="uploading || !files" @click="uploadFiles">上传</u-button>
         </div>
       </template>
-    </rb-confirm-modal>
+    </u-modal>
   </div>
 </template>
