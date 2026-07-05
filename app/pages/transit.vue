@@ -12,7 +12,6 @@ const loading = ref(true);
 async function enterGame(game: RbGame) {
   if (enteringGameId.value) return;
   enteringGameId.value = game.id;
-  useState<RbGame | undefined>('game').value = game;
   if (import.meta.client) localStorage.setItem('rbph::select_game', game.id.toString());
   await navigateTo(`/games/${game.id}`);
 }

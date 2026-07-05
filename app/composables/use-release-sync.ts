@@ -24,6 +24,7 @@ export function useGameReleaseSync() {
     direct_message: 'open',
     puzzle_ticket: 'open',
     leaderboard: 'live',
+    currency: 'closed',
   }));
   const toast = useToast();
 
@@ -99,9 +100,11 @@ export function useGameReleaseSync() {
         }
         releaseCursor = Math.max(releaseCursor, data.release_cursor);
         phases.value = data.phases;
+        const currencyStateChanged = features.value.currency !== data.features.currency;
         features.value = data.features;
         clearRetryTimer();
         if (activeTeamId) await useGame().updateRoundState();
+        if (activeTeamId && currencyStateChanged) await useCurrency().updateData(true);
         revision.value++;
         schedule();
       } catch (error) {
@@ -139,6 +142,7 @@ export function useGameReleaseSync() {
       direct_message: 'open',
       puzzle_ticket: 'open',
       leaderboard: 'live',
+      currency: 'closed',
     };
     clearTimer();
     clearRetryTimer();

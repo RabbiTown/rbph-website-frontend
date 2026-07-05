@@ -31,12 +31,7 @@ onMounted(async () => {
 
       success.value = 'ok';
 
-      const currentPath = route.fullPath;
-      setTimeout(() => {
-        if (route.fullPath === currentPath) {
-          navigateTo('/login');
-        }
-      }, 3000);
+      navigateTo('/login');
     }
   } catch {
     success.value = 'err';

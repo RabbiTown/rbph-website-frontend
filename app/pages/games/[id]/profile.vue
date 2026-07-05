@@ -520,7 +520,7 @@ watch(user, () => syncUserState(), { immediate: true });
                 <u-input v-model="userState.email" class="w-full" disabled />
               </rb-form-field>
               <u-separator />
-              <rb-form-field name="nickname" row narrow-label label="用户名" icon="material-symbols:badge-outline-rounded">
+              <rb-form-field name="nickname" row narrow-label label="用户名" icon="material-symbols:badge-outline-rounded" :dirty="userState.nickname !== user?.nickname" :reset="() => (userState.nickname = user?.nickname ?? '')">
                 <u-input v-model="userState.nickname" class="w-full" :maxlength="60" :disabled="userSubmitLoading">
                   <template #trailing>
                     <div class="text-xs text-muted tabular-nums" role="status">{{ userState.nickname.length }}/60</div>
@@ -528,7 +528,7 @@ watch(user, () => syncUserState(), { immediate: true });
                 </u-input>
               </rb-form-field>
               <u-separator />
-              <rb-form-field name="bio" row narrow-label label="个人简介" icon="material-symbols:notes-rounded">
+              <rb-form-field name="bio" row narrow-label label="个人简介" icon="material-symbols:notes-rounded" :dirty="userState.bio !== (user?.bio ?? '')" :reset="() => (userState.bio = user?.bio ?? '')">
                 <u-textarea v-model="userState.bio" class="w-full" :ui="{ base: 'resize-none' }" :rows="4" :maxrows="4" :maxlength="200" :disabled="userSubmitLoading" />
               </rb-form-field>
               <div class="flex justify-end">
@@ -604,7 +604,7 @@ watch(user, () => syncUserState(), { immediate: true });
                   <u-input v-model="editState.id" class="w-full sm:w-96" disabled type="number" />
                 </rb-form-field>
                 <u-separator />
-                <rb-form-field name="name" row narrow-label label="队伍名称" icon="material-symbols:group-outline-rounded">
+                <rb-form-field name="name" row narrow-label label="队伍名称" icon="material-symbols:group-outline-rounded" :dirty="editState.name !== team?.ref.value?.name" :reset="() => (editState.name = team?.ref.value?.name ?? '')">
                   <u-input v-model="editState.name" class="w-full sm:w-96" :maxlength="40" :disabled="!isCaptain">
                     <template #trailing>
                       <div class="text-xs text-muted tabular-nums" role="status">{{ editState.name.length }}/40</div>
@@ -612,7 +612,7 @@ watch(user, () => syncUserState(), { immediate: true });
                   </u-input>
                 </rb-form-field>
                 <u-separator />
-                <rb-form-field name="pass" row narrow-label label="队伍密码" icon="material-symbols:password-rounded">
+                <rb-form-field name="pass" row narrow-label label="队伍密码" icon="material-symbols:password-rounded" :dirty="editState.pass !== team?.ref.value?.pass" :reset="() => (editState.pass = team?.ref.value?.pass ?? '')">
                   <u-input v-model="editState.pass" class="w-full sm:w-96" :disabled="!isCaptain">
                     <template v-if="isCaptain" #trailing>
                       <u-button class="-me-2 cursor-pointer" color="neutral" variant="link" icon="material-symbols:casino-outline" @click="editRandomPass" />
@@ -620,7 +620,7 @@ watch(user, () => syncUserState(), { immediate: true });
                   </u-input>
                 </rb-form-field>
                 <u-separator />
-                <rb-form-field name="bio" row narrow-label label="队伍简介" icon="material-symbols:notes-rounded">
+                <rb-form-field name="bio" row narrow-label label="队伍简介" icon="material-symbols:notes-rounded" :dirty="editState.bio !== team?.ref.value?.bio" :reset="() => (editState.bio = team?.ref.value?.bio ?? '')">
                   <u-textarea v-model="editState.bio" class="w-full sm:w-96" :ui="{ base: 'resize-none' }" :rows="4" :maxrows="4" :disabled="!isCaptain" />
                 </rb-form-field>
                 <div class="flex flex-wrap justify-end gap-3">

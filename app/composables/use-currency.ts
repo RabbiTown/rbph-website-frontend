@@ -10,11 +10,11 @@ export function useCurrency(activate: boolean = true) {
     useSyncTime().updateCurrentTimeRef();
   }
 
-  async function updateData() {
+  async function updateData(force = false) {
     if (await useAggreInfo().waitUpdate()) return;
 
     const now = Date.now();
-    if (now - currencyLastUpdate < 500) return;
+    if (!force && now - currencyLastUpdate < 500) return;
     currencyLastUpdate = now;
 
     const api = useApi();

@@ -15,6 +15,7 @@ const featureMeta: Record<RbGameFeature, { label: string; icon: string }> = {
   direct_message: { label: '站内信', icon: 'material-symbols:mail-outline-rounded' },
   puzzle_ticket: { label: '人工提示', icon: 'material-symbols:near-me-outline-rounded' },
   leaderboard: { label: '排行榜', icon: 'material-symbols:leaderboard-outline-rounded' },
+  currency: { label: '货币', icon: 'material-symbols:payments-outline-rounded' },
 };
 
 const featureDescriptions: Record<RbGameFeature, Partial<Record<RbGameFeatureState, string>>> = {
@@ -35,6 +36,10 @@ const featureDescriptions: Record<RbGameFeature, Partial<Record<RbGameFeatureSta
   leaderboard: {
     live: '排行榜根据当前解题和提交结果实时更新。',
     locked: '排行榜保留锁定时的排名；新的提交仍然有效，但不会改变展示结果。',
+  },
+  currency: {
+    closed: '玩家不显示货币，余额停止按时间增长。',
+    open: '玩家可以查看货币，余额正常按时间增长。',
   },
 };
 
@@ -139,7 +144,11 @@ async function apply() {
   }
 }
 
-watch(() => game.value?.id, () => fetchFeatures(), { immediate: true });
+watch(
+  () => game.value?.id,
+  () => fetchFeatures(),
+  { immediate: true },
+);
 watch(dirty, value => {
   if (value) {
     dirtyToast.show({
@@ -166,7 +175,7 @@ onBeforeUnmount(() => dirtyToast.clear());
         <u-button size="sm" variant="ghost" icon="material-symbols:refresh-rounded" :loading="loading" :disabled="dirty || saving" @click="fetchFeatures()" />
       </div>
 
-      <div v-if="loading" class="space-y-2"><u-skeleton v-for="i in 4" :key="i" class="h-24 w-full" /></div>
+      <div v-if="loading" class="space-y-2"><u-skeleton v-for="i in 5" :key="i" class="h-24 w-full" /></div>
       <div v-else class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
         <template v-for="(feature, index) in features" :key="feature.feature">
           <u-separator v-if="index" />

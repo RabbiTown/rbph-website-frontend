@@ -5,6 +5,10 @@ const toast = useToast();
 const dirtyToast = useDirtyToast();
 const currentUser = useUser().ref;
 
+useHead({
+  titleTemplate: '用户管理 - RBPH 管理后台',
+});
+
 const userId = computed(() => Number(route.params.user));
 const user = ref<AdminUserDetail>();
 const loading = ref(false);

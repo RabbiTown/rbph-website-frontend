@@ -20,6 +20,10 @@ interface AdminSystemSettingsResponse {
 
 definePageMeta({ middleware: ['root'] });
 
+useHead({
+  titleTemplate: '系统设置 - RBPH 管理后台',
+});
+
 const api = useApi();
 const toast = useToast();
 const dirtyToast = useDirtyToast();

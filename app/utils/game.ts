@@ -321,10 +321,10 @@ export interface RbGameAggreInfo {
   server_time: string;
 }
 
-export type RbGameFeature = 'team_formation' | 'direct_message' | 'puzzle_ticket' | 'leaderboard';
+export type RbGameFeature = 'team_formation' | 'direct_message' | 'puzzle_ticket' | 'leaderboard' | 'currency';
 export type RbGameFeatureState = 'closed' | 'existing_only' | 'open' | 'live' | 'locked';
 export type RbGameFeatures = Record<RbGameFeature, RbGameFeatureState>;
-export type RbTeamFeature = Exclude<RbGameFeature, 'team_formation'>;
+export type RbTeamFeature = Exclude<RbGameFeature, 'team_formation' | 'currency'>;
 
 export interface RbTeamFeatureData {
   feature: RbTeamFeature;

@@ -66,6 +66,15 @@ const featureOptions: { feature: RbGameFeature; label: string; icon: string; sta
       { label: '锁定', value: 'locked', icon: 'material-symbols:lock-clock-outline-rounded' },
     ],
   },
+  {
+    feature: 'currency',
+    label: '货币',
+    icon: 'material-symbols:payments-outline-rounded',
+    states: [
+      { label: '关闭', value: 'closed', icon: 'material-symbols:block-outline' },
+      { label: '开放', value: 'open', icon: 'material-symbols:check-rounded' },
+    ],
+  },
 ];
 
 function statesFromChanges(changes: RbFeatureChange[]) {
