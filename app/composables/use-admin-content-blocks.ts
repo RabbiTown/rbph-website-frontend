@@ -50,7 +50,7 @@ export function useAdminContentBlocks(owner: 'puzzles' | 'rounds', ownerId: Ref<
 
   async function create() {
     if (!endpoint.value) return;
-    const { data } = await api.post<{ block: AdminContentBlock }>(endpoint.value, { name: 'Default' });
+    const { data } = await api.post<{ block: AdminContentBlock }>(endpoint.value, { name: '新建内容块' });
     blocks.value.push(data.block);
     baseline.value[data.block.id] = snapshot(data.block);
     selectedId.value = data.block.id;
