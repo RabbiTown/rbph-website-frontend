@@ -125,7 +125,7 @@ function costText(message: TicketMessage) {
               </div>
             </template>
           </u-popover>
-          <u-badge v-else-if="!item.message.unlocked" class="mt-2" color="error" variant="soft" icon="material-symbols:lock-outline">未解锁：{{ costText(item.message) }}</u-badge>
+          <u-badge v-else-if="canViewLocked" class="mt-2" color="error" variant="soft" icon="material-symbols:lock-outline">未解锁：{{ costText(item.message) }}</u-badge>
         </div>
       </div>
     </template>

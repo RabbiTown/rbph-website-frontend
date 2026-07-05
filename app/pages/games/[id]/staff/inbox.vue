@@ -357,6 +357,49 @@ async function sendDm() {
   }
 }
 
+const unlockLoading = ref(false);
+const toast = useToast();
+
+async function unlockMessage(message: TicketMessage) {
+  if (!thread.value?.perm.can_view_locked && thread.value?.perm.send_block === RbTicketSendBlock.NoAccess) return;
+  if (message.sender_type !== RbTicketSenderType.Host || message.unlocked || message.cost_id === null || message.cost_id === undefined) return;
+
+  unlockLoading.value = true;
+
+  const ticketId = thread.value?.ticket?.id;
+  if (ticketId) {
+    try {
+      const { data } = await api.post<TicketUnlockResponse>(`/tickets/${ticketId}/messages/${message.id}/purchase`, undefined, {
+        errorHints: {
+          [-2]: '余额不足。',
+          [-1]: '消息暂未开放或已购买。',
+        },
+      });
+      const messages =
+        thread.value?.messages.map(item => {
+          if (isTicketMessage(item) && item.id === data.id) {
+            return { ...item, ...data, unlocked: true } as TicketMessage;
+          }
+          return item;
+        }) ?? [];
+      thread.value = {
+        ...thread.value!,
+        messages,
+      };
+      toast.add({
+        title: '已解锁消息',
+        description: '队伍可查看该条内容。',
+        icon: 'material-symbols:lock-open-right-outline-rounded',
+        color: 'success',
+      });
+    } catch (error) {
+      handleError(error, '解锁消息失败');
+    }
+  }
+
+  unlockLoading.value = false;
+}
+
 useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
   if (data.game_id !== gameId.value) return;
   loadTickets(true);
@@ -518,29 +561,16 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
             v-if="thread.ticket.puzzle"
             :items="thread.messages"
             :currency="threadCurrency"
+            :unlockable="true"
             :can-view-locked="thread.perm.can_view_locked"
             :show-history-gap="Boolean(thread.history.has_more && thread.history.after)"
             :history-loading="threadHistoryLoading"
             :history-gap-index="threadHistoryGapIndex"
+            :unlock-loading="unlockLoading"
             class="mb-6"
+            @unlock="unlockMessage"
             @load-history="loadThreadHistory"
           />
-
-          <div v-else class="mb-6 space-y-3">
-            <div v-for="item in dmThreadItems" :key="`${item.type}-${item.id}`">
-              <div v-if="isTicketMessage(item)" class="rounded-md border border-default p-3">
-                <div class="flex justify-between text-xs text-muted mb-2">
-                  <span>
-                    <u-badge v-if="item.sender_type === RbTicketSenderType.Host" variant="soft" color="warning" class="me-1">工作人员</u-badge>
-                    {{ item.sender.nickname }}
-                  </span>
-                  <span>{{ formatDate(item.ctime_at) }}</span>
-                </div>
-                <rbph-content v-if="item.content !== undefined && item.content_type !== undefined" :content="item as RbContent" />
-              </div>
-            </div>
-            <div v-if="threadHistoryLoading" class="flex justify-center py-3"><u-icon name="material-symbols:progress-activity" class="size-5 animate-spin text-muted" /></div>
-          </div>
 
           <rbph-message-edit
             v-model:draft="draft"
@@ -558,6 +588,22 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
               <rb-input-number v-if="reqCurrencyId !== null" v-model="reqCurrencyAmount" :prec="reqCurrencyType?.prec ?? 0" orientation="vertical" class="w-24" variant="soft" :step="10" />
             </template>
           </rbph-message-edit>
+
+          <div v-if="!thread.ticket.puzzle" class="my-6 space-y-3">
+            <div v-for="item in dmThreadItems" :key="`${item.type}-${item.id}`">
+              <div v-if="isTicketMessage(item)" class="rounded-md border border-default p-3">
+                <div class="flex justify-between text-xs text-muted mb-2">
+                  <span>
+                    <u-badge v-if="item.sender_type === RbTicketSenderType.Host" variant="soft" color="warning" class="me-1">工作人员</u-badge>
+                    {{ item.sender.nickname }}
+                  </span>
+                  <span>{{ formatDate(item.ctime_at) }}</span>
+                </div>
+                <rbph-content v-if="item.content !== undefined && item.content_type !== undefined" :content="item as RbContent" />
+              </div>
+            </div>
+            <div v-if="threadHistoryLoading" class="flex justify-center py-3"><u-icon name="material-symbols:progress-activity" class="size-5 animate-spin text-muted" /></div>
+          </div>
         </template>
         <u-empty v-else class="min-h-112" title="选择一个会话" description="从左侧列表打开人工提示或站内信" icon="material-symbols:forum-outline-rounded" />
       </main>
