@@ -6,6 +6,7 @@ interface AdminPuzzleCardData {
   ptype: number;
   unlock_cond: string;
   release_phase_id: number | null;
+  immediate_release_at: string | null;
 }
 
 const props = defineProps<{
@@ -75,7 +76,11 @@ const displayedSlug = computed(() => props.slug ?? props.puzzle.slug);
             <u-icon name="material-symbols:lock-open-right-outline-rounded" class="align-middle mb-0.5 me-0.5" />
             {{ unlockConditionText }}
           </div>
-          <div v-if="releasePhase" class="truncate text-xs text-muted" :title="formatDate(releasePhase.release_at)">
+          <div v-if="puzzle.immediate_release_at" class="truncate text-xs text-muted" :title="formatDate(puzzle.immediate_release_at)">
+            <u-icon name="material-symbols:rocket-launch-outline-rounded" class="align-middle mb-0.5 me-0.5" />
+            已立即发布 · {{ formatDate(puzzle.immediate_release_at) }}
+          </div>
+          <div v-else-if="releasePhase" class="truncate text-xs text-muted" :title="formatDate(releasePhase.release_at)">
             <u-icon name="material-symbols:event-available-outline-rounded" class="align-middle mb-0.5 me-0.5" />
             {{ releasePhase.title }} · {{ formatDate(releasePhase.release_at) }}
           </div>

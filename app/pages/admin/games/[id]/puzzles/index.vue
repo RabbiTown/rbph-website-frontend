@@ -26,6 +26,7 @@ interface AdminPuzzle {
   max_submit?: number | null;
   unlock_cond: string;
   release_phase_id: number | null;
+  immediate_release_at: string | null;
   round_id: number;
   sort: number;
   ticket_enabled: boolean;
@@ -129,7 +130,7 @@ const creatingRoundId = ref<number | null>(null);
 const puzzleManagerRoot = ref<HTMLElement>();
 const selectedPuzzleIds = ref<Set<number>>(new Set());
 const selectionRect = ref<PuzzleSelectionRect>();
-const batchReleasePhaseId = ref<number | 'unpublished'>();
+const batchReleasePhaseId = ref<number | 'unpublished' | 'immediate'>();
 const batchPuzzleIds = ref<number[]>([]);
 const batchUsesSelection = ref(false);
 const batchConfirmOpen = ref(false);
@@ -148,6 +149,7 @@ const selectedPuzzleCount = computed(() => selectedPuzzleIds.value.size);
 const selectionMode = computed(() => selectedPuzzleCount.value > 0);
 const batchPhaseItems = computed(() => [
   { label: '不发布', value: 'unpublished' as const, icon: 'material-symbols:event-busy-outline-rounded' },
+  { label: '立即发布', value: 'immediate' as const, icon: 'material-symbols:rocket-launch-outline-rounded' },
   ...releasePhases.value
     .filter(phase => !phase.released && new Date(phase.release_at).getTime() > Date.now())
     .map(phase => ({
@@ -453,7 +455,7 @@ function puzzleContextMenuItems(puzzle: AdminPuzzle): ContextMenuItem[][] {
   const multiple = puzzleIds.length > 1;
   const actions: ContextMenuItem[] = [
     {
-      label: '更改开放阶段',
+      label: '更改发布方式',
       icon: 'material-symbols:published-with-changes-rounded',
       disabled: batchUpdating.value || puzzleDeleting.value || hasChanges.value,
       onSelect: () => openBatchReleaseConfirm(puzzle),
@@ -1203,7 +1205,9 @@ async function applyBatchReleasePhase() {
       {
         game_id: gameId.value,
         puzzle_ids: batchPuzzleIds.value,
-        release_phase_id: batchReleasePhaseId.value === 'unpublished' ? null : batchReleasePhaseId.value,
+        ...(batchReleasePhaseId.value === 'immediate'
+          ? { release_immediately: true }
+          : { release_phase_id: batchReleasePhaseId.value === 'unpublished' ? null : batchReleasePhaseId.value }),
       },
       {
         errorHints: {
@@ -1218,7 +1222,7 @@ async function applyBatchReleasePhase() {
     originalPuzzles.value = originalPuzzles.value.map(puzzle => updated.get(puzzle.id) ?? puzzle);
     const count = data.puzzles.length;
     if (batchUsesSelection.value) clearPuzzleSelection();
-    toast.add({ title: '开放时间已批量更新', description: `已更新 ${count} 道谜题。`, icon: 'material-symbols:check-rounded', color: 'success' });
+    toast.add({ title: batchReleasePhaseId.value === 'immediate' ? '谜题已立即发布' : '开放时间已批量更新', description: `已更新 ${count} 道谜题。`, icon: 'material-symbols:check-rounded', color: 'success' });
     return true;
   } catch (error) {
     handleError(error, '批量修改开放时间失败');
@@ -1663,26 +1667,27 @@ onBeforeUnmount(cleanupSelectionGesture);
       class="pointer-events-none fixed z-50 border border-primary bg-primary/10 shadow-sm"
       :style="{ left: `${selectionRect.left}px`, top: `${selectionRect.top}px`, width: `${selectionRect.width}px`, height: `${selectionRect.height}px` }"
     />
-    <rb-confirm-modal v-model:open="batchConfirmOpen" title="更改开放阶段" :description="`为 ${batchPuzzleIds.length} 道谜题设置新的开放阶段。`" :busy="batchUpdating">
+    <rb-confirm-modal v-model:open="batchConfirmOpen" title="更改发布方式" :description="`为 ${batchPuzzleIds.length} 道谜题设置新的发布方式。`" :busy="batchUpdating">
       <template #body>
-        <rb-form-field row narrow-label label="开放阶段">
+        <rb-form-field row narrow-label label="发布方式">
           <u-select
             v-model="batchReleasePhaseId"
             :items="batchPhaseItems"
-            :leading-icon="batchReleasePhaseId === 'unpublished' ? 'material-symbols:event-busy-outline-rounded' : selectedBatchPhase ? 'material-symbols:event-available-outline-rounded' : undefined"
-            placeholder="选择开放阶段"
+            :leading-icon="batchReleasePhaseId === 'unpublished' ? 'material-symbols:event-busy-outline-rounded' : batchReleasePhaseId === 'immediate' ? 'material-symbols:rocket-launch-outline-rounded' : selectedBatchPhase ? 'material-symbols:event-available-outline-rounded' : undefined"
+            placeholder="选择发布方式"
             class="w-full"
             :disabled="batchUpdating"
           />
         </rb-form-field>
         <p v-if="batchReleasePhaseId === 'unpublished'" class="mt-3 text-sm text-warning">撤销发布后玩家将无法访问这些谜题，已有队伍数据会保留。</p>
+        <p v-else-if="batchReleasePhaseId === 'immediate'" class="mt-3 text-sm text-warning">谜题将立即对已解锁的队伍开放，并推送一条发布提示。</p>
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
           <u-button color="neutral" variant="soft" :disabled="batchUpdating" label="取消" @click="batchConfirmOpen = false" />
           <u-button
             :color="batchReleasePhaseId === 'unpublished' ? 'warning' : 'primary'"
-            :icon="batchReleasePhaseId === 'unpublished' ? 'material-symbols:event-busy-outline-rounded' : 'material-symbols:event-available-outline-rounded'"
+            :icon="batchReleasePhaseId === 'unpublished' ? 'material-symbols:event-busy-outline-rounded' : batchReleasePhaseId === 'immediate' ? 'material-symbols:rocket-launch-outline-rounded' : 'material-symbols:event-available-outline-rounded'"
             :loading="batchUpdating"
             :disabled="batchUpdating || !batchReleasePhaseId"
             label="确认修改"

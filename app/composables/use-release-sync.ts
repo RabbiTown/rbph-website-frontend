@@ -68,10 +68,11 @@ export function useGameReleaseSync() {
 
   function showEvent(gameId: number, event: RbReleaseEvent) {
     const Content = resolveComponent('rbph-content');
+    const phase = event.phase;
     toast.add({
-      title: event.phase.title,
-      description: event.phase.description
-        ? h(Content, { content: { content: event.phase.description, content_type: event.phase.content_type } })
+      title: phase?.title ?? '谜题已发布',
+      description: phase?.description
+        ? h(Content, { content: { content: phase.description, content_type: phase.content_type } })
         : event.puzzles.length > 0
           ? `已开放 ${event.puzzles.length} 道谜题。`
           : undefined,

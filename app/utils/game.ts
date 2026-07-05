@@ -390,9 +390,9 @@ export interface RbReleasedPuzzle {
 
 export interface RbReleaseEvent {
   id: number;
-  type: 'phase_released';
+  type: 'phase_released' | 'puzzles_released';
   occurred_at: string;
-  phase: RbReleasePhase;
+  phase: RbReleasePhase | null;
   puzzles: RbReleasedPuzzle[];
 }
 
