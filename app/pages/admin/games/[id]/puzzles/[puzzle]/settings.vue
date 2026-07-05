@@ -70,18 +70,16 @@ const originalReleaseSelection = computed<number | 'unpublished' | 'immediate'>(
 });
 const releasePhaseDirty = computed(() => Boolean(puzzle.value && state.releasePhaseId !== originalReleaseSelection.value));
 const currentReleasePhase = computed(() => releasePhases.value.find(phase => phase.id === puzzle.value?.release_phase_id));
-const releasePhaseItems = computed(() =>
-  [
-    { label: '不发布', value: 'unpublished' as const, icon: 'material-symbols:event-busy-outline-rounded' },
-    { label: '立即发布', value: 'immediate' as const, icon: 'material-symbols:rocket-launch-outline-rounded' },
-    ...releasePhases.value.map(phase => ({
-      label: `${phase.title} · ${formatDate(phase.release_at)}`,
-      value: phase.id,
-      icon: 'material-symbols:event-available-outline-rounded',
-      disabled: phase.released || new Date(phase.release_at).getTime() <= Date.now(),
-    })),
-  ],
-);
+const releasePhaseItems = computed(() => [
+  { label: '不发布', value: 'unpublished' as const, icon: 'material-symbols:event-busy-outline-rounded' },
+  { label: '立即发布', value: 'immediate' as const, icon: 'material-symbols:rocket-launch-outline-rounded' },
+  ...releasePhases.value.map(phase => ({
+    label: `${phase.title} · ${formatDate(phase.release_at)}`,
+    value: phase.id,
+    icon: 'material-symbols:event-available-outline-rounded',
+    disabled: phase.released || new Date(phase.release_at).getTime() <= Date.now(),
+  })),
+]);
 const backendEnabled = computed(() => state.backend.enabled);
 const backendEnabledDirty = computed(() => Boolean(puzzle.value && backendLoaded.value && backendEnabled.value !== (backend.value?.enabled ?? false)));
 const backendSourceDirty = computed(() => Boolean(puzzle.value && backendLoaded.value && state.backend.source !== (backend.value?.source ?? '')));
@@ -161,18 +159,12 @@ async function applyReleasePhase() {
 
   try {
     type Response = { puzzle: AdminPuzzleData };
-    const response = await api.patch<Response>(
-      `/admin/puzzles/${puzzle.value.id}`,
-      state.releasePhaseId === 'immediate'
-        ? { release_immediately: true }
-        : { release_phase_id: state.releasePhaseId === 'unpublished' ? null : state.releasePhaseId },
-      {
-        errorHints: {
-          [-2]: '目标发布阶段不合法或已经发生。',
-          [-1]: '谜题不存在。',
-        },
+    const response = await api.patch<Response>(`/admin/puzzles/${puzzle.value.id}`, state.releasePhaseId === 'immediate' ? { release_immediately: true } : { release_phase_id: state.releasePhaseId === 'unpublished' ? null : state.releasePhaseId }, {
+      errorHints: {
+        [-2]: '目标发布阶段不合法或已经发生。',
+        [-1]: '谜题不存在。',
       },
-    );
+    });
 
     puzzle.value = response.data.puzzle;
     syncFromPuzzle();
@@ -456,20 +448,16 @@ watch(dirty, value => {
 
           <u-separator />
 
-          <rb-form-field name="release_phase_id" row narrow-label :dirty="releasePhaseDirty" :reset="resetReleasePhase">
-            <template #label>
-              发布阶段
-              <rb-tooltip text="题目可以立即发布，或在尚未开始的阶段发布。">
-                <u-icon name="material-symbols:help-outline-rounded" class="size-4 align-middle mb-0.5 ms-1 cursor-help text-secondary" />
-              </rb-tooltip>
-            </template>
+          <rb-form-field name="release_phase_id" row narrow-label :dirty="releasePhaseDirty" :reset="resetReleasePhase" label="发布阶段" tooltip="题目可以立即发布，或在尚未开始的阶段发布。">
             <div class="flex w-full flex-wrap items-center gap-2">
               <u-select-menu
                 v-model="state.releasePhaseId"
                 :items="releasePhaseItems"
                 value-key="value"
                 placeholder="选择发布阶段"
-                :icon="state.releasePhaseId === 'unpublished' ? 'material-symbols:event-busy-outline-rounded' : state.releasePhaseId === 'immediate' ? 'material-symbols:rocket-launch-outline-rounded' : 'material-symbols:event-available-outline-rounded'"
+                :icon="
+                  state.releasePhaseId === 'unpublished' ? 'material-symbols:event-busy-outline-rounded' : state.releasePhaseId === 'immediate' ? 'material-symbols:rocket-launch-outline-rounded' : 'material-symbols:event-available-outline-rounded'
+                "
                 class="w-full sm:min-w-72"
                 :loading="loadingOptions"
                 :disabled="saving"

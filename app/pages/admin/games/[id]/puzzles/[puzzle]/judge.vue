@@ -14,6 +14,7 @@ interface RawJudgeRule {
   result?: unknown;
   answer?: unknown;
   function?: unknown;
+  triggers?: unknown;
 }
 
 interface JudgeRuleState {
@@ -24,6 +25,7 @@ interface JudgeRuleState {
   result: string;
   answer: string;
   function: string;
+  triggers: string[];
 }
 
 interface SerializedJudgeRule {
@@ -33,6 +35,7 @@ interface SerializedJudgeRule {
   result?: string;
   answer?: string;
   function?: string;
+  triggers?: string[];
 }
 
 interface RawPenaltyRule {
@@ -178,6 +181,7 @@ function makeRule(data: Partial<RawJudgeRule> = {}): JudgeRuleState {
     result: stringValue(data.result),
     answer: stringValue(data.answer),
     function: stringValue(data.function),
+    triggers: Array.isArray(data.triggers) ? data.triggers.map(item => stringValue(item)) : [],
   };
 }
 
@@ -191,18 +195,22 @@ function serializeRule(rule: JudgeRuleState): SerializedJudgeRule {
   if (rule.type === 'custom' && rule.function.trim()) result.function = rule.function.trim();
   if (rule.result.trim()) result.result = rule.result.trim();
   if (rule.answer.trim()) result.answer = rule.answer.trim();
+  const triggers = rule.triggers.map(value => value.trim()).filter(Boolean);
+  if (triggers.length) result.triggers = triggers;
 
   return result;
 }
 
 function normalizeRawRule(rule: RawJudgeRule): SerializedJudgeRule {
   return serializeRule({
+    id: '',
     type: ruleTypeValue(rule.type),
     text: stringValue(rule.text),
     action: actionValue(rule.action),
     result: stringValue(rule.result),
     answer: stringValue(rule.answer),
     function: stringValue(rule.function),
+    triggers: Array.isArray(rule.triggers) ? rule.triggers.map(item => stringValue(item)) : [],
   });
 }
 
@@ -302,7 +310,17 @@ const judgeDirty = computed(() => JSON.stringify(judgePatch.value) !== JSON.stri
 const penaltyDirty = computed(() => JSON.stringify(penaltyPatch.value) !== JSON.stringify(originalPenalty.value));
 const maxSubmitDirty = computed(() => maxSubmitPatch.value !== originalMaxSubmit.value);
 const dirty = computed(() => judgeDirty.value || penaltyDirty.value || maxSubmitDirty.value);
-const invalidRules = computed(() => state.rules.filter(rule => (rule.type === 'exact' && !rule.text.trim()) || (rule.type === 'custom' && !rule.function.trim()) || rule.action === 'pending').map(rule => rule.id));
+const invalidRules = computed(() =>
+  state.rules
+    .filter(rule => {
+      const invalidTrigger = rule.triggers
+        .map(value => value.trim())
+        .filter(Boolean)
+        .some(value => !/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(value));
+      return (rule.type === 'exact' && !rule.text.trim()) || (rule.type === 'custom' && !rule.function.trim()) || rule.action === 'pending' || invalidTrigger;
+    })
+    .map(rule => rule.id),
+);
 const hasInvalidRules = computed(() => invalidRules.value.length > 0);
 const penaltyInvalid = computed(
   () =>
@@ -776,13 +794,7 @@ watch(dirty, value => {
                     </div>
                   </rb-form-field>
 
-                  <rb-form-field v-if="rule.type !== 'custom'" row narrow-label class="flex-1">
-                    <template #label>
-                      实际答案
-                      <rb-tooltip text="实际答案将显示给玩家作为参考。若为空，则默认使用匹配规则作为答案。">
-                        <u-icon name="material-symbols:help-outline-rounded" class="size-4 align-middle mb-0.5 ms-1 cursor-help text-secondary" />
-                      </rb-tooltip>
-                    </template>
+                  <rb-form-field v-if="rule.type !== 'custom'" row narrow-label class="flex-1" label="实际答案" tooltip="实际答案将显示给玩家作为参考。若为空，则默认使用匹配规则作为答案。">
                     <u-input v-model="rule.answer" placeholder="(optional)" class="w-full font-mono" :disabled="saving" />
                   </rb-form-field>
                 </div>
@@ -793,6 +805,10 @@ watch(dirty, value => {
                       <u-select v-model="rule.action" :items="actionItems" :leading-icon="selectedActionIcon(rule.action)" :color="selectedActionColor(rule.action)" variant="subtle" class="w-full sm:w-40 sm:shrink-0" :disabled="saving" />
                       <u-input v-model="rule.result" placeholder="进一步指示，留空则使用默认提示" class="w-full min-w-0" :disabled="saving" />
                     </div>
+                  </rb-form-field>
+
+                  <rb-form-field row narrow-label label="触发器" tooltip="匹配正确时将记录这些字段，可用于条件检查。">
+                    <u-input-tags v-model="rule.triggers" class="w-full font-mono" :disabled="saving" />
                   </rb-form-field>
                 </template>
               </div>

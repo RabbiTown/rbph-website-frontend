@@ -3,7 +3,7 @@ import { isSimpleAtom, parseUnlockCondition, serializeSexpr, type Sexpr } from '
 export type UnlockCompareOp = 'gt' | 'ge' | 'lt' | 'le' | 'eq' | 'ne';
 export type UnlockSetType = 'puzzles' | 'puzzle-range' | 'round';
 export type UnlockValueType = 'number' | 'solved-count';
-export type UnlockGateType = 'default' | 'source' | 'and' | 'or' | 'not' | 'solved' | 'all-solved' | 'any-solved' | 'game-started' | 'cmp';
+export type UnlockGateType = 'default' | 'source' | 'and' | 'or' | 'not' | 'solved' | 'triggered' | 'all-solved' | 'any-solved' | 'game-started' | 'cmp';
 
 export interface UnlockPuzzleOptionData {
   id: number;
@@ -37,6 +37,7 @@ export type UnlockGateNode =
   | { type: 'and' | 'or'; children: UnlockGateNode[] }
   | { type: 'not'; child: UnlockGateNode }
   | { type: 'solved'; ref: string }
+  | { type: 'triggered'; ref: string; key: string }
   | { type: 'all-solved' | 'any-solved'; set: UnlockSetNode }
   | { type: 'game-started' }
   | { type: 'cmp'; op: UnlockCompareOp; lhs: UnlockValueNode; rhs: UnlockValueNode };
@@ -79,6 +80,8 @@ export function defaultUnlockGate(type: UnlockGateType = 'game-started', puzzles
       return { type: 'not', child: defaultUnlockGate('game-started', puzzles, rounds) };
     case 'solved':
       return { type: 'solved', ref: firstPuzzle };
+    case 'triggered':
+      return { type: 'triggered', ref: firstPuzzle, key: '' };
     case 'all-solved':
     case 'any-solved':
       return { type, set };
@@ -129,6 +132,11 @@ export function serializeUnlockGate(node: UnlockGateNode): string {
   if (node.type === 'solved') {
     const ref = atom(node.ref);
     return ref ? serializeSexpr(['solved', ref]) : '';
+  }
+  if (node.type === 'triggered') {
+    const ref = atom(node.ref);
+    const key = atom(node.key);
+    return ref && key ? serializeSexpr(['triggered', ref, key]) : '';
   }
   if (node.type === 'all-solved' || node.type === 'any-solved') {
     const set = serializeUnlockSet(node.set);
@@ -193,6 +201,7 @@ export function parseUnlockGate(value: string): UnlockGateNode {
   const [op, ...args] = list;
   if (op === 'game-started' && args.length === 0) return { type: 'game-started' };
   if (op === 'solved' && args.length === 1) return { type: 'solved', ref: stringArg(args[0]) };
+  if (op === 'triggered' && args.length === 2) return { type: 'triggered', ref: stringArg(args[0]), key: stringArg(args[1]) };
   if ((op === 'all-solved' || op === 'any-solved') && args.length === 1) {
     const set = parseUnlockSet(args[0]);
     return set ? { type: op, set } : { type: 'source', source: value };

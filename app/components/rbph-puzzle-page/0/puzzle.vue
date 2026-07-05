@@ -5,6 +5,7 @@ const okSubmissionsComp = useTemplateRef('ok-submissions');
 const submitResultComp = useTemplateRef('submit-result');
 
 function onSubmitSuccess(action: RbJudgeAction) {
+  usePuzzle().updateState();
   if (action > 0) {
     if (action === RbJudgeAction.Correct || action === RbJudgeAction.FinishGame) {
       if (puzzle.value) puzzle.value.state.state = RbTeamPuzzleState.Solved;
@@ -48,6 +49,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
   if (useSid().consume(data.sid)) return;
 
   if (data.puzzle.id === puzzle.value?.data.id) {
+    usePuzzle().updateState();
     if (puzzle.value) {
       puzzle.value.state = mergePuzzleSubmitState(puzzle.value.state, data.state, data.action);
     }
@@ -65,7 +67,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
   <div v-if="puzzle">
     <rbph-annoucements v-if="puzzle.data.announcements.length > 0" class="mb-4" :data="puzzle.data.announcements" :current-puzzle-id="puzzle.data.id" />
     <u-card variant="soft" :ui="{ body: 'py-4' }">
-      <rbph-content :content="puzzle.data" />
+      <rbph-content-blocks :blocks="puzzle.data.contents" />
     </u-card>
 
     <u-separator class="my-6" :ui="{ container: 'w-full', border: 'md:w-3/12 w-0' }">

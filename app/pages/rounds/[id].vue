@@ -32,6 +32,8 @@ async function updateData(id: string | undefined = undefined) {
     round.value = undefined;
     try {
       const { data } = await api.get<RbRoundUserData>(`/rounds/${newId}`);
+      const contents = await api.get<{ contents: RbContentBlock[] }>(`/rounds/${data.data.id}/contents`);
+      data.data.contents = contents.data.contents;
       if (token !== fetchToken) return;
 
       round.value = data;
@@ -90,6 +92,7 @@ function onSelfSubmitSuccess(resp: RbJudgeResponse, answer: string) {
   if (resp.unlocks && resp.unlocks.length > 0) {
     useGame().updateRoundState();
   }
+  updateData();
 }
 
 function onSelfSubmitFailed(reason: string, answer: string) {
@@ -115,6 +118,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
   if (!isSelfEcho && ((data.solved && round.value?.state.puzzles.find(x => x.id === data.puzzle.id)) || data.unlocks?.find(x => x.round_id === round.value?.data.id))) {
     updateData();
   }
+  else if (!isSelfEcho) updateData();
 });
 </script>
 
@@ -127,7 +131,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
     </div>
 
     <u-card variant="soft" :ui="{ body: 'py4' }">
-      <rbph-content :content="round?.data" />
+      <rbph-content-blocks :blocks="round.data.contents" />
 
       <template v-if="round.state.puzzles.length > 0">
         <u-separator icon="material-symbols:extension-outline-rounded" class="mt-6 mb-2" />

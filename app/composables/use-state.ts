@@ -211,6 +211,8 @@ export function usePuzzle() {
 
     try {
       const { data } = await useApi().get<RbPuzzleShowData>(`/puzzles/${id}`);
+      const contents = await useApi().get<{ contents: RbContentBlock[] }>(`/puzzles/${id}/contents`);
+      data.data.contents = contents.data.contents;
       puzzle.value = data;
       if (data.data.game_id) {
         updateGameState(data.data.game_id.toString());
@@ -227,6 +229,8 @@ export function usePuzzle() {
 
     try {
       const { data } = await useApi().get<RbPuzzleShowData>(`/games/${gameId}/puzzles/${encodeURIComponent(puzzle_ref)}`);
+      const contents = await useApi().get<{ contents: RbContentBlock[] }>(`/puzzles/${data.data.id}/contents`);
+      data.data.contents = contents.data.contents;
       puzzle.value = data;
       if (data.data.game_id) {
         updateGameState(data.data.game_id.toString());

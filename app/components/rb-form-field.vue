@@ -8,6 +8,7 @@ const props = defineProps<
     narrowLabel?: boolean;
     reset?: () => void;
     row?: boolean;
+    tooltip?: string;
   }
 >();
 
@@ -29,11 +30,7 @@ const formFieldProps = computed(() => {
 const fieldClass = computed(() => [
   attrs.class,
   'relative',
-  props.row
-    ? props.narrowLabel
-      ? 'grid min-h-8 grid-cols-1 items-start gap-2 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-4'
-      : 'flex min-h-8 flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4'
-    : '',
+  props.row ? (props.narrowLabel ? 'grid min-h-8 grid-cols-1 items-start gap-2 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-4' : 'flex min-h-8 flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4') : '',
 ]);
 const labelClass = computed(() => ['inline-flex min-h-6 items-center align-middle transition-colors mt-0.5', props.dirty ? 'text-warning' : '']);
 const dirtyIndicatorClass = 'absolute inset-y-0 -start-4 z-10 w-4 cursor-pointer focus-visible:outline-none';
@@ -48,10 +45,13 @@ function onReset() {
   <u-form-field v-bind="{ ...attrs, ...formFieldProps }" :class="fieldClass">
     <template #label="{ label }">
       <span :class="labelClass">
-        <u-icon v-if="icon" :name="icon" class="pointer-events-none absolute inset-s-0 top-1/2 size-5 left-2 -translate-y-1/2 text-muted mt-0.25" />
+        <u-icon v-if="icon" :name="icon" class="pointer-events-none absolute inset-s-0 top-1/2 size-5 left-2 -translate-y-1/2 text-muted mt-px" />
         <span class="min-w-0">
           <slot name="label" :label="label">
             {{ label }}
+            <rb-tooltip v-if="tooltip" :text="tooltip">
+              <u-icon name="material-symbols:help-outline-rounded" class="size-4 align-middle mb-0.5 ms-1 cursor-help text-secondary" />
+            </rb-tooltip>
           </slot>
         </span>
       </span>

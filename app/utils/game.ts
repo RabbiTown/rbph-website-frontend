@@ -49,8 +49,7 @@ export interface RbPuzzle {
   slug?: string | null;
   title: string;
   ptype: RbPuzzleType;
-  content: string;
-  content_type: RbContentType;
+  contents: RbContentBlock[];
   round: Pick<RbRound, 'id' | 'slug' | 'title'>;
   game_id: number;
   announcements: RbAnnouncementInfo[];
@@ -89,6 +88,13 @@ export function mergePuzzleSubmitState(current: RbPuzzleTeamData, next: RbPuzzle
 export interface RbContent {
   content: string;
   content_type: RbContentType;
+}
+
+export interface RbContentBlock extends RbContent {
+  id: number;
+  sort: number;
+  revision: string;
+  content_url?: string | null;
 }
 
 export enum RbJudgeAction {
@@ -155,8 +161,7 @@ export interface RbRound {
   id: number;
   slug?: string | null;
   title: string;
-  content: string;
-  content_type: RbContentType;
+  contents: RbContentBlock[];
   cover?: string;
   game_id: number;
   puzzle?: number;

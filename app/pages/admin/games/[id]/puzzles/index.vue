@@ -5,8 +5,6 @@ interface AdminRound {
   id: number;
   slug?: string | null;
   title: string;
-  content: string;
-  content_type: number;
   cover?: string | null;
   game_id: number;
   puzzle?: number | null;
@@ -19,8 +17,6 @@ interface AdminPuzzle {
   slug?: string | null;
   title: string;
   ptype: number;
-  content: string;
-  content_type: number;
   judge: unknown;
   penalty: unknown;
   max_submit?: number | null;

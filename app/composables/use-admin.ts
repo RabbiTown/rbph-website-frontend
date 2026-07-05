@@ -4,8 +4,6 @@ export interface AdminRoundData {
   id: number;
   slug?: string | null;
   title: string;
-  content: string;
-  content_type: number;
   cover?: string | null;
   game_id: number;
   puzzle?: number | null;
@@ -18,8 +16,6 @@ export interface AdminPuzzleData {
   slug?: string | null;
   title: string;
   ptype: number;
-  content: string;
-  content_type: number;
   judge: unknown;
   penalty: unknown;
   max_submit?: number | null;
