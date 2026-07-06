@@ -20,7 +20,7 @@ const gateTypeItems = [
     { label: '默认解锁', value: 'default', icon: 'material-symbols:lock-open-right-outline-rounded' },
     { label: '队伍开始游戏', value: 'game-started', icon: 'material-symbols:flag-outline-rounded' },
     { label: '解出谜题', value: 'solved', icon: 'material-symbols:extension-outline-rounded' },
-    { label: '判题触发器', value: 'triggered', icon: 'material-symbols:bolt-rounded' },
+    { label: '触发器', value: 'triggered', icon: 'material-symbols:bolt-outline-rounded' },
     { label: '全部解出', value: 'all-solved', icon: 'material-symbols:done-all-rounded' },
     { label: '任一解出', value: 'any-solved', icon: 'material-symbols:rule-rounded' },
   ],

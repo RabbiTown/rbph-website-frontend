@@ -356,9 +356,6 @@ onBeforeUnmount(clearDragState);
               />
             </u-field-group>
           </rb-form-field>
-          <rb-form-field label="显示条件" tooltip="首次满足后将对该队伍永久解锁。">
-            <rbph-content-block-visibility-editor v-model="infoState.visibilityCond" :game-id="gameId" :current-puzzle-id="currentPuzzleId" :disabled="disabled || savingInfo" />
-          </rb-form-field>
           <rb-form-field v-if="cdnAvailable" label="内容分发" row narrow-label>
             <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
               <u-badge :color="infoTarget?.cdn_backend ? 'success' : 'neutral'" variant="soft" :icon="infoTarget?.cdn_backend ? 'material-symbols:cloud-done-outline-rounded' : 'material-symbols:cloud-off-outline-rounded'">
@@ -400,7 +397,11 @@ onBeforeUnmount(clearDragState);
               <span v-else-if="infoTarget?.cdn_backend" class="text-xs text-muted">{{ infoTarget.cdn_backend }}</span>
             </div>
           </rb-form-field>
-          <div class="flex justify-end">
+          <rb-form-field label="显示条件" tooltip="首次满足后将对该队伍永久解锁。">
+            <rbph-content-block-visibility-editor v-model="infoState.visibilityCond" :game-id="gameId" :current-puzzle-id="currentPuzzleId" :disabled="disabled || savingInfo" />
+          </rb-form-field>
+          <u-separator />
+          <rb-form-field label="危险区域" row narrow-label>
             <u-popover v-model:open="clearUnlocksOpen" arrow>
               <u-button label="清除永久解锁记录" icon="material-symbols:lock-reset-rounded" color="warning" variant="soft" :disabled="disabled || savingInfo" />
               <template #content>
@@ -412,7 +413,7 @@ onBeforeUnmount(clearDragState);
                 </div>
               </template>
             </u-popover>
-          </div>
+          </rb-form-field>
         </u-form>
       </template>
       <template #footer>
