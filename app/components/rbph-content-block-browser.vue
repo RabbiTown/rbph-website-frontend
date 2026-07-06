@@ -16,7 +16,11 @@ const props = defineProps<{
   gameId: number;
   currentPuzzleId?: number;
   disabled?: boolean;
+  cdnAvailable: boolean;
   saveInfo: (id: number, info: Pick<AdminContentBlock, 'name' | 'content_type' | 'visibility_cond'>) => Promise<void>;
+  upload: (id: number) => Promise<void>;
+  removeUpload: (id: number) => Promise<void>;
+  isDirty: (id: number) => boolean;
 }>();
 
 const emit = defineEmits<{
@@ -33,6 +37,10 @@ const dragOver = ref<BlockDropTarget | null>(null);
 const originPlaceholderVisible = ref(false);
 const infoOpen = ref(false);
 const savingInfo = ref(false);
+const uploadingCdn = ref(false);
+const uploadCdnOpen = ref(false);
+const removingCdn = ref(false);
+const removeCdnOpen = ref(false);
 const clearUnlocksOpen = ref(false);
 const infoTargetId = ref<number>();
 const infoState = reactive({
@@ -49,6 +57,7 @@ const dragAutoScroll = useDragAutoScroll({
 });
 
 const infoTarget = computed(() => props.blocks.find(block => block.id === infoTargetId.value));
+const infoTargetDirty = computed(() => Boolean(infoTarget.value && props.isDirty(infoTarget.value.id)));
 const contentTypeItems = [
   { label: 'Markdown', value: RbContentType.Markdown, icon: 'material-symbols:markdown-rounded' },
   { label: 'HTML', value: RbContentType.Html, icon: 'material-symbols:html-rounded' },
@@ -57,6 +66,8 @@ const contentTypeItems = [
 
 function openInfo(block: AdminContentBlock) {
   clearUnlocksOpen.value = false;
+  uploadCdnOpen.value = false;
+  removeCdnOpen.value = false;
   infoTargetId.value = block.id;
   infoState.name = block.name;
   infoState.contentType = block.content_type;
@@ -87,6 +98,36 @@ async function applyInfo() {
     handleError(error, '保存内容块信息失败');
   } finally {
     savingInfo.value = false;
+  }
+}
+
+async function uploadInfoTarget() {
+  const block = infoTarget.value;
+  if (!block || infoTargetDirty.value || !block.content || uploadingCdn.value) return;
+  uploadingCdn.value = true;
+  try {
+    await props.upload(block.id);
+    uploadCdnOpen.value = false;
+    toast.add({ title: '内容块已上传到 CDN', icon: 'material-symbols:cloud-done-outline-rounded', color: 'success' });
+  } catch (error) {
+    handleError(error, '上传内容块失败');
+  } finally {
+    uploadingCdn.value = false;
+  }
+}
+
+async function removeInfoTargetUpload() {
+  const block = infoTarget.value;
+  if (!block?.cdn_backend || removingCdn.value) return;
+  removingCdn.value = true;
+  try {
+    await props.removeUpload(block.id);
+    removeCdnOpen.value = false;
+    toast.add({ title: '内容块已撤销上传', icon: 'material-symbols:cloud-off-outline-rounded', color: 'success' });
+  } catch (error) {
+    handleError(error, '撤销内容块上传失败');
+  } finally {
+    removingCdn.value = false;
   }
 }
 
@@ -250,7 +291,12 @@ onBeforeUnmount(clearDragState);
         <div class="flex items-center gap-2 rounded-lg bg-elevated/60 px-3 py-2 ring transition hover:bg-elevated" :class="block.id === selectedId ? 'ring-primary/70' : 'ring-default'">
           <button type="button" class="min-w-0 flex-1 text-left" @click="emit('select', block.id)">
             <span class="block truncate text-sm font-medium text-highlighted">{{ block.name }}</span>
-            <span class="mt-0.5 block truncate text-xs text-muted">{{ block.visibility_cond === 'default' ? '始终显示' : '条件显示' }}</span>
+            <span class="mt-1 flex min-w-0 flex-wrap items-center gap-1">
+              <u-badge size="xs" variant="soft" :color="block.visibility_cond === 'default' ? 'neutral' : 'warning'" :icon="block.visibility_cond === 'default' ? 'material-symbols:visibility-outline-rounded' : 'material-symbols:rule-rounded'">
+                {{ block.visibility_cond === 'default' ? '始终显示' : '条件显示' }}
+              </u-badge>
+              <u-badge v-if="block.cdn_backend" size="xs" variant="soft" color="success" icon="material-symbols:cloud-done-outline-rounded"> 已上传 </u-badge>
+            </span>
           </button>
           <div class="flex shrink-0 items-center gap-1">
             <u-button icon="material-symbols:info-outline-rounded" color="neutral" variant="ghost" size="xs" :disabled="disabled" title="内容块信息" @click="openInfo(block)" />
@@ -289,7 +335,7 @@ onBeforeUnmount(clearDragState);
       <p v-if="blocks.length === 0" class="py-8 text-center text-sm text-muted">暂无内容块</p>
     </div>
 
-    <u-modal v-model:open="infoOpen" title="内容块信息" :dismissible="!disabled && !savingInfo" :close="!disabled && !savingInfo" :ui="{ content: 'sm:max-w-3xl' }">
+    <u-modal v-model:open="infoOpen" title="内容块信息" :dismissible="!disabled && !savingInfo && !uploadingCdn && !removingCdn" :close="!disabled && !savingInfo && !uploadingCdn && !removingCdn" :ui="{ content: 'sm:max-w-3xl' }">
       <template #body>
         <u-form :state="infoState" class="space-y-4" @submit.prevent="applyInfo">
           <rb-form-field label="名称" tooltip="仅便于后台区分内容块，不会向玩家公开。" row narrow-label required>
@@ -313,13 +359,56 @@ onBeforeUnmount(clearDragState);
           <rb-form-field label="显示条件" tooltip="首次满足后将对该队伍永久解锁。">
             <rbph-content-block-visibility-editor v-model="infoState.visibilityCond" :game-id="gameId" :current-puzzle-id="currentPuzzleId" :disabled="disabled || savingInfo" />
           </rb-form-field>
+          <rb-form-field v-if="cdnAvailable" label="内容分发" row narrow-label>
+            <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+              <u-badge :color="infoTarget?.cdn_backend ? 'success' : 'neutral'" variant="soft" :icon="infoTarget?.cdn_backend ? 'material-symbols:cloud-done-outline-rounded' : 'material-symbols:cloud-off-outline-rounded'">
+                {{ infoTarget?.cdn_backend ? '已上传' : '未上传' }}
+              </u-badge>
+              <u-popover v-model:open="uploadCdnOpen" arrow>
+                <u-button
+                  :label="infoTarget?.cdn_backend ? '重新上传' : '上传到 CDN'"
+                  icon="material-symbols:upload-2-outline-rounded"
+                  color="primary"
+                  variant="soft"
+                  :loading="uploadingCdn"
+                  :disabled="disabled || savingInfo || uploadingCdn || removingCdn || infoTargetDirty || !infoTarget?.content"
+                />
+                <template #content>
+                  <div class="w-64 p-3 text-sm">
+                    <p class="text-muted">
+                      {{ infoTarget?.cdn_backend ? '将使用当前已保存正文替换现有 CDN 内容。' : '将当前已保存正文上传到 CDN。' }}
+                    </p>
+                    <div class="mt-3 flex justify-end">
+                      <u-button :label="infoTarget?.cdn_backend ? '确认重新上传' : '确认上传'" icon="material-symbols:upload-2-outline-rounded" color="primary" variant="soft" size="xs" :loading="uploadingCdn" @click="uploadInfoTarget" />
+                    </div>
+                  </div>
+                </template>
+              </u-popover>
+              <u-popover v-if="infoTarget?.cdn_backend" v-model:open="removeCdnOpen" arrow>
+                <u-button label="撤销上传" icon="material-symbols:cloud-off-outline-rounded" color="error" variant="soft" :loading="removingCdn" :disabled="disabled || savingInfo || uploadingCdn || removingCdn" />
+                <template #content>
+                  <div class="w-64 p-3 text-sm">
+                    <p class="text-muted">撤销后玩家将重新从后端接口获取此内容块。</p>
+                    <div class="mt-3 flex justify-end">
+                      <u-button label="确认撤销" icon="material-symbols:cloud-off-outline-rounded" color="error" variant="soft" size="xs" :loading="removingCdn" @click="removeInfoTargetUpload" />
+                    </div>
+                  </div>
+                </template>
+              </u-popover>
+              <span v-if="infoTargetDirty" class="text-xs text-warning">请先保存正文修改</span>
+              <span v-else-if="!infoTarget?.content" class="text-xs text-muted">空内容块无需上传</span>
+              <span v-else-if="infoTarget?.cdn_backend" class="text-xs text-muted">{{ infoTarget.cdn_backend }}</span>
+            </div>
+          </rb-form-field>
           <div class="flex justify-end">
             <u-popover v-model:open="clearUnlocksOpen" arrow>
               <u-button label="清除永久解锁记录" icon="material-symbols:lock-reset-rounded" color="warning" variant="soft" :disabled="disabled || savingInfo" />
               <template #content>
                 <div class="w-64 p-3 text-sm">
                   <p class="mb-3 text-muted">清除后，各队伍将重新按当前条件判断此内容块。</p>
-                  <u-button label="确认清除" color="warning" variant="soft" size="xs" @click="confirmClearUnlocks" />
+                  <div class="mt-3 flex justify-end">
+                    <u-button label="确认清除" color="warning" variant="soft" size="xs" @click="confirmClearUnlocks" />
+                  </div>
                 </div>
               </template>
             </u-popover>
@@ -328,8 +417,8 @@ onBeforeUnmount(clearDragState);
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
-          <u-button label="取消" color="neutral" variant="soft" :disabled="disabled || savingInfo" @click="infoOpen = false" />
-          <u-button label="保存" icon="material-symbols:save-outline-rounded" :loading="savingInfo" :disabled="disabled || !infoState.name.trim()" @click="applyInfo" />
+          <u-button label="取消" color="neutral" variant="soft" :disabled="disabled || savingInfo || uploadingCdn || removingCdn" @click="infoOpen = false" />
+          <u-button label="保存" icon="material-symbols:save-outline-rounded" :loading="savingInfo" :disabled="disabled || uploadingCdn || removingCdn || !infoState.name.trim()" @click="applyInfo" />
         </div>
       </template>
     </u-modal>

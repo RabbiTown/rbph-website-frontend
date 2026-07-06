@@ -6,6 +6,11 @@ export interface AdminContentBlock {
   name: string;
   content: string;
   content_type: RbContentType;
+  cdn_backend?: string | null;
+  cdn_object_key?: string | null;
+  cdn_relative_path?: string | null;
+  cdn_sha256?: string | null;
+  cdn_size?: number | null;
   visibility_cond: string;
   ctime_at: string;
   utime_at: string;
@@ -18,6 +23,7 @@ export function useAdminContentBlocks(owner: 'puzzles' | 'rounds', ownerId: Ref<
   const selectedId = ref<number>();
   const loading = ref(false);
   const saving = ref(false);
+  const cdnAvailable = ref(false);
 
   const endpoint = computed(() => (ownerId.value ? `/admin/${owner}/${ownerId.value}/content-blocks` : ''));
   const selected = computed(() => blocks.value.find(block => block.id === selectedId.value));
@@ -30,6 +36,10 @@ export function useAdminContentBlocks(owner: 'puzzles' | 'rounds', ownerId: Ref<
     });
   const dirtyBlocks = computed(() => blocks.value.filter(block => baseline.value[block.id] !== snapshot(block)));
   const dirty = computed(() => dirtyBlocks.value.length > 0);
+  const isDirty = (id: number) => {
+    const block = blocks.value.find(item => item.id === id);
+    return Boolean(block && baseline.value[id] !== snapshot(block));
+  };
 
   function accept(next: AdminContentBlock[]) {
     blocks.value = next.sort((a, b) => a.sort - b.sort || a.id - b.id);
@@ -41,8 +51,12 @@ export function useAdminContentBlocks(owner: 'puzzles' | 'rounds', ownerId: Ref<
     if (!endpoint.value) return;
     loading.value = true;
     try {
-      const { data } = await api.get<{ blocks: AdminContentBlock[] }>(endpoint.value);
-      accept(data.blocks);
+      const [blocksResponse, cdnResponse] = await Promise.all([
+        api.get<{ blocks: AdminContentBlock[] }>(endpoint.value),
+        api.get<{ available: boolean }>('/admin/content-blocks/cdn-status').catch(() => undefined),
+      ]);
+      accept(blocksResponse.data.blocks);
+      cdnAvailable.value = cdnResponse?.data.available ?? false;
     } finally {
       loading.value = false;
     }
@@ -137,7 +151,22 @@ export function useAdminContentBlocks(owner: 'puzzles' | 'rounds', ownerId: Ref<
     await api.del(`/admin/content-blocks/${id}/unlocks`);
   }
 
+  async function upload(id: number) {
+    if (isDirty(id)) return;
+    const block = blocks.value.find(item => item.id === id);
+    if (!block) return;
+    const { data } = await api.post<{ block: AdminContentBlock }>('/admin/content-blocks/' + id + '/cdn');
+    Object.assign(block, data.block);
+  }
+
+  async function removeUpload(id: number) {
+    const block = blocks.value.find(item => item.id === id);
+    if (!block) return;
+    const { data } = await api.del<{ block: AdminContentBlock }>('/admin/content-blocks/' + id + '/cdn');
+    Object.assign(block, data.block);
+  }
+
   watch(ownerId, load, { immediate: true });
 
-  return { blocks, selected, selectedId, loading, saving, dirty, load, create, remove, reorder, save, saveInfo, reset, clearUnlocks };
+  return { blocks, selected, selectedId, loading, saving, cdnAvailable, dirty, isDirty, load, create, remove, reorder, save, saveInfo, reset, clearUnlocks, upload, removeUpload };
 }

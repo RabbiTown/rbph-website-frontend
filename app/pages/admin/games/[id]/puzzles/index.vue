@@ -109,6 +109,8 @@ const dragAutoScroll = useDragAutoScroll({
 const loading = ref(false);
 const applyLoading = ref(false);
 const batchUpdating = ref(false);
+const batchContentUploading = ref(false);
+const contentCdnAvailable = ref(false);
 const rounds = ref<AdminRound[]>([]);
 const puzzles = ref<AdminPuzzle[]>([]);
 const releasePhases = ref<AdminReleasePhaseData[]>([]);
@@ -130,6 +132,9 @@ const batchReleasePhaseId = ref<number | 'unpublished' | 'immediate'>();
 const batchPuzzleIds = ref<number[]>([]);
 const batchUsesSelection = ref(false);
 const batchConfirmOpen = ref(false);
+const batchContentPuzzleIds = ref<number[]>([]);
+const batchContentUsesSelection = ref(false);
+const batchContentConfirmOpen = ref(false);
 const deletingPuzzle = ref<AdminPuzzle>();
 const deletePuzzleNameInput = ref('');
 const deletePuzzleConfirmOpen = ref(false);
@@ -453,10 +458,19 @@ function puzzleContextMenuItems(puzzle: AdminPuzzle): ContextMenuItem[][] {
     {
       label: '更改发布方式',
       icon: 'material-symbols:published-with-changes-rounded',
-      disabled: batchUpdating.value || puzzleDeleting.value || hasChanges.value,
+      disabled: batchUpdating.value || batchContentUploading.value || puzzleDeleting.value || hasChanges.value,
       onSelect: () => openBatchReleaseConfirm(puzzle),
     },
   ];
+
+  if (contentCdnAvailable.value) {
+    actions.push({
+      label: '上传所有内容块',
+      icon: 'material-symbols:upload-2-outline-rounded',
+      disabled: batchUpdating.value || batchContentUploading.value || puzzleDeleting.value || hasChanges.value,
+      onSelect: () => openBatchContentUploadConfirm(puzzle),
+    });
+  }
 
   if (!multiple) {
     actions.push({
@@ -476,6 +490,52 @@ function openBatchReleaseConfirm(puzzle: AdminPuzzle) {
   batchUsesSelection.value = contextUsesSelection(puzzle);
   batchReleasePhaseId.value = undefined;
   batchConfirmOpen.value = true;
+}
+
+function openBatchContentUploadConfirm(puzzle: AdminPuzzle) {
+  batchContentPuzzleIds.value = contextPuzzleIds(puzzle);
+  batchContentUsesSelection.value = contextUsesSelection(puzzle);
+  batchContentConfirmOpen.value = true;
+}
+
+async function confirmBatchContentUpload() {
+  const puzzleIds = batchContentPuzzleIds.value;
+  if (batchContentUploading.value || puzzleIds.length === 0) return;
+  batchContentUploading.value = true;
+  try {
+    type Response = {
+      puzzle_count: number;
+      block_count: number;
+      skipped_empty: number;
+    };
+    const { data } = await api.post<Response>(
+      '/admin/content-blocks/batch-cdn',
+      {
+        game_id: gameId.value,
+        puzzle_ids: puzzleIds,
+      },
+      {
+        errorHints: {
+          [-3]: '空内容块无法上传。',
+          [-2]: '内容 CDN 未配置，或所选谜题不合法。',
+        },
+      },
+    );
+    batchContentConfirmOpen.value = false;
+    if (batchContentUsesSelection.value) clearPuzzleSelection();
+    toast.add({
+      title: '内容块上传完成',
+      description: data.skipped_empty > 0
+        ? `已上传 ${data.block_count} 个内容块，跳过 ${data.skipped_empty} 个空内容块。`
+        : `已上传 ${data.block_count} 个内容块。`,
+      icon: 'material-symbols:cloud-done-outline-rounded',
+      color: 'success',
+    });
+  } catch (error) {
+    handleError(error, '批量上传内容块失败');
+  } finally {
+    batchContentUploading.value = false;
+  }
 }
 
 function openDeletePuzzleConfirm(puzzle: AdminPuzzle) {
@@ -1427,8 +1487,9 @@ async function fetchData() {
     type RoundResponse = { rounds: AdminRound[] };
     type PuzzleResponse = { puzzles: AdminPuzzle[] };
     type ReleaseResponse = { phases: AdminReleasePhaseData[] };
+    type CdnStatusResponse = { available: boolean };
 
-    const [roundResp, puzzleResp, releaseResp] = await Promise.all([
+    const [roundResp, puzzleResp, releaseResp, cdnResp] = await Promise.all([
       api.get<RoundResponse>('/admin/rounds', {
         query: {
           game_id: gameId.value,
@@ -1440,11 +1501,13 @@ async function fetchData() {
         },
       }),
       api.get<ReleaseResponse>(`/admin/games/${gameId.value}/release-phases`),
+      api.get<CdnStatusResponse>('/admin/content-blocks/cdn-status').catch(() => undefined),
     ]);
 
     rounds.value = sortBySortId(roundResp.data.rounds);
     puzzles.value = orderAllPuzzles(sortBySortId(puzzleResp.data.puzzles));
     releasePhases.value = releaseResp.data.phases;
+    contentCdnAvailable.value = cdnResp?.data.available ?? false;
     originalRounds.value = cloneRounds(rounds.value);
     originalPuzzles.value = clonePuzzles(puzzles.value);
     deletingRoundIds.value = new Set();
@@ -1454,6 +1517,7 @@ async function fetchData() {
     rounds.value = [];
     puzzles.value = [];
     releasePhases.value = [];
+    contentCdnAvailable.value = false;
     originalRounds.value = [];
     originalPuzzles.value = [];
     deletingRoundIds.value = new Set();
@@ -1690,6 +1754,25 @@ onBeforeUnmount(cleanupSelectionGesture);
             @click="confirmBatchRelease"
           />
         </div>
+      </template>
+    </rb-confirm-modal>
+    <rb-confirm-modal
+      v-model:open="batchContentConfirmOpen"
+      title="上传所有内容块"
+      :description="`将 ${batchContentPuzzleIds.length} 道谜题的全部非空内容块上传到 CDN。`"
+      confirm-label="确认上传"
+      confirm-icon="material-symbols:upload-2-outline-rounded"
+      :busy="batchContentUploading"
+      @confirm="confirmBatchContentUpload"
+    >
+      <template #body>
+        <u-alert
+          color="warning"
+          variant="subtle"
+          icon="material-symbols:warning-outline-rounded"
+          title="已有 CDN 内容将被替换"
+          description="空内容块会自动跳过，上传完成后旧 CDN 文件将被删除。"
+        />
       </template>
     </rb-confirm-modal>
     <rb-confirm-modal
