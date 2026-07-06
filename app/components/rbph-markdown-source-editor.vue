@@ -21,6 +21,7 @@ function lineMarkerClass(line: string) {
   if (/^\s{0,3}>/.test(line)) return 'bg-info';
   if (/^\s*([-+*]|\d+\.)\s+/.test(line)) return 'bg-warning';
   if (/^\s*`{3,}/.test(line)) return 'bg-success';
+  if (/^\s*(\$\$|\\\[)/.test(line)) return 'bg-info';
   if (/^\s*::rb-raw-html(?:\{[^}]*\})?\s*$/.test(line)) return 'bg-error';
   if (/^\s*::rb-vue-app(?:\{[^}]*\})?\s*$/.test(line)) return 'bg-primary';
   if (/^\s*::[A-Za-z][\w-]*(?:\{[^}]*\})?\s*$/.test(line)) return 'bg-secondary';
@@ -39,6 +40,8 @@ function highlightLine(line: string) {
   html = html.replace(/^(\s*)([-+*]|\d+\.)(\s+)/, '$1<span class="text-warning">$2</span>$3');
   html = html.replace(/^(\s*`{3,}.*)$/, '<span class="text-success">$1</span>');
   html = html.replace(/(`[^`]+`)/g, '<span class="text-success">$1</span>');
+  html = html.replace(/^(\s*(?:\$\$|\\\[|\\\]).*)$/, '<span class="text-info">$1</span>');
+  html = html.replace(/(\$[^$\s][^$\n]*?\$|\\\([^)\n]+\\\))/g, '<span class="text-info">$1</span>');
   html = html.replace(/(\*\*|__)(.+?)(\1)/g, '<span class="text-primary">$1</span><span class="text-highlighted">$2</span><span class="text-primary">$3</span>');
   html = html.replace(/(\*|_)([^*_]+?)(\1)/g, '<span class="text-primary">$1</span><span class="text-highlighted">$2</span><span class="text-primary">$3</span>');
   html = html.replace(/(!?\[[^\]]*\]\([^)]+\))/g, '<span class="text-secondary">$1</span>');

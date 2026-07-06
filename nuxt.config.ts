@@ -12,7 +12,7 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/ui', '@nuxtjs/mdc', '@vueuse/nuxt'],
-  css: ['~/assets/css/main.css'],
+  css: ['katex/dist/katex.min.css', '~/assets/css/main.css'],
   ssr: false,
   image: {
     provider: 'none',
@@ -65,6 +65,7 @@ export default defineNuxtConfig({
         '@tiptap/extension-text-align',
         '@tiptap/extension-text-style',
         '@tiptap/extension-underline',
+        'katex',
         'valibot',
       ],
     },

@@ -356,7 +356,7 @@ defineExpose({ apply, reset });
                   </rb-form-field>
                 </div>
 
-                <rbph-content-editor v-model="phase.description" framed placeholder="向玩家展示的阶段说明" :disabled="saving || phase.deleting" class="h-24" />
+                <rbph-content-editor v-model="phase.description" framed content-class="min-h-28" placeholder="向玩家展示的阶段说明" :disabled="saving || phase.deleting" @save="apply" />
 
                 <rb-form-field row narrow-label label="修改功能">
                   <div class="flex w-full min-w-0 flex-wrap gap-2">

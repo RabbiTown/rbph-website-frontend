@@ -22,23 +22,38 @@ const emit = defineEmits<{
 let dynTimer: ReturnType<typeof setTimeout> | undefined = undefined;
 let dynSeq = 0;
 
-const mdWhitelists = ['div', 'span', 'figure', 'figcaption', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'hr', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img', 'em', 'strong', 'u'];
+const mdWhitelists = ['div', 'span', 'figure', 'figcaption', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'hr', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img', 'em', 'strong', 'u', 'rbph-katex-renderer'];
+
+function isSanitizedMdNode(node: MDCNode | MDCRoot | null): node is MDCNode | MDCRoot {
+  return Boolean(node);
+}
 
 function sanitizedMdNode<T extends MDCNode | MDCRoot>(node: T): T | null {
   if (node.type === 'root') {
     return {
       ...node,
-      children: node.children.map(sanitizedMdNode).filter(Boolean),
+      children: node.children.map(sanitizedMdNode).filter(isSanitizedMdNode),
     };
   } else if (node.type === 'element') {
     if (!mdWhitelists.includes(node.tag)) return null;
+
+    if (node.tag === 'rbph-katex-renderer') {
+      return {
+        ...node,
+        props: {
+          tex: typeof node.props?.tex === 'string' ? node.props.tex : '',
+          display: node.props?.display === true || node.props?.display === 'true',
+        },
+        children: [],
+      };
+    }
 
     if (node.tag === 'div') {
       const textAlign = node.props?.['data-text-align'];
       return {
         ...node,
         props: typeof textAlign === 'string' && ['left', 'center', 'right'].includes(textAlign) ? { class: `text-${textAlign}`, 'data-text-align': textAlign } : {},
-        children: node.children.map(sanitizedMdNode).filter(Boolean),
+        children: node.children.map(sanitizedMdNode).filter(isSanitizedMdNode),
       };
     }
 
@@ -53,13 +68,13 @@ function sanitizedMdNode<T extends MDCNode | MDCRoot>(node: T): T | null {
             : typeof style === 'string' && /^color:\s*#[0-9a-f]{6}$/i.test(style)
               ? { style }
               : {},
-        children: node.children.map(sanitizedMdNode).filter(Boolean),
+        children: node.children.map(sanitizedMdNode).filter(isSanitizedMdNode),
       };
     }
 
     return {
       ...node,
-      children: node.children.map(sanitizedMdNode).filter(Boolean),
+      children: node.children.map(sanitizedMdNode).filter(isSanitizedMdNode),
     };
   } else if (node.type === 'text' || node.type === 'comment') {
     return node;
@@ -113,12 +128,13 @@ watch(
       const dynCur = ++dynSeq;
       const updater = async () => {
         if (dynCur !== dynSeq) return;
-        const newAst = await mdParser(content as string);
+        const newAst = await mdParser(transformMarkdownMath(content as string));
         newAst.body = transformAlignBlocks(newAst.body);
         newAst.body = transformImageBlocks(newAst.body);
         newAst.body = transformTableBlocks(newAst.body);
         newAst.body = transformRawHtmlBlocks(newAst.body);
         newAst.body = transformVueAppBlocks(newAst.body);
+        newAst.body = transformMathNodes(newAst.body);
         newAst.body = transformColorSpans(newAst.body);
         newAst.body = stripMarkdownHints(newAst.body);
         if (content_type === RbContentType.UnsafeMarkdown) {

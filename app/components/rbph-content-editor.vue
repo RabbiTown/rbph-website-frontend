@@ -30,6 +30,7 @@ const props = defineProps<{
   placeholder?: string;
   disabled?: boolean;
   framed?: boolean;
+  contentClass?: string;
 }>();
 
 const emit = defineEmits<{
@@ -39,6 +40,8 @@ const emit = defineEmits<{
 
 const isSourceMode = computed(() => mode.value === 'source');
 const isPreviewMode = computed(() => mode.value === 'preview');
+const contentHeightClass = computed(() => props.contentClass ?? (props.framed ? 'min-h-56' : ''));
+const effectiveContentClass = computed(() => [contentHeightClass.value, 'text-sm'].filter(Boolean).join(' '));
 const editorModel = computed({
   get: () => normalizeCjkMarkdown(model.value),
   set: value => {
@@ -49,7 +52,7 @@ const previewContent = computed<RbContent>(() => ({
   content: model.value,
   content_type: RbContentType.Markdown,
 }));
-const editorExtensions = [RbphAlignBlock, RbphImageBlock, RbphRawHtmlBlock, RbphVueAppBlock, RbphTable, RbphTableRow, RbphTableHeader, RbphTableCell, RbphTextStyle, RbphUnderline, Color, TextAlign.configure({ types: ['heading', 'paragraph', 'align'] })];
+const editorExtensions = [RbphAlignBlock, RbphImageBlock, RbphRawHtmlBlock, RbphVueAppBlock, RbphMathInline, RbphMathBlock, RbphTable, RbphTableRow, RbphTableHeader, RbphTableCell, RbphTextStyle, RbphUnderline, Color, TextAlign.configure({ types: ['heading', 'paragraph', 'align'] })];
 const editorProps = {
   handleKeyDown: onEditorKeydown,
   handleDOMEvents: {
@@ -133,6 +136,16 @@ const editorHandlers = {
     canExecute: () => true,
     execute: (editor: Editor) => createRbVueAppBlock(editor),
     isActive: (editor: Editor) => editor.isActive('rbVueApp'),
+  },
+  mathInline: {
+    canExecute: () => true,
+    execute: (editor: Editor) => createRbphMathInline(editor),
+    isActive: (editor: Editor) => editor.isActive('mathInline'),
+  },
+  mathBlock: {
+    canExecute: () => true,
+    execute: (editor: Editor) => createRbphMathBlock(editor),
+    isActive: (editor: Editor) => editor.isActive('mathBlock'),
   },
 };
 
@@ -296,6 +309,8 @@ const suggestionItems = [
   { kind: 'horizontalRule', label: '分割线', aliases: ['hr', 'divider', 'separator', 'rule'], icon: 'material-symbols:horizontal-rule-rounded' },
   { kind: 'rbImage', label: '图片', aliases: ['image', 'img', 'picture'], icon: 'material-symbols:image-outline-rounded' },
   { kind: 'rbTable', label: '表格', aliases: ['table', 'grid'], icon: 'material-symbols:grid-on-outline' },
+  { kind: 'mathInline', label: '行内公式', aliases: ['math', 'latex', 'tex', 'inline'], icon: 'material-symbols:function-rounded' },
+  { kind: 'mathBlock', label: '块级公式', aliases: ['mathblock', 'latexblock', 'texblock', 'equation'], icon: 'material-symbols:functions-rounded' },
   { type: 'separator' },
   { type: 'label', label: '高级' },
   { kind: 'rbRawHtml', label: 'HTML', aliases: ['html', 'raw', 'script', 'style', 'iframe'], icon: 'material-symbols:web-asset' },
@@ -506,7 +521,7 @@ defineExpose({ focus });
         :editor-props="editorProps"
         :ui="{
           content: props.framed ? '' : 'ps-3',
-          base: props.framed ? 'min-h-56 px-3 py-3' : 'py-3',
+          base: props.framed ? `${effectiveContentClass} px-3 py-2 sm:px-4` : `py-3 ${effectiveContentClass}`,
         }"
         :on-selection-update="refreshEditorSelection"
       >
@@ -602,10 +617,10 @@ defineExpose({ focus });
         :placeholder="placeholder"
         :disabled="disabled"
         :framed="props.framed"
-        :class="props.framed ? 'min-h-56' : ''"
+        :class="effectiveContentClass"
         @focus-title="emit('focusTitle')"
       />
-      <div v-else-if="isPreviewMode" key="preview" ref="previewFrame" class="px-4 py-3 sm:px-5 outline-none" :class="props.framed ? 'min-h-56' : ''" :tabindex="props.framed ? 0 : undefined">
+      <div v-else-if="isPreviewMode" key="preview" ref="previewFrame" class="px-4 py-3 sm:px-5 outline-none" :class="effectiveContentClass" :tabindex="props.framed ? 0 : undefined">
         <rbph-content :content="previewContent" @rendered="releaseRetainedContentHeight()" />
       </div>
     </div>
@@ -660,5 +675,15 @@ defineExpose({ focus });
   background-color: transparent;
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--ui-primary) 22%, transparent);
+}
+
+.rbph-content-editor :deep(.rbph-math-node-error) {
+  color: var(--ui-error);
+  background: color-mix(in oklab, var(--ui-error) 8%, transparent);
+}
+
+.rbph-content-editor :deep(.rbph-math-node-editing) {
+  border-radius: 0.5rem;
+  background: color-mix(in oklab, var(--ui-primary) 14%, transparent);
 }
 </style>
