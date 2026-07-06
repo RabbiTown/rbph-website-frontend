@@ -52,7 +52,17 @@ export interface RbPuzzle {
   contents: RbContentBlock[];
   round: Pick<RbRound, 'id' | 'slug' | 'title'>;
   game_id: number;
+  submission_enabled: boolean;
+  submit_requirements: RbPuzzleSubmitRequirement[];
   announcements: RbAnnouncementInfo[];
+}
+
+export interface RbPuzzleSubmitRequirement {
+  type: 'currency_minimum';
+  currency_id: number;
+  currency_name: string;
+  currency_prec: number;
+  minimum: number;
 }
 
 export enum RbTeamPuzzleState {

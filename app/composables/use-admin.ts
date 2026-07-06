@@ -18,6 +18,7 @@ export interface AdminPuzzleData {
   ptype: number;
   judge: unknown;
   penalty: unknown;
+  submit_requirements: unknown;
   max_submit?: number | null;
   unlock_cond: string;
   release_phase_id: number | null;

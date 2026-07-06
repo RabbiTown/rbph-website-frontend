@@ -3,6 +3,17 @@ const { puzzle, puzzleRoute } = usePuzzleContext();
 
 const okSubmissionsComp = useTemplateRef('ok-submissions');
 const submitResultComp = useTemplateRef('submit-result');
+const currencies = useCurrency().getAllCurrent();
+const unmetSubmitRequirements = computed(() => (puzzle.value?.data.submit_requirements ?? []).filter(requirement => (currencies.value[requirement.currency_id]?.current ?? 0) < requirement.minimum));
+const submitRequirementHint = computed(() => {
+  if (!unmetSubmitRequirements.value.length) return undefined;
+  return unmetSubmitRequirements.value
+    .map(requirement => {
+      const current = currencies.value[requirement.currency_id]?.current ?? 0;
+      return `${requirement.currency_name} ${intPrecString(current, requirement.currency_prec)} / ${intPrecString(requirement.minimum, requirement.currency_prec)}`;
+    })
+    .join('，');
+});
 
 function onSubmitSuccess(action: RbJudgeAction) {
   usePuzzle().updateState();
@@ -70,28 +81,32 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
       <rbph-content-blocks :blocks="puzzle.data.contents" />
     </u-card>
 
-    <u-separator class="my-6" :ui="{ container: 'w-full', border: 'md:w-3/12 w-0' }">
-      <rbph-submitter
-        class="w-full"
-        :puzzle="puzzle.data.id"
-        :success="puzzle.state.state === RbTeamPuzzleState.Solved"
-        :cooldown-till="puzzle.state.cooldown_till"
-        :max-submit="puzzle.state.max_submit"
-        :submit-count="puzzle.state.submit_count"
-        @submit-success="onSelfSubmitSuccess"
-        @submit-fail="onSelfSubmitFailed"
-      />
-    </u-separator>
-    <rbph-submit-result ref="submit-result" />
+    <template v-if="puzzle.data.submission_enabled">
+      <u-separator class="mt-6" :ui="{ container: 'w-full', border: 'md:w-3/12 w-0' }">
+        <rbph-submitter
+          class="w-full"
+          :puzzle="puzzle.data.id"
+          :success="puzzle.state.state === RbTeamPuzzleState.Solved"
+          :cooldown-till="puzzle.state.cooldown_till"
+          :max-submit="puzzle.state.max_submit"
+          :submit-count="puzzle.state.submit_count"
+          :externally-blocked="unmetSubmitRequirements.length > 0"
+          :blocked-hint="submitRequirementHint"
+          @submit-success="onSelfSubmitSuccess"
+          @submit-fail="onSelfSubmitFailed"
+        />
+      </u-separator>
+      <rbph-submit-result ref="submit-result" />
 
-    <div class="w-full" variant="soft">
-      <div class="text-lg font-bold mb-4">最近成功提交</div>
-      <rbph-submissions ref="ok-submissions" :puzzle-id="puzzle.data.id" :only-ok="true" />
-      <div class="flex justify-center mt-2">
-        <nuxt-link :to="puzzleRoute('submissions')">
-          <u-button class="cursor-pointer" variant="ghost" color="secondary" icon="material-symbols:more-horiz" trailing-icon="material-symbols:more-horiz">查看所有提交</u-button>
-        </nuxt-link>
+      <div class="w-full" variant="soft">
+        <div class="text-lg font-bold mb-4 mt-6">最近成功提交</div>
+        <rbph-submissions ref="ok-submissions" :puzzle-id="puzzle.data.id" :only-ok="true" />
+        <div class="flex justify-center mt-2">
+          <nuxt-link :to="puzzleRoute('submissions')">
+            <u-button class="cursor-pointer" variant="ghost" color="secondary" icon="material-symbols:more-horiz" trailing-icon="material-symbols:more-horiz">查看所有提交</u-button>
+          </nuxt-link>
+        </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>

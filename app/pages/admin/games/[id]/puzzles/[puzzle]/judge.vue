@@ -58,6 +58,24 @@ interface SerializedPenaltyRule {
   args: number[];
 }
 
+interface RawSubmitRequirement {
+  type?: unknown;
+  currency_id?: unknown;
+  minimum?: unknown;
+}
+
+interface SubmitRequirementState {
+  id: string;
+  currencyId: number | null;
+  minimum: number;
+}
+
+interface SerializedSubmitRequirement {
+  type: 'currency_minimum';
+  currency_id: number;
+  minimum: number;
+}
+
 interface AdminCurrencyData {
   id: number;
   name: string;
@@ -91,6 +109,7 @@ const currencies = ref<AdminCurrencyData[]>([]);
 
 const state = reactive({
   rules: [] as JudgeRuleState[],
+  submitRequirements: [] as SubmitRequirementState[],
   penalty: {
     cooldownType: 'none',
     fixedTime: 0,
@@ -107,6 +126,7 @@ const draggingRuleId = ref<string | null>(null);
 const dragOverRule = ref<RuleDropTarget | null>(null);
 const ruleOriginPlaceholderVisible = ref(false);
 let nextRuleId = 0;
+let nextRequirementId = 0;
 let ruleDropEntries: RuleDropEntry[] = [];
 
 const allRuleTypeItems = [
@@ -158,6 +178,17 @@ const selectedCurrency = computed(() => currencies.value.find(currency => curren
 const selectedCooldownTypeIcon = computed(() => cooldownTypeItems.find(item => item.value === state.penalty.cooldownType)?.icon);
 const selectedCurrencyIcon = computed(() => currencyItems.value.find(item => item.value === state.penalty.currencyId)?.icon);
 const selectedSubmitLimitIcon = computed(() => submitLimitItems.find(item => item.value === state.penalty.submitLimitType)?.icon);
+
+function requirementCurrencyItems(requirement: SubmitRequirementState): SelectItem[] {
+  const used = new Set(state.submitRequirements.filter(item => item.id !== requirement.id).map(item => item.currencyId));
+  return currencies.value
+    .filter(currency => !used.has(currency.id))
+    .map(currency => ({ label: currency.name, value: currency.id, icon: 'material-symbols:emoji-objects-outline-rounded' }));
+}
+
+function requirementCurrency(requirement: SubmitRequirementState) {
+  return currencies.value.find(currency => currency.id === requirement.currencyId);
+}
 
 function stringValue(value: unknown) {
   return typeof value === 'string' ? value : '';
@@ -299,17 +330,41 @@ function serializePenalty(penalty: PenaltyState): SerializedPenaltyRule[] {
   return result;
 }
 
+function normalizeSubmitRequirements(value: unknown): SubmitRequirementState[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(item => item && typeof item === 'object')
+    .map(item => item as RawSubmitRequirement)
+    .filter(item => item.type === 'currency_minimum')
+    .map(item => ({
+      id: `submit-requirement-${nextRequirementId++}`,
+      currencyId: numberValue(item.currency_id) || null,
+      minimum: numberValue(item.minimum),
+    }));
+}
+
+function serializeSubmitRequirements(requirements: SubmitRequirementState[]): SerializedSubmitRequirement[] {
+  return requirements.map(requirement => ({
+    type: 'currency_minimum',
+    currency_id: Math.trunc(requirement.currencyId ?? 0),
+    minimum: Math.max(0, Math.trunc(requirement.minimum || 0)),
+  }));
+}
+
 const judgePatch = computed(() => serializeRules(state.rules));
 const originalJudge = computed(() => normalizeRawRules(puzzle.value?.judge));
 const penaltyPatch = computed(() => serializePenalty(state.penalty));
 const originalPenalty = computed(() => normalizeRawPenalty(puzzle.value?.penalty));
 const originalPenaltyState = computed(() => normalizePenalty(puzzle.value?.penalty));
+const submitRequirementsPatch = computed(() => serializeSubmitRequirements(state.submitRequirements));
+const originalSubmitRequirements = computed(() => serializeSubmitRequirements(normalizeSubmitRequirements(puzzle.value?.submit_requirements)));
 const maxSubmitPatch = computed(() => (state.penalty.submitLimitType === 'limited' ? Math.max(0, Math.trunc(state.penalty.maxSubmit || 0)) : null));
 const originalMaxSubmit = computed(() => puzzle.value?.max_submit ?? null);
 const judgeDirty = computed(() => JSON.stringify(judgePatch.value) !== JSON.stringify(originalJudge.value));
 const penaltyDirty = computed(() => JSON.stringify(penaltyPatch.value) !== JSON.stringify(originalPenalty.value));
 const maxSubmitDirty = computed(() => maxSubmitPatch.value !== originalMaxSubmit.value);
-const dirty = computed(() => judgeDirty.value || penaltyDirty.value || maxSubmitDirty.value);
+const submitRequirementsDirty = computed(() => JSON.stringify(submitRequirementsPatch.value) !== JSON.stringify(originalSubmitRequirements.value));
+const dirty = computed(() => judgeDirty.value || submitRequirementsDirty.value || penaltyDirty.value || maxSubmitDirty.value);
 const invalidRules = computed(() =>
   state.rules
     .filter(rule => {
@@ -322,6 +377,10 @@ const invalidRules = computed(() =>
     .map(rule => rule.id),
 );
 const hasInvalidRules = computed(() => invalidRules.value.length > 0);
+const submitRequirementsInvalid = computed(() => {
+  const ids = state.submitRequirements.map(requirement => requirement.currencyId);
+  return state.submitRequirements.some(requirement => !requirement.currencyId || !requirementCurrency(requirement) || requirement.minimum <= 0) || new Set(ids).size !== ids.length;
+});
 const penaltyInvalid = computed(
   () =>
     (state.penalty.cooldownType === 'fixed' && state.penalty.fixedTime < 0) ||
@@ -342,6 +401,7 @@ const submitLimitDirty = computed(() => maxSubmitDirty.value);
 
 function syncFromPuzzle() {
   state.rules = normalizeRules(puzzle.value?.judge);
+  state.submitRequirements = normalizeSubmitRequirements(puzzle.value?.submit_requirements);
   state.penalty = normalizePenalty(puzzle.value?.penalty);
 }
 
@@ -354,6 +414,21 @@ function resetCooldownPenalty() {
   state.penalty.cooldownType = originalPenaltyState.value.cooldownType;
   state.penalty.fixedTime = originalPenaltyState.value.fixedTime;
   state.penalty.linearTime = originalPenaltyState.value.linearTime;
+}
+
+function resetSubmitRequirements() {
+  state.submitRequirements = normalizeSubmitRequirements(puzzle.value?.submit_requirements);
+}
+
+function addSubmitRequirement() {
+  const used = new Set(state.submitRequirements.map(requirement => requirement.currencyId));
+  const currency = currencies.value.find(item => !used.has(item.id));
+  if (!currency) return;
+  state.submitRequirements.push({ id: `submit-requirement-${nextRequirementId++}`, currencyId: currency.id, minimum: 1 });
+}
+
+function removeSubmitRequirement(index: number) {
+  state.submitRequirements.splice(index, 1);
 }
 
 function resetCurrencyPenalty() {
@@ -653,17 +728,29 @@ async function apply() {
     return;
   }
 
+  if (submitRequirementsInvalid.value) {
+    toast.add({
+      title: '答案提交要求不完整',
+      description: '请选择不重复的货币，并填写大于零的最低数量。',
+      icon: 'material-symbols:error-med-outline-rounded',
+      color: 'error',
+    });
+    return;
+  }
+
   saving.value = true;
 
   try {
     type Response = { puzzle: AdminPuzzleData };
     const body: {
       judge?: SerializedJudgeRule[];
+      submit_requirements?: SerializedSubmitRequirement[];
       penalty?: SerializedPenaltyRule[];
       max_submit?: number | null;
     } = {};
 
     if (judgeDirty.value) body.judge = judgePatch.value;
+    if (submitRequirementsDirty.value) body.submit_requirements = submitRequirementsPatch.value;
     if (penaltyDirty.value) body.penalty = penaltyPatch.value;
     if (maxSubmitDirty.value) body.max_submit = maxSubmitPatch.value;
 
@@ -819,12 +906,66 @@ watch(dirty, value => {
           </div>
         </template>
 
-        <u-empty v-else icon="material-symbols:rule-settings-rounded" title="还没有判定规则" description="没有规则时所有提交都会判为错误。">
+        <u-empty v-else icon="material-symbols:rule-settings-rounded" title="还没有判定规则" description="没有规则时将禁用本题的答案提交。">
           <template #actions>
             <u-button icon="material-symbols:add-rounded" label="添加精确匹配" :disabled="saving" @click="addRule('exact')" />
             <u-button color="neutral" variant="soft" icon="material-symbols:keyboard-double-arrow-down-rounded" label="添加兜底规则" :disabled="saving" @click="addRule('all')" />
           </template>
         </u-empty>
+      </section>
+
+      <u-separator class="my-6" />
+
+      <section class="space-y-4">
+        <div>
+          <h2 class="text-xl font-semibold text-highlighted">提交答案要求</h2>
+          <p class="mt-1 text-sm text-muted">队伍需要同时满足全部要求才能提交答案，检查没有副作用。</p>
+        </div>
+
+        <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
+          <rb-form-field row narrow-label label="最低货币" :dirty="submitRequirementsDirty" :reset="resetSubmitRequirements">
+            <div class="w-full space-y-2">
+              <div v-for="(requirement, index) in state.submitRequirements" :key="requirement.id" class="flex flex-wrap items-center gap-2">
+                <u-select
+                  v-model="requirement.currencyId"
+                  :items="requirementCurrencyItems(requirement)"
+                  leading-icon="material-symbols:emoji-objects-outline-rounded"
+                  placeholder="选择货币"
+                  variant="subtle"
+                  class="w-40"
+                  :disabled="saving"
+                />
+                <rb-input-number
+                  v-model="requirement.minimum"
+                  :prec="requirementCurrency(requirement)?.prec ?? 0"
+                  :min="1"
+                  :step="1"
+                  orientation="vertical"
+                  placeholder="最低数量"
+                  variant="subtle"
+                  class="w-36"
+                  :disabled="saving || !requirementCurrency(requirement)"
+                />
+                <u-button
+                  icon="material-symbols:delete-outline-rounded"
+                  color="error"
+                  variant="ghost"
+                  aria-label="删除要求"
+                  :disabled="saving"
+                  @click="removeSubmitRequirement(index)"
+                />
+              </div>
+              <u-button
+                icon="material-symbols:add-rounded"
+                label="添加货币要求"
+                color="neutral"
+                variant="soft"
+                :disabled="saving || state.submitRequirements.length >= currencies.length"
+                @click="addSubmitRequirement"
+              />
+            </div>
+          </rb-form-field>
+        </div>
       </section>
 
       <u-separator class="my-6" />

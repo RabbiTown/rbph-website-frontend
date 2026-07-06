@@ -5,6 +5,8 @@ const props = defineProps<{
   cooldownTill?: string;
   maxSubmit?: number | null;
   submitCount?: number;
+  externallyBlocked?: boolean;
+  blockedHint?: string;
 }>();
 
 const emit = defineEmits<{
@@ -49,7 +51,7 @@ const cooldown = computed(() => {
 const maxSubmit = computed(() => props.maxSubmit ?? undefined);
 const submitCount = computed(() => (Number.isFinite(props.submitCount) ? props.submitCount! : 0));
 const remainSubmit = computed(() => (maxSubmit.value === undefined ? undefined : Math.max(0, maxSubmit.value - submitCount.value)));
-const submitBlocked = computed(() => cooldown.value > 0 || remainSubmit.value === 0);
+const submitBlocked = computed(() => cooldown.value > 0 || remainSubmit.value === 0 || props.externallyBlocked);
 
 watch(
   () => props.cooldownTill,
@@ -154,10 +156,11 @@ function submit() {
 const inputStyle = computed(() => {
   if (cooldown.value > 0) return { placeholder: `提交冷却中：${formatTime(cooldown.value)}`, icon: 'material-symbols:schedule-outline-rounded' };
   if (remainSubmit.value === 0) return { placeholder: `剩余提交次数：0/${maxSubmit.value}`, icon: 'material-symbols:block-outline' };
+  if (props.externallyBlocked) return { placeholder: props.blockedHint || '尚未满足答案提交要求', icon: 'material-symbols:lock-outline' };
   if (props.success) return { placeholder: `你的队伍已通过本题`, icon: 'material-symbols:check-rounded' };
   return { placeholder: `提交答案`, icon: 'material-symbols:send-outline-rounded' };
 });
-const submitHint = computed(() => (maxSubmit.value === undefined ? undefined : `剩余提交次数：${remainSubmit.value}/${maxSubmit.value}`));
+const submitHint = computed(() => props.blockedHint || (maxSubmit.value === undefined ? undefined : `剩余提交次数：${remainSubmit.value}/${maxSubmit.value}`));
 </script>
 
 <template>
