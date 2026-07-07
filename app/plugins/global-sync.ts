@@ -11,10 +11,6 @@ export default defineNuxtPlugin(() => {
 
   releaseSync.start();
   void systemStatus.refresh().catch(() => undefined);
-  const statusTimer = window.setInterval(() => {
-    if (user.ref.value) void systemStatus.refresh(true).catch(() => undefined);
-  }, 15000);
-  onScopeDispose(() => window.clearInterval(statusTimer));
 
   const syncEnabled = computed(() => {
     const currentUser = user.ref.value;
@@ -43,6 +39,18 @@ export default defineNuxtPlugin(() => {
 
   sync.listen(SyncMessageType.GameReleaseUpdated, ({ data }) => {
     releaseSync.notify(data.game_id, data.cursor);
+  });
+
+  sync.listen(SyncMessageType.SystemStatusUpdated, async () => {
+    const status = await systemStatus.refresh(true).catch(() => undefined);
+    if (!status) return;
+
+    const currentUser = user.ref.value;
+    if (status.maintenance_enabled && (currentUser?.urole ?? RbUserRole.User) < RbUserRole.Admin) {
+      await navigateTo('/maintenance');
+    } else if (!status.maintenance_enabled && useRoute().path === '/maintenance') {
+      await navigateTo('/transit');
+    }
   });
 
   function notificationTitle(notification: TeamNotification) {

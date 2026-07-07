@@ -2,7 +2,7 @@ export interface SystemStatus {
   registration_open: boolean;
   require_email_verification: boolean;
   maintenance_enabled: boolean;
-  maintenance_message: string;
+  maintenance_message?: string;
 }
 
 let updatePromise: Promise<void> | null = null;

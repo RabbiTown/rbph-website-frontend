@@ -1,6 +1,9 @@
 export enum SyncMessageType {
   Unknown = -1,
 
+  // 0 - system
+  SystemStatusUpdated = 1,
+
   // 100 - game
   GameNewAnnouncement = 101,
   GameReleaseUpdated = 102,
@@ -27,6 +30,9 @@ export interface SyncMessage<T> {
 
 export interface SyncMessageMap {
   [SyncMessageType.Unknown]: unknown;
+
+  // 0 - system
+  [SyncMessageType.SystemStatusUpdated]: null;
 
   // 100 - game
   [SyncMessageType.GameNewAnnouncement]: { game_id: number | null };

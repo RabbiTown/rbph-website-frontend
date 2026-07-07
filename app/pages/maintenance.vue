@@ -4,7 +4,11 @@ useHead({ titleTemplate: '系统维护 - RBPH' });
 const status = useSystemStatus();
 const user = useUser(false).ref;
 const checking = ref(false);
-let timer: ReturnType<typeof setInterval> | undefined;
+const sync = useSync();
+
+onMounted(() => {
+  sync.disconnect();
+});
 
 async function check() {
   if (checking.value) return;
@@ -18,13 +22,6 @@ async function check() {
     checking.value = false;
   }
 }
-
-onMounted(() => {
-  timer = setInterval(check, 15000);
-});
-onBeforeUnmount(() => {
-  if (timer) clearInterval(timer);
-});
 </script>
 
 <template>

@@ -54,9 +54,11 @@ export default defineNuxtConfig({
       include: [
         '@codemirror/lang-html',
         '@codemirror/lang-javascript',
+        '@codemirror/language',
         '@codemirror/state',
         '@codemirror/view',
         '@internationalized/date',
+        '@lezer/highlight',
         '@tiptap/extension-color',
         '@tiptap/extension-table',
         '@tiptap/extension-table-cell',
