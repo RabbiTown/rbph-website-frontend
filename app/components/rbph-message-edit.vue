@@ -50,11 +50,11 @@ watch(
 
 <template>
   <div>
-    <u-chat-prompt v-model="draft" variant="subtle" :placeholder="placeholder" :ui="{ footer: 'text-muted mt-1 justify-end' }" :rows="3" :loading="loading" @submit="emit('submit')">
+    <u-chat-prompt v-model="draft" class="text-sm" variant="subtle" :placeholder="placeholder" :ui="{ footer: 'text-muted mt-1 justify-end' }" :rows="3" :submit-on-enter="false" :loading="loading" @submit="emit('submit')">
       <!-- <u-chat-prompt-submit variant="soft" class="rounded-full cursor-pointer" :disabled="disabled" :loading="loading" /> -->
       <template #footer>
         <u-icon name="material-symbols:markdown-outline-rounded" />
-        <span class="text-xs"> 支持 Markdown 语法 · 使用 Shift + Enter 换行</span>
+        <span class="text-xs">支持 Markdown 语法</span>
       </template>
     </u-chat-prompt>
     <div class="flex mt-2 gap-2 justify-between">
