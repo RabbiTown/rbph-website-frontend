@@ -72,7 +72,7 @@ function renderKatex(dom: HTMLElement, tex: string, display: boolean) {
 
 function createMathNodeView(editor: Editor, getPos: () => number | undefined, attrs: RbphMathAttrs, display: boolean) {
   const dom = document.createElement(display ? 'div' : 'span');
-  dom.className = display ? 'rbph-math-node rbph-math-node-block my-4 rounded-md px-2 py-1' : 'rbph-math-node rbph-math-node-inline rounded px-1';
+  dom.className = display ? 'rbph-math-node rbph-math-node-block my-4 rounded-md px-2 py-1' : 'rbph-math-node rbph-math-node-inline rounded';
   dom.dataset.rbphMath = display ? 'block' : 'inline';
   dom.dataset.nodeViewWrapper = '';
   let popoverOpen = false;
@@ -159,7 +159,7 @@ function createMathNodeView(editor: Editor, getPos: () => number | undefined, at
     event.preventDefault();
     event.stopPropagation();
     const pos = getPos();
-    if (typeof pos === 'number') editor.commands.setNodeSelection(pos);
+    if (display && typeof pos === 'number') editor.commands.setNodeSelection(pos);
     openPopover();
   });
 
@@ -213,7 +213,6 @@ function createMathNodeView(editor: Editor, getPos: () => number | undefined, at
     },
     selectNode() {
       dom.classList.add('rbph-math-node-selected');
-      openPopover();
     },
     deselectNode() {
       dom.classList.remove('rbph-math-node-selected');
@@ -269,12 +268,12 @@ function isInsideCodeSpan(src: string, index: number) {
 function findDollarInline(src: string, from = 0): MathSegment | undefined {
   for (let start = src.indexOf('$', from); start !== -1; start = src.indexOf('$', start + 1)) {
     if (src[start + 1] === '$') continue;
-    if (start > 0 && src[start - 1] === '$') continue;
+    if (start > from && src[start - 1] === '$') continue;
     if (start > 0 && src[start - 1] === '\\') continue;
     if (isInsideCodeSpan(src, start)) continue;
 
     for (let end = src.indexOf('$', start + 1); end !== -1; end = src.indexOf('$', end + 1)) {
-      if (src[end - 1] === '\\' || src[end + 1] === '$') continue;
+      if (src[end - 1] === '\\') continue;
 
       const tex = src.slice(start + 1, end);
       if (tex.includes('$')) break;
@@ -314,7 +313,6 @@ function findDollarInlineInput(text: string) {
   if (!match?.[1]) return null;
 
   const start = text.length - match[0].length;
-  if (start > 0 && text[start - 1] === '$') return null;
 
   return {
     index: start,
@@ -331,6 +329,17 @@ function inlineMathInputRule(type: NodeType, find: InputRuleFinder, getTex: (mat
       if (!tex) return;
 
       const resolved = state.doc.resolve(range.from);
+      const resolvedTo = state.doc.resolve(range.to);
+      if (resolved.parent !== resolvedTo.parent) return;
+
+      // Tiptap includes atom renderText output when matching input rules. Make
+      // sure the calculated range maps to the literal text typed by the user,
+      // rather than crossing an existing math atom whose text is longer than
+      // its document node size.
+      const existingText = resolved.parent.textBetween(resolved.parentOffset, resolvedTo.parentOffset, '', '\uFFFC');
+      if (existingText !== match[0].slice(0, -1)) return;
+      if (resolved.nodeBefore?.isText && resolved.nodeBefore.text?.endsWith('$')) return;
+
       if (!resolved.parent.canReplaceWith(resolved.index(), resolved.index(), type)) return;
 
       state.tr.replaceWith(range.from, range.to, type.create({ tex })).scrollIntoView();
@@ -508,9 +517,15 @@ export const RbphMathInline = TiptapNode.create({
 
   atom: true,
 
+  selectable: false,
+
   addAttributes() {
     return {
-      tex: { default: '' },
+      tex: {
+        default: '',
+        parseHTML: element => element.getAttribute('data-latex') ?? '',
+        renderHTML: attributes => ({ 'data-latex': attrStringValue(attributes.tex) }),
+      },
     };
   },
 
@@ -520,6 +535,10 @@ export const RbphMathInline = TiptapNode.create({
 
   renderHTML({ HTMLAttributes }) {
     return ['span', mergeAttributes({ 'data-rbph-math': 'inline' }, HTMLAttributes)];
+  },
+
+  renderText({ node }) {
+    return `$${attrStringValue(node.attrs.tex)}$`;
   },
 
   addNodeView() {
@@ -573,7 +592,11 @@ export const RbphMathBlock = TiptapNode.create({
 
   addAttributes() {
     return {
-      tex: { default: '' },
+      tex: {
+        default: '',
+        parseHTML: element => element.getAttribute('data-latex') ?? '',
+        renderHTML: attributes => ({ 'data-latex': attrStringValue(attributes.tex) }),
+      },
     };
   },
 
@@ -583,6 +606,10 @@ export const RbphMathBlock = TiptapNode.create({
 
   renderHTML({ HTMLAttributes }) {
     return ['div', mergeAttributes({ 'data-rbph-math': 'block' }, HTMLAttributes)];
+  },
+
+  renderText({ node }) {
+    return `$$\n${attrStringValue(node.attrs.tex)}\n$$`;
   },
 
   addNodeView() {

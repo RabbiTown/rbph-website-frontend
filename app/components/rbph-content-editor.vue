@@ -3,6 +3,9 @@ import TextAlign from '@tiptap/extension-text-align';
 import Color from '@tiptap/extension-color';
 import type { ChainedCommands, Editor } from '@tiptap/core';
 import type { EditorSuggestionMenuItem } from '@nuxt/ui';
+import { Fragment, Slice } from '@tiptap/pm/model';
+import { NodeSelection } from '@tiptap/pm/state';
+import { dropPoint } from '@tiptap/pm/transform';
 
 const model = defineModel<string>({ default: '' });
 const attrs = useAttrs();
@@ -16,6 +19,8 @@ const previewFrame = ref<HTMLElement>();
 const sourceEditor = ref<{ focus: () => void }>();
 const retainedContentHeight = ref(0);
 let retainedContentReleaseId = 0;
+let dragHandleTargetPos: number | undefined;
+let draggedTopLevelBlock: { pos: number; typeName: string } | undefined;
 type ScrollAnchor = {
   frameTop: number;
 };
@@ -40,8 +45,7 @@ const emit = defineEmits<{
 
 const isSourceMode = computed(() => mode.value === 'source');
 const isPreviewMode = computed(() => mode.value === 'preview');
-const contentHeightClass = computed(() => props.contentClass ?? (props.framed ? 'min-h-56' : ''));
-const effectiveContentClass = computed(() => [contentHeightClass.value, 'text-sm'].filter(Boolean).join(' '));
+const effectiveContentClass = computed(() => [props.contentClass, props.framed && 'min-h-56'].filter(Boolean).join(' '));
 const editorModel = computed({
   get: () => normalizeCjkMarkdown(model.value),
   set: value => {
@@ -414,9 +418,60 @@ function onEditorTailBlankMouseDown(view: { dom: HTMLElement }, event: MouseEven
   return true;
 }
 
+function onDragHandleHover({ pos }: { pos: number }) {
+  dragHandleTargetPos = pos >= 0 ? pos : undefined;
+}
+
+function onDragHandleDragStart() {
+  const editor = currentEditor.value;
+  if (!editor || dragHandleTargetPos === undefined) return;
+
+  const node = editor.state.doc.nodeAt(dragHandleTargetPos);
+  if (!node || node.isInline) return;
+  draggedTopLevelBlock = { pos: dragHandleTargetPos, typeName: node.type.name };
+}
+
+function onDragHandleDragEnd() {
+  draggedTopLevelBlock = undefined;
+}
+
+function moveDraggedTopLevelBlock(editor: Editor, event: DragEvent) {
+  const dragging = draggedTopLevelBlock;
+  if (!dragging) return false;
+
+  const sourceNode = editor.state.doc.nodeAt(dragging.pos);
+  if (!sourceNode || sourceNode.type.name !== dragging.typeName) return false;
+
+  const eventPos = editor.view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
+  if (eventPos === undefined) return false;
+
+  const sourceFrom = dragging.pos;
+  const sourceTo = sourceFrom + sourceNode.nodeSize;
+  const slice = new Slice(Fragment.from(sourceNode), 0, 0);
+  const insertPos = dropPoint(editor.state.doc, eventPos, slice) ?? eventPos;
+
+  event.preventDefault();
+  event.stopPropagation();
+  draggedTopLevelBlock = undefined;
+
+  if (insertPos >= sourceFrom && insertPos <= sourceTo) return true;
+
+  const tr = editor.state.tr.delete(sourceFrom, sourceTo);
+  const mappedInsertPos = tr.mapping.map(insertPos);
+  tr.replaceRangeWith(mappedInsertPos, mappedInsertPos, sourceNode);
+
+  if (NodeSelection.isSelectable(sourceNode)) {
+    tr.setSelection(NodeSelection.create(tr.doc, mappedInsertPos));
+  }
+
+  editor.view.dispatch(tr.setMeta('uiEvent', 'drop'));
+  editor.view.focus();
+  return true;
+}
+
 function onEditorDrop(view: { dom: HTMLElement }, event: DragEvent) {
   const data = getRbAssetDragData(event);
-  if (!data) return false;
+  if (!data) return currentEditor.value ? moveDraggedTopLevelBlock(currentEditor.value, event) : false;
 
   event.preventDefault();
   event.stopPropagation();
@@ -521,7 +576,7 @@ defineExpose({ focus });
         :editor-props="editorProps"
         :ui="{
           content: props.framed ? '' : 'ps-3',
-          base: props.framed ? `${effectiveContentClass} px-3 py-2 sm:px-4` : `py-3 ${effectiveContentClass}`,
+          base: props.framed ? [effectiveContentClass, 'text-sm px-3 py-2 sm:px-4'] : [effectiveContentClass, 'py-3'],
         }"
         :on-selection-update="refreshEditorSelection"
       >
@@ -578,7 +633,7 @@ defineExpose({ focus });
               </u-popover>
             </template>
           </u-editor-toolbar>
-          <u-editor-drag-handle v-if="mode === 'editor' && !props.framed" :editor="editor" />
+          <u-editor-drag-handle v-if="mode === 'editor' && !props.framed" :editor="editor" :on-element-drag-start="onDragHandleDragStart" :on-element-drag-end="onDragHandleDragEnd" @hover="onDragHandleHover" />
           <u-editor-suggestion-menu v-if="mode === 'editor'" :editor="editor" :items="suggestionItems" :filter-fields="['label', 'aliases']" />
         </template>
       </u-editor>
@@ -617,10 +672,10 @@ defineExpose({ focus });
         :placeholder="placeholder"
         :disabled="disabled"
         :framed="props.framed"
-        :class="effectiveContentClass"
+        :class="[effectiveContentClass]"
         @focus-title="emit('focusTitle')"
       />
-      <div v-else-if="isPreviewMode" key="preview" ref="previewFrame" class="px-4 py-3 sm:px-5 outline-none" :class="effectiveContentClass" :tabindex="props.framed ? 0 : undefined">
+      <div v-else-if="isPreviewMode" key="preview" ref="previewFrame" class="px-4 py-3 sm:px-5 outline-none" :class="[effectiveContentClass, framed && 'text-sm']" :tabindex="props.framed ? 0 : undefined">
         <rbph-content :content="previewContent" @rendered="releaseRetainedContentHeight()" />
       </div>
     </div>
