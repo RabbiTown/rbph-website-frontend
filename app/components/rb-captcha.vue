@@ -3,6 +3,9 @@ const props = defineProps<{
   config: AuthCaptchaConfig;
   action: CaptchaAction;
 }>();
+const emit = defineEmits<{
+  interactive: [];
+}>();
 
 const model = defineModel<string>();
 const provider = useTemplateRef<{ reset: () => void }>('provider');
@@ -16,5 +19,5 @@ defineExpose({ reset });
 </script>
 
 <template>
-  <rb-captcha-cloudflare v-if="props.config.provider === 'cloudflare'" ref="provider" v-model="model" :site-key="props.config.site_key" :action="props.action" />
+  <rb-captcha-cloudflare v-if="props.config.provider === 'cloudflare'" ref="provider" v-model="model" :site-key="props.config.site_key" :action="props.action" @interactive="emit('interactive')" />
 </template>

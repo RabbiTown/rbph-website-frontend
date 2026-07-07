@@ -6,6 +6,7 @@ interface TurnstileRenderOptions {
   size: 'flexible';
   theme: 'auto';
   callback: (token: string) => void;
+  'before-interactive-callback': () => void;
   'expired-callback': () => void;
   'error-callback': () => void;
 }
@@ -45,6 +46,9 @@ const props = defineProps<{
   siteKey: string;
   action: CaptchaAction;
 }>();
+const emit = defineEmits<{
+  interactive: [];
+}>();
 
 const model = defineModel<string>();
 const container = useTemplateRef<HTMLElement>('container');
@@ -68,15 +72,18 @@ async function render() {
       size: 'flexible',
       theme: 'auto',
       callback: token => (model.value = token),
+      'before-interactive-callback': () => emit('interactive'),
       'expired-callback': clearToken,
       'error-callback': () => {
         clearToken();
         loadFailed.value = true;
+        emit('interactive');
       },
     });
   } catch {
     loadFailed.value = true;
     clearToken();
+    emit('interactive');
   }
 }
 

@@ -21,6 +21,9 @@ const state = reactive({
 
 const showPwd = ref(false);
 const loginLoading = ref(false);
+const waitingCaptcha = ref(false);
+const captchaInteractive = ref(false);
+const pendingSubmit = ref<FormSubmitEvent<Schema>>();
 
 const toast = useToast();
 const api = useApi();
@@ -33,8 +36,33 @@ const captcha = useTemplateRef<{ reset: () => void }>('captcha');
 const captchaToken = ref<string>();
 const captchaConfig = computed(() => authConfig.ref.value?.captcha ?? undefined);
 const captchaRequired = computed(() => Boolean(captchaConfig.value?.login_required));
+const submitLoading = computed(() => loginLoading.value || waitingCaptcha.value);
+const submitLabel = computed(() => (waitingCaptcha.value ? '等待验证码' : '登录'));
+
+watch(captchaToken, token => {
+  if (!token || !pendingSubmit.value) return;
+  const event = pendingSubmit.value;
+  pendingSubmit.value = undefined;
+  waitingCaptcha.value = false;
+  void submit(event);
+});
+
+function onCaptchaInteractive() {
+  captchaInteractive.value = true;
+  if (!waitingCaptcha.value) return;
+  pendingSubmit.value = undefined;
+  waitingCaptcha.value = false;
+}
 
 async function submit(event: FormSubmitEvent<Schema>) {
+  if (loginLoading.value) return;
+  if (captchaRequired.value && !captchaToken.value) {
+    if (captchaInteractive.value) return;
+    pendingSubmit.value = event;
+    waitingCaptcha.value = true;
+    return;
+  }
+
   loginLoading.value = true;
   try {
     const { code, data } = await api.post<{ uid: number; must_change_password: boolean }>(
@@ -70,6 +98,9 @@ async function submit(event: FormSubmitEvent<Schema>) {
       }, 1000);
     }
   } catch (error) {
+    pendingSubmit.value = undefined;
+    waitingCaptcha.value = false;
+    captchaInteractive.value = false;
     captcha.value?.reset();
     handleError(error, '登录失败', true);
   } finally {
@@ -106,9 +137,9 @@ async function submit(event: FormSubmitEvent<Schema>) {
               </template>
             </u-input>
           </u-form-field>
-          <rb-captcha v-if="captchaRequired && captchaConfig" ref="captcha" v-model="captchaToken" :config="captchaConfig" action="login" />
+          <rb-captcha v-if="captchaRequired && captchaConfig" ref="captcha" v-model="captchaToken" :config="captchaConfig" action="login" @interactive="onCaptchaInteractive" />
           <div class="mt-8">
-            <u-button type="submit" :loading="loginLoading" :disabled="captchaRequired && !captchaToken" class="w-full justify-center cursor-pointer" size="lg">登录</u-button>
+            <u-button type="submit" :loading="submitLoading" class="w-full justify-center cursor-pointer" size="lg">{{ submitLabel }}</u-button>
           </div>
           <div class="">
             <u-button v-if="systemStatus.ref.value?.registration_open" class="w-full justify-center cursor-pointer" variant="outline" size="md" to="/register">注册</u-button>

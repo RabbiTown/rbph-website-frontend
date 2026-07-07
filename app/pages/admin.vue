@@ -15,12 +15,17 @@ const isDarkMode = computed(() => colorMode.value === 'dark');
 game
   .updateGameList()
   .then(x => {
-    if (x.length > 0 && route.path === '/admin') {
+    if (x.length > 0 && route.name === 'admin') {
       navigateTo(`/admin/games/${x[0]?.id}`);
     }
   })
   .catch(err => {
     handleError(err, '获取比赛列表失败');
+  })
+  .finally(() => {
+    if (route.name === 'admin') {
+      navigateTo('/admin/users');
+    }
   });
 
 const gameNav = computed(() => {
