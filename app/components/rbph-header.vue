@@ -82,12 +82,14 @@ const navItems = computed(() => {
     to: `/games/${game.value.id}/info`,
   });
 
-  result.push({
-    value: 'game-leaderboard',
-    label: '排行榜',
-    icon: 'material-symbols:leaderboard-outline-rounded',
-    to: `/games/${game.value.id}/leaderboard`,
-  });
+  if (user.value) {
+    result.push({
+      value: 'game-leaderboard',
+      label: '排行榜',
+      icon: 'material-symbols:leaderboard-outline-rounded',
+      to: `/games/${game.value.id}/leaderboard`,
+    });
+  }
 
   return result;
 });
