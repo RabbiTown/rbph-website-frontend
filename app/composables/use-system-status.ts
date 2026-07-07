@@ -10,6 +10,15 @@ let updatePromise: Promise<void> | null = null;
 export function useSystemStatus() {
   const state = useState<SystemStatus | undefined>('system-status');
 
+  function setMaintenance(message?: string) {
+    state.value = {
+      registration_open: state.value?.registration_open ?? false,
+      require_email_verification: state.value?.require_email_verification ?? false,
+      maintenance_enabled: true,
+      maintenance_message: message,
+    };
+  }
+
   async function refresh(force = false) {
     if (updatePromise) {
       await updatePromise;
@@ -32,5 +41,5 @@ export function useSystemStatus() {
     return state.value;
   }
 
-  return { ref: state, refresh };
+  return { ref: state, refresh, setMaintenance };
 }

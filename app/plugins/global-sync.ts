@@ -10,12 +10,11 @@ export default defineNuxtPlugin(() => {
   const systemStatus = useSystemStatus();
 
   releaseSync.start();
-  void systemStatus.refresh().catch(() => undefined);
 
   const syncEnabled = computed(() => {
     const currentUser = user.ref.value;
     const status = systemStatus.ref.value;
-    return Boolean(currentUser && status && !currentUser.must_change_password && (!status.maintenance_enabled || currentUser.urole >= RbUserRole.Admin));
+    return Boolean(currentUser && !currentUser.must_change_password && (!status?.maintenance_enabled || currentUser.urole >= RbUserRole.Admin));
   });
 
   watch(

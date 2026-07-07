@@ -24,15 +24,21 @@ interface ApiRequestOptions<TBody = unknown> extends Omit<FetchOptions, 'body' |
 }
 
 export function useApi() {
+  const handleMaintenance = (message?: string) => {
+    if (!import.meta.client) return;
+    useSystemStatus().setMaintenance(message);
+    void navigateTo('/maintenance');
+  };
+
   const normalizeResponse = <T>(payload: ApiEnvelope<T> | T, errorHints?: Record<number, string>): ApiResult<T> => {
     if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'code' in payload) {
       const envelope = payload as ApiEnvelope<T> & Record<string, unknown>;
       const code = typeof envelope.code === 'number' ? envelope.code : 0;
 
       if (code < 0) {
-        if (code === RbErrorCode.Maintenance && import.meta.client) void navigateTo('/maintenance');
         const hint = errorHints?.[code] ?? defaultErrorHints[code];
         const resolvedMessage = envelope.message ?? hint;
+        if (code === RbErrorCode.Maintenance) handleMaintenance(resolvedMessage);
         const statusMessage = resolvedMessage ?? `API error ${code}`;
 
         throw createError({
@@ -103,9 +109,9 @@ export function useApi() {
         if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'code' in payload) {
           const envelope = payload as ApiEnvelope<TResponse> & Record<string, unknown>;
           const code = typeof envelope.code === 'number' ? envelope.code : 0;
-          if (code === RbErrorCode.Maintenance && import.meta.client) void navigateTo('/maintenance');
           const hint = errorHints?.[code] ?? defaultErrorHints[code];
           const resolvedMessage = envelope.message ?? hint;
+          if (code === RbErrorCode.Maintenance) handleMaintenance(resolvedMessage);
           const statusMessage = resolvedMessage ?? fetchError.message;
 
           throw createError({

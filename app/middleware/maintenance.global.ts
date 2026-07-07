@@ -1,8 +1,9 @@
 export default defineNuxtRouteMiddleware(async to => {
   const status = useSystemStatus();
-  await status.refresh(true);
 
-  if (!status.ref.value?.maintenance_enabled) {
+  if (!status.ref.value) return;
+
+  if (!status.ref.value.maintenance_enabled) {
     if (to.path === '/maintenance') return navigateTo('/transit');
     return;
   }

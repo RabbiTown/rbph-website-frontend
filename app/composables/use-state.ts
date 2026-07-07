@@ -3,6 +3,7 @@ export function navigateToLogin() {
 }
 
 const userUsed = ref(false);
+const userChecked = ref(false);
 let userUpdatePromise: Promise<void> | null = null;
 
 export function useUser(activate: boolean = true) {
@@ -13,6 +14,7 @@ export function useUser(activate: boolean = true) {
       await userUpdatePromise;
       if (!force) return;
     }
+    if (userChecked.value && !force) return;
 
     async function inner() {
       try {
@@ -25,6 +27,7 @@ export function useUser(activate: boolean = true) {
           throw error;
         }
       }
+      userChecked.value = true;
     }
 
     const updatePromise = inner();
@@ -40,9 +43,9 @@ export function useUser(activate: boolean = true) {
     if (userUpdatePromise) {
       await userUpdatePromise;
       return user;
-    } else {
-      return user;
     }
+    if (!userChecked.value) await updateData();
+    return user;
   }
 
   function required() {
@@ -245,6 +248,8 @@ export function usePuzzle() {
 
 export async function resetStates() {
   useState('user').value = undefined;
+  userChecked.value = false;
+  userUsed.value = false;
   resetTeamState();
   useGameReleaseSync().reset();
 }
