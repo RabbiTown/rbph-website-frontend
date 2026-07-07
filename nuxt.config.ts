@@ -17,14 +17,6 @@ export default defineNuxtConfig({
   image: {
     provider: 'none',
   },
-  icon: {
-    customCollections: [
-      {
-        prefix: 'tabler',
-        dir: './app/assets/icons/tabler',
-      },
-    ],
-  },
   mdc: {
     components: {
       prose: true,
@@ -70,6 +62,11 @@ export default defineNuxtConfig({
         'katex',
         'valibot',
       ],
+    },
+  },
+  icon: {
+    clientBundle: {
+      scan: true,
     },
   },
 });
