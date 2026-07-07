@@ -28,7 +28,8 @@ const roleItems = [
 
 const dirty = computed(() => Boolean(user.value && (draft.email !== user.value.email || draft.nickname !== user.value.nickname || draft.bio !== (user.value.bio ?? '') || draft.role !== user.value.urole)));
 const valid = computed(() => draft.email.trim().includes('@') && draft.nickname.trim().length > 0);
-const canResetPassword = computed(() => Boolean(currentUser.value && user.value && user.value.urole < currentUser.value.urole));
+const canManageCredentials = computed(() => Boolean(currentUser.value && user.value && user.value.urole < currentUser.value.urole));
+const canResetPassword = canManageCredentials;
 
 function roleDisabled(role: RbUserRole) {
   if (saving.value || currentUser.value?.id === user.value?.id) return true;
@@ -70,7 +71,7 @@ async function save() {
     const { data } = await api.patch<{ user: AdminUserDetail }>(
       `/admin/users/${userId.value}`,
       { email: draft.email.trim(), nickname: draft.nickname.trim(), bio: draft.bio, role: draft.role },
-      { errorHints: { [-6]: '只有超级管理员可以修改管理员角色。', [-4]: '不能修改自己的角色。', [-3]: '该邮箱已存在。', [-2]: '用户信息不合法。', [-1]: '用户不存在。' } },
+      { errorHints: { [-7]: '不能修改同级或更高权限账号的邮箱。', [-6]: '只有超级管理员可以修改管理员角色。', [-4]: '不能修改自己的角色。', [-3]: '该邮箱已存在。', [-2]: '用户信息不合法。', [-1]: '用户不存在。' } },
     );
     user.value = data.user;
     syncDraft(data.user);
@@ -155,17 +156,17 @@ onBeforeUnmount(() => dirtyToast.clear());
               <section class="space-y-4">
                 <h2 class="text-xl font-semibold text-highlighted">账号信息</h2>
                 <div class="space-y-3 rounded-md bg-elevated/60 p-4 ring ring-default">
-                  <rb-form-field row narrow-label label="邮箱" icon="material-symbols:alternate-email-rounded" :dirty="draft.email !== user.email" :reset="() => (draft.email = user!.email)"
-                    ><u-input v-model="draft.email" type="email" class="w-full" :disabled="saving"
-                  /></rb-form-field>
+                  <rb-form-field row narrow-label label="邮箱" icon="material-symbols:alternate-email-rounded" :dirty="draft.email !== user.email" :reset="() => (draft.email = user!.email)">
+                    <u-input v-model="draft.email" type="email" class="w-full" :disabled="saving || !canManageCredentials" />
+                  </rb-form-field>
                   <u-separator />
-                  <rb-form-field row narrow-label label="昵称" icon="material-symbols:badge-outline-rounded" :dirty="draft.nickname !== user.nickname" :reset="() => (draft.nickname = user!.nickname)"
-                    ><u-input v-model="draft.nickname" class="w-full" :maxlength="60" :disabled="saving"
-                  /></rb-form-field>
+                  <rb-form-field row narrow-label label="昵称" icon="material-symbols:badge-outline-rounded" :dirty="draft.nickname !== user.nickname" :reset="() => (draft.nickname = user!.nickname)">
+                    <u-input v-model="draft.nickname" class="w-full" :maxlength="60" :disabled="saving" />
+                  </rb-form-field>
                   <u-separator />
-                  <rb-form-field row narrow-label label="个人简介" icon="material-symbols:notes-rounded" :dirty="draft.bio !== (user.bio ?? '')" :reset="() => (draft.bio = user!.bio ?? '')"
-                    ><u-textarea v-model="draft.bio" class="w-full" :maxlength="200" :rows="4" :disabled="saving"
-                  /></rb-form-field>
+                  <rb-form-field row narrow-label label="个人简介" icon="material-symbols:notes-rounded" :dirty="draft.bio !== (user.bio ?? '')" :reset="() => (draft.bio = user!.bio ?? '')">
+                    <u-textarea v-model="draft.bio" class="w-full" :maxlength="200" :rows="4" :disabled="saving" />
+                  </rb-form-field>
                   <u-separator />
                   <rb-form-field row narrow-label label="用户角色" icon="material-symbols:manage-accounts-outline-rounded" :dirty="draft.role !== user.urole" :reset="() => (draft.role = user!.urole)">
                     <u-badge v-if="user.urole === RbUserRole.Root" color="info" class="mt-0.5" variant="soft" icon="material-symbols:security-rounded">超级管理员</u-badge>
