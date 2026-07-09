@@ -46,12 +46,7 @@ const emit = defineEmits<{
 const isSourceMode = computed(() => mode.value === 'source');
 const isPreviewMode = computed(() => mode.value === 'preview');
 const effectiveContentClass = computed(() => [props.contentClass, props.framed && 'min-h-56'].filter(Boolean).join(' '));
-const editorModel = computed({
-  get: () => normalizeCjkMarkdown(model.value),
-  set: value => {
-    model.value = value;
-  },
-});
+const editorModel = computed(() => normalizeCjkMarkdown(model.value));
 const previewContent = computed<RbContent>(() => ({
   content: model.value,
   content_type: RbContentType.Markdown,
@@ -256,6 +251,10 @@ function normalizeSerializedMarkdown(markdown: string) {
   return result;
 }
 
+function restoreSerializedEmptyParagraphs(markdown: string) {
+  return markdown.replace(/^(?:&nbsp;?|\u00A0)$/gm, '');
+}
+
 function syncEditorMarkdown() {
   if (mode.value !== 'editor' || !currentEditor.value) return;
 
@@ -263,7 +262,7 @@ function syncEditorMarkdown() {
     const editor = currentEditor.value as Editor & { markdown?: { serialize: (doc: JSONContent) => string } };
     const doc = escapePlainMdcComponentTextNodesForMarkdown(editor.getJSON());
     const markdown = editor.markdown?.serialize(doc) ?? currentEditor.value.getMarkdown();
-    model.value = normalizeSerializedMarkdown(restorePlainMdcComponentMarkdownEscapes(markdown));
+    model.value = normalizeSerializedMarkdown(restoreSerializedEmptyParagraphs(restorePlainMdcComponentMarkdownEscapes(markdown)));
   } catch {
     model.value = currentEditor.value.getText();
   }
@@ -609,7 +608,7 @@ defineExpose({ focus });
       <u-editor
         v-if="mode === 'editor'"
         key="editor"
-        v-model="editorModel"
+        :model-value="editorModel"
         v-bind="attrs"
         content-type="markdown"
         :placeholder="placeholder"
