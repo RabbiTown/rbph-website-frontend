@@ -355,19 +355,19 @@ function dollarBlockToMdc(src: string) {
 }
 
 function matchDollarBlock(src: string) {
-  return src.match(/^(\s{0,3}\$\$\s*\n([\s\S]*?)\n\s{0,3}\$\$\s*)/);
+  return src.match(/^(\s{0,3}\$\$\s*\n([\s\S]*?)\n\s{0,3}\$\$[ \t]*(?:\n|$))/);
 }
 
 function matchBracketBlock(src: string) {
-  return src.match(/^(\s{0,3}\\\[\s*\n([\s\S]*?)\n\s{0,3}\\\]\s*)/);
+  return src.match(/^(\s{0,3}\\\[\s*\n([\s\S]*?)\n\s{0,3}\\\][ \t]*(?:\n|$))/);
 }
 
 function matchSingleLineDollarBlock(src: string) {
-  return src.match(/^(\s{0,3}\$\$\s*([^\n]+?)\s*\$\$\s*)/);
+  return src.match(/^(\s{0,3}\$\$\s*([^\n]+?)\s*\$\$[ \t]*(?:\n|$))/);
 }
 
 function matchSingleLineBracketBlock(src: string) {
-  return src.match(/^(\s{0,3}\\\[\s*([^\n]+?)\s*\\\]\s*)/);
+  return src.match(/^(\s{0,3}\\\[\s*([^\n]+?)\s*\\\][ \t]*(?:\n|$))/);
 }
 
 function bracketBlockToMdc(src: string) {

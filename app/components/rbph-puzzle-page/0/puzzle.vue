@@ -96,7 +96,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
           @submit-fail="onSelfSubmitFailed"
         />
       </u-separator>
-      <rbph-submit-result ref="submit-result" />
+      <rbph-submit-result ref="submit-result" class="mt-6" />
 
       <div class="w-full" variant="soft">
         <div class="text-lg font-bold mb-4 mt-6">最近成功提交</div>

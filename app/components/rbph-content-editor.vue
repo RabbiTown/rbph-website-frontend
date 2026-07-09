@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import TextAlign from '@tiptap/extension-text-align';
 import Color from '@tiptap/extension-color';
-import type { ChainedCommands, Editor } from '@tiptap/core';
+import type { ChainedCommands, Editor, JSONContent } from '@tiptap/core';
 import type { EditorSuggestionMenuItem } from '@nuxt/ui';
 import { Fragment, Slice } from '@tiptap/pm/model';
 import { NodeSelection } from '@tiptap/pm/state';
@@ -56,7 +56,7 @@ const previewContent = computed<RbContent>(() => ({
   content: model.value,
   content_type: RbContentType.Markdown,
 }));
-const editorExtensions = [RbphAlignBlock, RbphImageBlock, RbphRawHtmlBlock, RbphVueAppBlock, RbphMathInline, RbphMathBlock, RbphTable, RbphTableRow, RbphTableHeader, RbphTableCell, RbphTextStyle, RbphUnderline, Color, TextAlign.configure({ types: ['heading', 'paragraph', 'align'] })];
+const editorExtensions = [RbphAlignBlock, RbphImageBlock, RbphRawHtmlBlock, RbphVueAppBlock, RbphMdcComponentBlock, RbphMdcComponentInline, RbphMathInline, RbphMathBlock, RbphTable, RbphTableRow, RbphTableHeader, RbphTableCell, RbphMdcInline, RbphTextStyle, RbphUnderline, Color, TextAlign.configure({ types: ['heading', 'paragraph', 'align'] })];
 const editorProps = {
   handleKeyDown: onEditorKeydown,
   handleDOMEvents: {
@@ -213,11 +213,57 @@ function currentTextColor(editor: Editor) {
   return normalizeTextColor(editor.getAttributes('textStyle').color);
 }
 
+function normalizeSerializedMarkdown(markdown: string) {
+  let result = '';
+  let cursor = 0;
+
+  while (cursor < markdown.length) {
+    if (markdown[cursor] !== '\\' || markdown[cursor + 1] !== '[') {
+      result += markdown[cursor] ?? '';
+      cursor += 1;
+      continue;
+    }
+
+    const contentStart = cursor + 2;
+    let contentEnd = -1;
+    let closeEscaped = false;
+
+    for (let index = contentStart; index < markdown.length; index += 1) {
+      if (markdown[index] === '\n') break;
+
+      if (markdown[index] === '\\' && markdown[index + 1] === ']') {
+        contentEnd = index;
+        closeEscaped = true;
+        break;
+      }
+
+      if (markdown[index] === ']') {
+        contentEnd = index;
+        break;
+      }
+    }
+
+    if (contentEnd === -1) {
+      result += markdown[cursor] ?? '';
+      cursor += 1;
+      continue;
+    }
+
+    result += `\\[${markdown.slice(contentStart, contentEnd)}]`;
+    cursor = contentEnd + (closeEscaped ? 2 : 1);
+  }
+
+  return result;
+}
+
 function syncEditorMarkdown() {
   if (mode.value !== 'editor' || !currentEditor.value) return;
 
   try {
-    model.value = currentEditor.value.getMarkdown();
+    const editor = currentEditor.value as Editor & { markdown?: { serialize: (doc: JSONContent) => string } };
+    const doc = escapePlainMdcComponentTextNodesForMarkdown(editor.getJSON());
+    const markdown = editor.markdown?.serialize(doc) ?? currentEditor.value.getMarkdown();
+    model.value = normalizeSerializedMarkdown(restorePlainMdcComponentMarkdownEscapes(markdown));
   } catch {
     model.value = currentEditor.value.getText();
   }
@@ -725,11 +771,29 @@ defineExpose({ focus });
 }
 
 .rbph-content-editor :deep(.ProseMirror-selectednode[data-rb-raw-html]),
-.rbph-content-editor :deep(.ProseMirror-selectednode[data-rb-vue-app]) {
+.rbph-content-editor :deep(.ProseMirror-selectednode[data-rb-vue-app]),
+.rbph-content-editor :deep(.ProseMirror-selectednode[data-rb-mdc-component]),
+.rbph-content-editor :deep(.ProseMirror-selectednode[data-rb-mdc-component-inline]),
+.rbph-content-editor :deep(.rbph-mdc-component-selected) {
   border-color: var(--ui-primary);
   background-color: transparent;
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--ui-primary) 22%, transparent);
+}
+
+.rbph-content-editor :deep(.rbph-mdc-component-node-inline) {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.rbph-content-editor :deep(.rbph-mdc-component-preview) {
+  pointer-events: none;
+}
+
+.rbph-content-editor :deep(.rbph-mdc-component-preview-inline),
+.rbph-content-editor :deep(.rbph-mdc-component-preview-inline > *) {
+  display: inline-flex;
+  vertical-align: middle;
 }
 
 .rbph-content-editor :deep(.rbph-math-node-error) {
