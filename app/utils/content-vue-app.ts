@@ -318,12 +318,12 @@ export const RbphVueAppBlock = TiptapNode.create({
       return src.match(/^::rb-vue-app/m)?.index ?? -1;
     },
     tokenize(src: string) {
-      const openingMatch = src.match(/^::rb-vue-app(?:\{([^}]*)\})?\s*\n/);
+      const openingMatch = src.match(/^::rb-vue-app(?:\{([^}]*)\})?[ \t]*\n/);
       if (!openingMatch) return undefined;
 
       const [openingTag, attrSource = ''] = openingMatch;
       const remaining = src.slice(openingTag.length);
-      const closingMatch = remaining.match(/^::\s*$/m);
+      const closingMatch = remaining.match(/^::[ \t]*$/m);
       if (!closingMatch || closingMatch.index === undefined) return undefined;
 
       return {

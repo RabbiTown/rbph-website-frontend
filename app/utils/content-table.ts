@@ -177,12 +177,12 @@ export const RbphTable = Table.configure({
       return src.match(/^::rb-table/m)?.index ?? -1;
     },
     tokenize(src: string) {
-      const openingMatch = src.match(/^::rb-table(?:\{([^}]*)\})?\s*\n/);
+      const openingMatch = src.match(/^::rb-table(?:\{([^}]*)\})?[ \t]*\n/);
       if (!openingMatch) return undefined;
 
       const [openingTag, attrString = ''] = openingMatch;
       const remaining = src.slice(openingTag.length);
-      const closingMatch = remaining.match(/^::\s*$/m);
+      const closingMatch = remaining.match(/^::[ \t]*$/m);
       if (!closingMatch || closingMatch.index === undefined) return undefined;
 
       const rawContent = remaining.slice(0, closingMatch.index);

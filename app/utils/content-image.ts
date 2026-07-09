@@ -432,12 +432,12 @@ export const RbphImageBlock = TiptapNode.create({
       return src.match(/^::rb-image/m)?.index ?? -1;
     },
     tokenize(src: string, _tokens: MarkdownToken[], lexer: { inlineTokens: (src: string) => MarkdownToken[] }) {
-      const openingMatch = src.match(/^::rb-image(?:\{([^}]*)\})?\s*\n/);
+      const openingMatch = src.match(/^::rb-image(?:\{([^}]*)\})?[ \t]*\n/);
       if (!openingMatch) return undefined;
 
       const [openingTag, attrSource = ''] = openingMatch;
       const remaining = src.slice(openingTag.length);
-      const closingMatch = remaining.match(/^::\s*$/m);
+      const closingMatch = remaining.match(/^::[ \t]*$/m);
       if (!closingMatch || closingMatch.index === undefined) return undefined;
 
       const raw = src.slice(0, openingTag.length + closingMatch.index + closingMatch[0].length);

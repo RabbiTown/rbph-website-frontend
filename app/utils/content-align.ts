@@ -66,7 +66,7 @@ export const RbphAlignBlock = Node.create({
   },
 
   parseMarkdown: (token: MarkdownToken, helpers: MarkdownParseHelpers) => {
-    return helpers.createNode('align', token.attributes, helpers.parseChildren(token.tokens || []));
+    return helpers.createNode('align', token.attributes, helpers.parseBlockChildren(token.tokens || []));
   },
 
   renderMarkdown: (node: JSONContent, helpers: MarkdownRendererHelpers) => {
@@ -81,12 +81,12 @@ export const RbphAlignBlock = Node.create({
       return src.match(/^::align/m)?.index ?? -1;
     },
     tokenize(src: string, _tokens: MarkdownToken[], lexer: { blockTokens: (src: string) => MarkdownToken[]; inlineTokens: (src: string) => MarkdownToken[] }) {
-      const openingMatch = src.match(/^::align(?:\{([^}]*)\})?\s*\n/);
+      const openingMatch = src.match(/^::align(?:\{([^}]*)\})?[ \t]*\n/);
       if (!openingMatch) return undefined;
 
       const [openingTag, attrString = ''] = openingMatch;
       const remaining = src.slice(openingTag.length);
-      const closingMatch = remaining.match(/^::\s*$/m);
+      const closingMatch = remaining.match(/^::[ \t]*$/m);
       if (!closingMatch || closingMatch.index === undefined) return undefined;
 
       const rawContent = remaining.slice(0, closingMatch.index);

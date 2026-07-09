@@ -345,12 +345,12 @@ export const RbphRawHtmlBlock = TiptapNode.create({
       return src.match(/^::rb-raw-html/m)?.index ?? -1;
     },
     tokenize(src: string) {
-      const openingMatch = src.match(/^::rb-raw-html(?:\{([^}]*)\})?\s*\n/);
+      const openingMatch = src.match(/^::rb-raw-html(?:\{([^}]*)\})?[ \t]*\n/);
       if (!openingMatch) return undefined;
 
       const [openingTag, attrSource = ''] = openingMatch;
       const remaining = src.slice(openingTag.length);
-      const closingMatch = remaining.match(/^::\s*$/m);
+      const closingMatch = remaining.match(/^::[ \t]*$/m);
       if (!closingMatch || closingMatch.index === undefined) return undefined;
 
       return {
