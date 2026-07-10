@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { t, tm } = useI18n();
+const { t } = useI18n();
 
 const props = withDefaults(
   defineProps<{

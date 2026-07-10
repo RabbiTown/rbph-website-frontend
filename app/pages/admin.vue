@@ -177,7 +177,10 @@ const nav = computed(() => {
       </template>
       <template #default="{ collapsed }">
         <u-navigation-menu :key="`admin-nav-${game.ref.value?.id ?? 'none'}-${collapsed ? 'collapsed' : 'expanded'}`" :items="nav" orientation="vertical" :collapsed="collapsed" />
-        <u-navigation-menu :items="navBottom" orientation="vertical" :collapsed="collapsed" class="mt-auto" />
+        <div class="mt-auto">
+          <rb-language-switcher sidebar class="text-muted" :collapsed="collapsed" />
+          <u-navigation-menu :items="navBottom" orientation="vertical" :collapsed="collapsed" />
+        </div>
       </template>
       <template #footer="{ collapsed }">
         <u-dropdown-menu :ui="{ content: collapsed ? 'w-48' : 'w-(--reka-dropdown-menu-trigger-width)' }" :items="userNav">

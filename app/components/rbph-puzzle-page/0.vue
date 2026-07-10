@@ -1,6 +1,7 @@
 <script setup lang="ts">
-const { t } = useI18n();
 import type { BreadcrumbItem, NavigationMenuItem } from '@nuxt/ui';
+
+const { t } = useI18n();
 
 const { puzzle, puzzleRoute, roundRoute } = usePuzzleContext();
 
