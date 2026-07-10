@@ -5,11 +5,12 @@ definePageMeta({
 
 useUser().required();
 
+const { t } = useI18n();
 const game = useGame().ref;
 const team = useTeam().ref;
 
 useHead({
-  titleTemplate: computed(() => buildTitleParts([{ text: '站内信' }, { text: game.value?.title, sep: ' - ' }])),
+  titleTemplate: computed(() => buildTitleParts([{ text: t('message.title') }, { text: game.value?.title, sep: ' - ' }])),
 });
 
 const api = useApi();
@@ -29,7 +30,7 @@ async function updateData(newId: number | undefined = undefined): Promise<boolea
       pageData.value = data;
       return true;
     } catch (error) {
-      handleError(error, '获取站内信信息失败');
+      handleError(error, t('message.loadFailed'));
     }
   }
   return false;
@@ -50,7 +51,7 @@ async function loadOlder() {
       };
     }
   } catch (error) {
-    handleError(error, '加载更早站内信失败');
+    handleError(error, t('message.loadEarlierFailed'));
   } finally {
     historyLoading.value = false;
   }
@@ -72,7 +73,7 @@ async function loadNewer() {
       };
     }
   } catch (error) {
-    handleError(error, '更新站内信失败');
+    handleError(error, t('message.updateFailed'));
   }
 }
 
@@ -109,22 +110,22 @@ async function submitMessage() {
     try {
       const { code, data } = await api.post<TicketSendResponse>(`/games/${gameId}/tickets/self/send`, { content: draftMessage.value, content_type: draftContentType.value } satisfies TicketSendRequest, {
         errorHints: {
-          [-1]: '队伍站内信被禁用。',
-          [-2]: '积压信息过多，请先等待工作人员回复。',
-          [-3]: '内容类型无效或无权使用。',
-          [-4]: '发送的信息过长。',
-          [-5]: '信息要求的费用无效。',
-          [-8]: '当前不可发起或发送站内信。',
-          [-9]: '本队伍的站内信功能已被封禁。',
-          [-10]: '比赛当前仅允许回复已有站内信会话。',
+          [-1]: t('message.sendBlockTeam'),
+          [-2]: t('message.sendBlockPending'),
+          [-3]: t('message.sendBlockType'),
+          [-4]: t('message.sendBlockLength'),
+          [-5]: t('message.sendBlockCost'),
+          [-8]: t('message.sendBlockUnavailable'),
+          [-9]: t('message.sendBlockBanned'),
+          [-10]: t('message.sendBlockExistingOnly'),
         },
       });
       draftMessage.value = '';
 
       if (code === 0) {
         toast.add({
-          title: '已发送站内信',
-          description: '请等待工作人员回复。',
+          title: t('message.sentSuccess'),
+          description: t('message.sentSuccessDesc'),
           icon: 'material-symbols:check-rounded',
           color: 'success',
         });
@@ -138,7 +139,7 @@ async function submitMessage() {
         draftContentType.value = getDefaultTicketContentType(perm);
       }
     } catch (error) {
-      handleError(error, '站内信发送失败');
+      handleError(error, t('message.sendFailed'));
     }
   }
 
@@ -158,12 +159,12 @@ interface SendBlockConst {
 }
 
 const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
-  [RbTicketSendBlock.NoAccess]: { icon: 'material-symbols:error-med-outline-rounded', color: 'error', title: '没有发送权限。' },
-  [RbTicketSendBlock.Closed]: { icon: 'material-symbols:check-rounded', color: 'success', title: '站内信会话已关闭。' },
-  [RbTicketSendBlock.Pending]: { icon: 'material-symbols:more-horiz', color: 'warning', title: '积压信息过多，请等待工作人员回复。' },
-  [RbTicketSendBlock.FeatureClosed]: { icon: 'material-symbols:lock-outline', color: 'warning', title: '比赛当前已关闭站内信功能。' },
-  [RbTicketSendBlock.FeatureExistingOnly]: { icon: 'material-symbols:history-rounded', color: 'warning', title: '比赛当前仅允许回复已有站内信会话。' },
-  [RbTicketSendBlock.TeamFeatureBanned]: { icon: 'material-symbols:block-outline', color: 'error', title: '本队伍的站内信功能已被封禁。', teamRestriction: true },
+  [RbTicketSendBlock.NoAccess]: { icon: 'material-symbols:error-med-outline-rounded', color: 'error', title: t('message.noAccess') },
+  [RbTicketSendBlock.Closed]: { icon: 'material-symbols:check-rounded', color: 'success', title: t('message.closed') },
+  [RbTicketSendBlock.Pending]: { icon: 'material-symbols:more-horiz', color: 'warning', title: t('message.pending') },
+  [RbTicketSendBlock.FeatureClosed]: { icon: 'material-symbols:lock-outline', color: 'warning', title: t('message.featureClosed') },
+  [RbTicketSendBlock.FeatureExistingOnly]: { icon: 'material-symbols:history-rounded', color: 'warning', title: t('message.featureExistingOnly') },
+  [RbTicketSendBlock.TeamFeatureBanned]: { icon: 'material-symbols:block-outline', color: 'error', title: t('message.teamFeatureBanned'), teamRestriction: true },
 };
 </script>
 
@@ -171,25 +172,21 @@ const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
   <div>
     <div class="pt-6">
       <div class="flex items-baseline justify-between md:flex-row flex-col">
-        <div class="text-3xl font-bold">站内信</div>
+        <div class="text-3xl font-bold">{{ t('message.title') }}</div>
       </div>
     </div>
-    <u-alert v-if="team?.is_banned && canSend" class="mt-6" variant="subtle" title="队伍当前处于封禁状态，但仍可使用站内信。" icon="material-symbols:warning-outline-rounded" color="warning">
+    <u-alert v-if="team?.is_banned && canSend" class="mt-6" variant="subtle" :title="t('message.teamBannedWarning')" icon="material-symbols:warning-outline-rounded" color="warning">
       <template #description>
-        <span class="whitespace-nowrap">
-          具体原因可在
-          <u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" label="队伍动态" class="p-0 align-middle mb-0.5" />
-          中查看。
-        </span>
+        <i18n-t keypath="message.restrictionDetails" tag="span" class="whitespace-nowrap">
+          <template #activity><u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" :label="t('nav.teamActivity')" class="p-0 align-middle mb-0.5" /></template>
+        </i18n-t>
       </template>
     </u-alert>
     <u-alert v-if="sendBlock" class="my-6" variant="subtle" :title="sendBlock.title" :icon="sendBlock.icon" :color="sendBlock.color">
       <template v-if="sendBlock.teamRestriction" #description>
-        <span class="whitespace-nowrap">
-          具体原因可在
-          <u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" label="队伍动态" class="p-0 align-middle mb-0.5" />
-          中查看。
-        </span>
+        <i18n-t keypath="message.restrictionDetails" tag="span" class="whitespace-nowrap">
+          <template #activity><u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" :label="t('nav.teamActivity')" class="p-0 align-middle mb-0.5" /></template>
+        </i18n-t>
       </template>
     </u-alert>
     <rbph-message-edit
@@ -197,7 +194,7 @@ const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
       v-model:draft="draftMessage"
       v-model:content-type="draftContentType"
       class="my-6"
-      placeholder="发送站内信"
+      :placeholder="t('message.replyPlaceholder')"
       :content-types="pageData?.perm.content_type"
       :disabled="!canSend || submitLoading"
       :loading="!pageData || submitLoading"
@@ -210,13 +207,13 @@ const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
             <u-icon class="align-middle me-2 text-primary" name="material-symbols:chat-outline-rounded" />
             <div class="text-sm flex-1 flex flex-wrap justify-between">
               <div>
-                <u-badge v-if="msg.sender_type === RbTicketSenderType.Host" variant="soft" color="warning" class="me-1">工作人员</u-badge>
-                <u-badge v-if="msg.sender_type === RbTicketSenderType.Team" variant="soft" class="me-1">队员</u-badge>
+                <u-badge v-if="msg.sender_type === RbTicketSenderType.Host" variant="soft" color="warning" class="me-1">{{ t('message.staffMember') }}</u-badge>
+                <u-badge v-if="msg.sender_type === RbTicketSenderType.Team" variant="soft" class="me-1">{{ t('message.teamMember') }}</u-badge>
                 {{ msg.sender.nickname }}
               </div>
               <div v-if="msg.ctime_at" class="text-secondary text-xs flex items-center ms-1">
                 <u-icon name="material-symbols:schedule-outline-rounded" class="align-middle me-0.5" />
-                发送于 {{ formatDate(msg.ctime_at) }}
+                {{ t('message.sentAt', { time: formatDate(msg.ctime_at) }) }}
               </div>
             </div>
             <u-icon name="material-symbols:expand-more-rounded" class="-me-1 size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
@@ -230,7 +227,7 @@ const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
       </u-card>
       <div v-if="historyLoading" class="flex w-full justify-center py-3"><u-icon name="material-symbols:progress-activity" class="size-5 animate-spin text-muted" /></div>
     </div>
-    <u-empty v-else-if="pageData" icon="material-symbols:chat-info-outline-rounded" title="需要帮助？" description="发送站内信与主办方联系" />
+    <u-empty v-else-if="pageData" icon="material-symbols:chat-info-outline-rounded" :title="t('message.needHelp')" :description="t('message.contact')" />
     <div v-else class="h-full">
       <u-skeleton class="w-full h-full min-h-24" />
     </div>

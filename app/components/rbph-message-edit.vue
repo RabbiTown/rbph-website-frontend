@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { SelectItem } from '@nuxt/ui';
 
+const { t } = useI18n();
+
 const draft = defineModel<string>('draft');
 const contentType = defineModel<RbContentType>('contentType', { default: RbContentType.UnsafeMarkdown });
 
@@ -54,7 +56,7 @@ watch(
       <!-- <u-chat-prompt-submit variant="soft" class="rounded-full cursor-pointer" :disabled="disabled" :loading="loading" /> -->
       <template #footer>
         <u-icon name="material-symbols:markdown-outline-rounded" />
-        <span class="text-xs">支持 Markdown 语法</span>
+        <span class="text-xs">{{ t('components.messageEdit.markdownHint') }}</span>
       </template>
     </u-chat-prompt>
     <div class="flex mt-2 gap-2 justify-between">
@@ -65,9 +67,9 @@ watch(
       <div class="flex gap-2">
         <slot name="action" />
         <u-button v-if="canClose" class="justify-center cursor-pointer" color="error" variant="subtle" :loading="loading" :disabled="disabled" icon="material-symbols:check-rounded" @click="emit('submitClose')">
-          {{ draft && draft?.length > 0 ? '回复并关闭工单' : '关闭工单' }}
+          {{ draft && draft?.length > 0 ? t('components.messageEdit.closeWithReply') : t('components.messageEdit.closeTicket') }}
         </u-button>
-        <u-button class="text-white min-w-20 justify-center cursor-pointer" :loading="loading" :disabled="disabled || !draft?.length" @click="emit('submit')">发送</u-button>
+        <u-button class="text-white min-w-20 justify-center cursor-pointer" :loading="loading" :disabled="disabled || !draft?.length" @click="emit('submit')">{{ t('components.messageEdit.send') }}</u-button>
       </div>
     </div>
   </div>

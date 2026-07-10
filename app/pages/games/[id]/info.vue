@@ -13,16 +13,17 @@ const game = useGame().ref;
 const user = useUser().ref;
 const phases = useGameReleaseSync().phases;
 const route = useRoute();
+const { t } = useI18n();
 const activeTab = ref(route.query.tab === 'phases' ? 'phases' : 'announcements');
 
 const tabItems = [
   {
-    label: '比赛公告',
+    label: t('pages.info.announcementsTab'),
     icon: 'material-symbols:chat-info-outline-rounded',
     value: 'announcements',
   },
   {
-    label: '赛程安排',
+    label: t('pages.info.phasesTab'),
     icon: 'material-symbols:event-list-outline-rounded',
     value: 'phases',
   },
@@ -47,7 +48,7 @@ const timelineItems = computed<PhaseTimelineItem[]>(() =>
 );
 
 useHead({
-  titleTemplate: computed(() => buildTitleParts([{ text: activeTab.value === 'phases' ? '比赛阶段' : '公告' }, { text: game.value?.title, sep: ' - ' }])),
+  titleTemplate: computed(() => buildTitleParts([{ text: activeTab.value === 'phases' ? t('pages.info.phaseTitle') : t('pages.info.announcementTitle') }, { text: game.value?.title, sep: ' - ' }])),
 });
 
 const api = useApi();
@@ -60,7 +61,7 @@ async function updateData(newId: number | undefined) {
       const { data } = await api.get<RbAnnouncementInfo[]>(`/games/${gameId}/announcements`);
       rawData.value = data;
     } catch (error) {
-      handleError(error, '获取公告信息失败');
+      handleError(error, t('pages.info.loadFailed'));
     }
   }
 }
@@ -83,7 +84,7 @@ useSync().listen(SyncMessageType.GameNewAnnouncement, ({ data }) => {
 <template>
   <u-main class="py-8">
     <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 sm:px-6 lg:px-8">
-      <h1 class="text-2xl font-semibold text-highlighted">比赛信息</h1>
+      <h1 class="text-2xl font-semibold text-highlighted">{{ t('pages.info.title') }}</h1>
 
       <u-tabs v-model="activeTab" :items="tabItems" variant="link" :content="false" class="-mb-2" />
 
@@ -96,7 +97,7 @@ useSync().listen(SyncMessageType.GameNewAnnouncement, ({ data }) => {
           </template>
         </u-timeline>
 
-        <u-empty v-else icon="material-symbols:event-busy-outline-rounded" :title="user ? '暂无公开阶段' : '登录后查看比赛阶段'" :actions="user ? undefined : [{ label: '登录', to: `/login?url=${route.fullPath}` }]" />
+        <u-empty v-else icon="material-symbols:event-busy-outline-rounded" :title="user ? t('pages.info.noPhases') : t('pages.info.loginToView')" :actions="user ? undefined : [{ label: t('auth.login'), to: `/login?url=${route.fullPath}` }]" />
       </div>
     </div>
   </u-main>

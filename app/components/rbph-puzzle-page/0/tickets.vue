@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n();
 const { puzzle } = usePuzzleContext();
 
 const api = useApi();
@@ -79,7 +80,7 @@ async function updateData(): Promise<boolean> {
       pageData.value = derivePuzzleList(data);
       return true;
     } catch (error) {
-      handleError(error, '获取人工提示信息失败');
+      handleError(error, t('ticket.loadFailed'));
     }
   }
   return false;
@@ -129,22 +130,22 @@ async function submitMessage() {
       const endpoint = staffTarget ? `/games/${gameId}/tickets/staff/puzzle/${puzzleId}/teams/${staffTarget.id}` : `/puzzles/${puzzleId}/tickets`;
       const { code, data } = await api.post<TicketOpenResponse>(endpoint, { content: draftMessage.value, content_type: draftContentType.value } satisfies TicketSendRequest, {
         errorHints: {
-          [-1]: '无法处理请求。',
-          [-2]: '同时只能请求一个人工提示。',
-          [-3]: '题目人工提示暂未开放。',
-          [-4]: '内容类型无效或无权使用。',
-          [-5]: '发送的信息过长。',
-          [-6]: '比赛当前已关闭人工提示功能。',
-          [-7]: '比赛当前仅允许回复已有人工提示。',
-          [-8]: '本队伍的人工提示功能已被封禁。',
+          [-1]: t('ticket.invalidRequest'),
+          [-2]: t('ticket.onlyOne'),
+          [-3]: t('ticket.puzzleUnavailable'),
+          [-4]: t('ticket.sendBlockType'),
+          [-5]: t('ticket.sendBlockLength'),
+          [-6]: t('ticket.featureClosed'),
+          [-7]: t('ticket.sendBlockExistingOnly'),
+          [-8]: t('ticket.teamFeatureBanned'),
         },
       });
       draftMessage.value = '';
 
       if (code === 0) {
         toast.add({
-          title: staffTarget ? `已为 ${staffTarget.name} 发起人工提示` : '已请求人工提示',
-          description: staffTarget ? '队伍会收到该人工提示和通知。' : '请等待工作人员回复。',
+          title: staffTarget ? t('ticket.requestedFor', { team: staffTarget.name }) : t('ticket.sentSuccess'),
+          description: staffTarget ? t('ticket.requestedForDesc') : t('ticket.sentSuccessDesc'),
           icon: 'material-symbols:check-rounded',
           color: 'success',
         });
@@ -160,7 +161,7 @@ async function submitMessage() {
         }
       }
     } catch (error) {
-      handleError(error, '人工提示请求失败');
+      handleError(error, t('ticket.requestFailed'));
     }
   }
 
@@ -182,71 +183,67 @@ const cooldown = computed(() => {
       <u-tabs
         v-model="staffView"
         :items="[
-          { label: '工作人员视图', value: 'staff', icon: 'material-symbols:near-me-outline-rounded' },
-          { label: '队伍视图', value: 'team', icon: 'material-symbols:groups-2-outline-rounded' },
+          { label: t('ticket.staffView'), value: 'staff', icon: 'material-symbols:near-me-outline-rounded' },
+          { label: t('ticket.teamView'), value: 'team', icon: 'material-symbols:groups-2-outline-rounded' },
         ]"
         :content="false"
         variant="link"
       />
-      <rbph-staff-team-select v-if="staffView === 'team' && isAdmin && puzzle?.data.game_id" v-model="selectedTeamId" v-model:team="selectedAdminTeam" :game-id="puzzle.data.game_id" placeholder="输入队伍名称搜索" class="w-full sm:max-w-80" />
-      <u-alert v-else-if="staffView === 'team' && team" variant="subtle" color="neutral" icon="material-symbols:groups-2-outline-rounded" :title="`本队视图：${team.name}`" />
+      <rbph-staff-team-select v-if="staffView === 'team' && isAdmin && puzzle?.data.game_id" v-model="selectedTeamId" v-model:team="selectedAdminTeam" :game-id="puzzle.data.game_id" :placeholder="t('pages.staffInbox.searchTeam')" class="w-full sm:max-w-80" />
+      <u-alert v-else-if="staffView === 'team' && team" variant="subtle" color="neutral" icon="material-symbols:groups-2-outline-rounded" :title="t('ticket.ownTeamView', { team: team.name })" />
     </div>
 
     <div v-if="isStaff && staffView === 'staff' && staffTickets" class="flex flex-col gap-4">
       <div class="flex items-center justify-between gap-3">
-        <u-alert class="flex-1" variant="subtle" title="工作人员视图" description="这里显示所有队伍针对本题发起的人工提示。" icon="material-symbols:near-me-outline-rounded" color="warning" />
-        <u-button :to="`/games/${puzzle?.data.game_id}/staff/inbox?kind=puzzle&puzzle_id=${puzzle?.data.id}`" label="在工作台打开" icon="material-symbols:inbox-outline-rounded" />
+        <u-alert class="flex-1" variant="subtle" :title="t('ticket.staffView')" :description="t('ticket.staffViewDesc')" icon="material-symbols:near-me-outline-rounded" color="warning" />
+        <u-button :to="`/games/${puzzle?.data.game_id}/staff/inbox?kind=puzzle&puzzle_id=${puzzle?.data.id}`" :label="t('pages.staffInbox.openInInbox')" icon="material-symbols:inbox-outline-rounded" />
       </div>
       <rbph-ticket-card v-for="ticket in staffTickets" :key="ticket.id" :ticket="ticket" />
-      <u-empty v-if="staffTickets.length === 0" icon="material-symbols:inbox-outline-rounded" title="本题暂无人工提示" />
+      <u-empty v-if="staffTickets.length === 0" icon="material-symbols:inbox-outline-rounded" :title="t('ticket.noPuzzleTickets')" />
     </div>
     <u-empty
       v-else-if="isStaff && staffView === 'team' && !selectedTeamId"
       icon="material-symbols:group-search-outline-rounded"
-      :title="isAdmin ? '请选择队伍' : '你当前没有加入队伍'"
-      :description="isAdmin ? '输入队伍名称搜索，选择后可查看其人工提示状态并发起人工提示。' : '你只能查看本队视图。'"
+      :title="isAdmin ? t('ticket.selectTeam') : t('pages.profile.noTeam')"
+      :description="isAdmin ? t('ticket.selectTeamDesc') : t('ticket.teamViewOnly')"
     />
     <div v-else-if="pageData" class="flex flex-col gap-4">
-      <u-alert v-if="!isStaff && team?.is_banned && canOpenTicket" variant="subtle" title="队伍当前处于封禁状态，但仍可使用人工提示。" icon="material-symbols:warning-outline-rounded" color="warning">
+      <u-alert v-if="!isStaff && team?.is_banned && canOpenTicket" variant="subtle" :title="t('ticket.teamBannedCanRequest')" icon="material-symbols:warning-outline-rounded" color="warning">
         <template #description>
-          <span class="whitespace-nowrap">
-            具体原因可在
-            <u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" label="队伍动态" class="p-0 align-middle mb-0.5" />
-            中查看。
-          </span>
+          <i18n-t keypath="ticket.restrictionDetails" tag="span" class="whitespace-nowrap">
+            <template #activity><u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" :label="t('nav.teamActivity')" class="p-0 align-middle mb-0.5" /></template>
+          </i18n-t>
         </template>
       </u-alert>
       <u-alert
         v-if="canOpenTicket"
         variant="subtle"
-        :title="isStaff && selectedTeam ? `可以为 ${selectedTeam.name} 发起人工提示。` : '你可以请求人工提示。'"
-        :description="isStaff && selectedTeam ? '发起后将以工作人员消息开始会话，并通知该队伍。' : '如果有预设提示无法解决的困惑，请询问人工提示。'"
+        :title="isStaff && selectedTeam ? t('ticket.canRequestFor', { team: selectedTeam.name }) : t('ticket.canRequest')"
+        :description="isStaff && selectedTeam ? t('ticket.canRequestForDesc') : t('ticket.contact')"
         icon="material-symbols:near-me-outline-rounded"
         color="warning"
       />
-      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.Disabled" variant="subtle" title="暂时不能请求人工提示。" description="本题未启用人工提示。" icon="material-symbols:near-me-disabled-outline-rounded" color="error" />
-      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.FeatureClosed" variant="subtle" title="暂时不能请求人工提示。" description="比赛当前已关闭人工提示功能。" icon="material-symbols:near-me-disabled-outline-rounded" color="warning" />
-      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.FeatureExistingOnly" variant="subtle" title="暂时不能请求新的人工提示。" description="比赛当前仅允许回复已有人工提示。" icon="material-symbols:history-rounded" color="warning" />
-      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.TeamFeatureBanned" variant="subtle" title="本队伍的人工提示功能已被封禁。" icon="material-symbols:block-outline" color="error">
+      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.Disabled" variant="subtle" :title="t('ticket.temporarilyUnavailable')" :description="t('ticket.disabledForPuzzle')" icon="material-symbols:near-me-disabled-outline-rounded" color="error" />
+      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.FeatureClosed" variant="subtle" :title="t('ticket.temporarilyUnavailable')" :description="t('ticket.featureClosed')" icon="material-symbols:near-me-disabled-outline-rounded" color="warning" />
+      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.FeatureExistingOnly" variant="subtle" :title="t('ticket.newRequestUnavailable')" :description="t('ticket.featureExistingOnly')" icon="material-symbols:history-rounded" color="warning" />
+      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.TeamFeatureBanned" variant="subtle" :title="t('ticket.teamFeatureBanned')" icon="material-symbols:block-outline" color="error">
         <template #description>
-          <span class="whitespace-nowrap">
-            具体原因可在
-            <u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" label="队伍动态" class="p-0 align-middle mb-0.5" />
-            中查看。
-          </span>
+          <i18n-t keypath="ticket.restrictionDetails" tag="span" class="whitespace-nowrap">
+            <template #activity><u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" :label="t('nav.teamActivity')" class="p-0 align-middle mb-0.5" /></template>
+          </i18n-t>
         </template>
       </u-alert>
       <u-alert
         v-else-if="pageData.open_block === TicketOpenBlock.CurrentPuzzlePending"
         variant="subtle"
-        title="暂时不能请求人工提示。"
-        description="本题已有开放中的人工提示，请在下方会话中继续沟通。"
+        :title="t('ticket.temporarilyUnavailable')"
+        :description="t('ticket.currentPuzzlePending')"
         icon="material-symbols:near-me-disabled-outline-rounded"
         color="error"
       />
-      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.PendingLimit" variant="subtle" title="暂时不能请求人工提示。" icon="material-symbols:near-me-disabled-outline-rounded" color="error">
+      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.PendingLimit" variant="subtle" :title="t('ticket.temporarilyUnavailable')" icon="material-symbols:near-me-disabled-outline-rounded" color="error">
         <template #description>
-          当前同时开放的人工提示已达到上限，请考虑关闭以下请求。
+          {{ t('ticket.pendingLimit') }}
           <div class="flex mt-1.5 flex-wrap gap-1">
             <nuxt-link v-for="el in pageData.open_tickets" :key="el.id" :to="`/tickets/${el.id}`">
               <u-badge color="success" variant="subtle" icon="material-symbols:add-circle-outline-rounded">{{ el.puzzle_title }} #{{ el.id }}</u-badge>
@@ -254,9 +251,9 @@ const cooldown = computed(() => {
           </div>
         </template>
       </u-alert>
-      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.Cooldown" variant="subtle" title="暂时不能请求人工提示。" icon="material-symbols:hourglass-outline-rounded" color="error">
+      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.Cooldown" variant="subtle" :title="t('ticket.temporarilyUnavailable')" icon="material-symbols:hourglass-outline-rounded" color="error">
         <template #description>
-          {{ cooldown ? `本题的人工提示将在 ${formatTime(cooldown)} 后开放。` : '本题的人工提示仍在冷却中。' }}
+          {{ cooldown ? t('ticket.opensAfter', { time: formatTime(cooldown) }) : t('ticket.coolingDown') }}
         </template>
       </u-alert>
       <rbph-message-edit
@@ -265,7 +262,7 @@ const cooldown = computed(() => {
         v-model:content-type="draftContentType"
         class="mb-6"
         :content-types="[RbContentType.UnsafeMarkdown]"
-        :placeholder="isStaff && selectedTeam ? `为 ${selectedTeam.name} 发起人工提示` : '请求人工提示'"
+        :placeholder="isStaff && selectedTeam ? t('ticket.requestForPlaceholder', { team: selectedTeam.name }) : t('ticket.requestPlaceholder')"
         :disabled="!pageData || submitLoading"
         :loading="!pageData || submitLoading"
         @submit="submitMessage"

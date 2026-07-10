@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n();
 const { puzzle, puzzleRoute } = usePuzzleContext();
 
 const okSubmissionsComp = useTemplateRef('ok-submissions');
@@ -7,12 +8,11 @@ const currencies = useCurrency().getAllCurrent();
 const unmetSubmitRequirements = computed(() => (puzzle.value?.data.submit_requirements ?? []).filter(requirement => (currencies.value[requirement.currency_id]?.current ?? 0) < requirement.minimum));
 const submitRequirementHint = computed(() => {
   if (!unmetSubmitRequirements.value.length) return undefined;
-  return unmetSubmitRequirements.value
-    .map(requirement => {
+  const requirements = unmetSubmitRequirements.value.map(requirement => {
       const current = currencies.value[requirement.currency_id]?.current ?? 0;
       return `${requirement.currency_name} ${intPrecString(current, requirement.currency_prec)} / ${intPrecString(requirement.minimum, requirement.currency_prec)}`;
-    })
-    .join('，');
+    });
+  return t('puzzleSubmit.requirements', { requirements });
 });
 
 function onSubmitSuccess(action: RbJudgeAction) {
@@ -101,11 +101,11 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
       <rbph-submit-result ref="submit-result" class="mt-6" />
 
       <div class="w-full" variant="soft">
-        <div class="text-lg font-bold mb-4 mt-6">最近成功提交</div>
+        <div class="text-lg font-bold mb-4 mt-6">{{ t('pages.puzzlePage.recentSuccessfulSubmissions') }}</div>
         <rbph-submissions ref="ok-submissions" :puzzle-id="puzzle.data.id" :only-ok="true" />
         <div class="flex justify-center mt-2">
           <nuxt-link :to="puzzleRoute('submissions')">
-            <u-button class="cursor-pointer" variant="ghost" color="secondary" icon="material-symbols:more-horiz" trailing-icon="material-symbols:more-horiz">查看所有提交</u-button>
+            <u-button class="cursor-pointer" variant="ghost" color="secondary" icon="material-symbols:more-horiz" trailing-icon="material-symbols:more-horiz">{{ t('pages.puzzlePage.viewAllSubmissions') }}</u-button>
           </nuxt-link>
         </div>
       </div>

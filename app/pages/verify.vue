@@ -1,6 +1,8 @@
 <script setup lang="ts">
+const { t } = useI18n();
+
 useHead({
-  titleTemplate: '验证账号 - RBPH',
+  titleTemplate: computed(() => t('auth.verifyHeadTitle')),
 });
 
 const api = useApi();
@@ -23,8 +25,8 @@ onMounted(async () => {
     const { code } = await api.get('/auth/verify', { query: { token } });
     if (code == 0) {
       toast.add({
-        title: '邮箱验证成功！',
-        description: '即将跳转到登录页面…',
+        title: t('auth.emailVerified'),
+        description: t('auth.registerSuccessDesc'),
         icon: 'material-symbols:check-rounded',
         color: 'success',
       });

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n();
 const props = defineProps<{
   puzzleId?: number;
   utimeAt?: string;
@@ -24,7 +25,7 @@ const processedData = computed(() => {
     return {
       ...x,
       state,
-      displayTitle: state?.title ?? x.title ?? '这条提示以后再来探索吧！',
+      displayTitle: state?.title ?? x.title ?? t('hints.hiddenTitle'),
     };
   });
 });
@@ -100,7 +101,7 @@ async function updateData(newId: number | undefined = undefined) {
       rawData.value = data;
       scheduleDueHintSync();
     } catch (error) {
-      handleError(error, '获取提示失败');
+      handleError(error, t('hints.getFailed'));
     }
   }
 }
@@ -121,8 +122,8 @@ async function purchaseHint(hintId: number) {
       { sid },
       {
         errorHints: {
-          [-2]: '余额不足。',
-          [-1]: '提示暂未开放或已购买。',
+          [-2]: t('hints.insufficientBalance'),
+          [-1]: t('hints.unavailableOrPurchased'),
         },
       }
     );
@@ -141,10 +142,12 @@ async function purchaseHint(hintId: number) {
 
     if (hint) {
       const cur = hint.cost_id ? currency.value[hint.cost_id] : undefined;
-      const title = data.title ?? hint.title ?? '提示';
+      const title = data.title ?? hint.title ?? t('hints.title');
       toast.add({
-        title: hint.cost_id ? '已购买提示' : '已解锁提示',
-        description: hint.cost_id ? `已花费 ${intPrecString(hint.cost_amount, cur?.prec || 0)} ${cur?.name} 购买提示【${title}】` : `已解锁提示【${title}】`,
+        title: hint.cost_id ? t('hints.purchased') : t('hints.unlocked'),
+        description: hint.cost_id
+          ? t('hints.purchaseSuccessDesc', { amount: intPrecString(hint.cost_amount, cur?.prec || 0), currency: cur?.name, title })
+          : t('hints.unlockSuccessDesc', { title }),
         icon: 'material-symbols:check-rounded',
         color: 'success',
       });
@@ -153,7 +156,7 @@ async function purchaseHint(hintId: number) {
     useCurrency().updateData();
   } catch (error) {
     sidStore.clear(sid);
-    handleError(error, '提示购买失败');
+    handleError(error, t('hints.purchaseFailed'));
   }
 
   purchaseLoading.value = false;
@@ -218,13 +221,13 @@ defineExpose({
             {{ hint.displayTitle }}
           </div>
           <template v-if="!hint.state">
-            <u-tooltip v-if="!calcCooldown(hint)" :disabled="checkEnough(hint)" arrow :text="`还需 ${intPrecString(hint.cost_amount - (currency[hint.cost_id ?? 0]?.current || 0), currency[hint.cost_id ?? 0]?.prec || 0)} ${currency[hint.cost_id ?? 0]?.name}`">
+            <u-tooltip v-if="!calcCooldown(hint)" :disabled="checkEnough(hint)" arrow :text="t('hints.needMore', { amount: `${intPrecString(hint.cost_amount - (currency[hint.cost_id ?? 0]?.current || 0), currency[hint.cost_id ?? 0]?.prec || 0)} ${currency[hint.cost_id ?? 0]?.name}` })">
               <u-button variant="soft" size="xs" class="cursor-pointer -my-8" icon="material-symbols:emoji-objects-outline-rounded" :loading="purchaseLoading || syncingDueHints" :disabled="!checkEnough(hint)" @click="() => purchaseHint(hint.id)">
-                <template v-if="!hint.cost_id"> 解锁 </template>
+                <template v-if="!hint.cost_id"> {{ t('hints.unlock') }} </template>
                 <template v-else> {{ currency[hint.cost_id]?.name }} {{ intPrecString(-hint.cost_amount, currency[hint.cost_id]?.prec || 0, true, ' ') }} </template>
               </u-button>
             </u-tooltip>
-            <u-tooltip v-else :disabled="checkEnough(hint)" arrow text="等待时间结束后才可购买">
+            <u-tooltip v-else :disabled="checkEnough(hint)" arrow :text="t('hints.waitOver')">
               <u-button variant="soft" size="xs" class="-my-8" icon="material-symbols:hourglass-outline-rounded" :disabled="true"> {{ formatTime(calcCooldown(hint)) }} </u-button>
             </u-tooltip>
           </template>
@@ -238,5 +241,5 @@ defineExpose({
       </u-collapsible>
     </u-card>
   </div>
-  <u-empty v-else-if="processedData" icon="material-symbols:contact-support-outline-rounded" title="暂无提示" description="没有可用提示" />
+  <u-empty v-else-if="processedData" icon="material-symbols:contact-support-outline-rounded" :title="t('hints.noHints')" :description="t('hints.noAvailable')" />
 </template>

@@ -18,6 +18,8 @@ const emit = defineEmits<{
 const api = useApi();
 const toast = useToast();
 const sidStore = useSid();
+const { t } = useI18n();
+const judgeActions = useJudgeActionConsts();
 
 const currentTime = useCurrentTimeSec();
 
@@ -72,17 +74,17 @@ async function submitAnswer(answer: string) {
   let curToast: Toast | undefined = undefined;
   try {
     curToast = toast.add({
-      title: '提交答案中…',
-      description: '请耐心等待。',
-      color: judgeActionConsts[RbJudgeAction.Pending].color,
-      icon: judgeActionConsts[RbJudgeAction.Pending].icon,
+      title: t('puzzleSubmit.submitting'),
+      description: t('puzzleSubmit.submittingDesc'),
+      color: judgeActions.value[RbJudgeAction.Pending].color,
+      icon: judgeActions.value[RbJudgeAction.Pending].icon,
       duration: Infinity,
     });
 
-    const { data } = await api.post<RbJudgeResponse>(`/puzzles/${props.puzzle}/submit`, { answer, sid }, { errorHints: { [-1]: '答案无效。', [-2]: '已经提交过这个答案了！', [-3]: '目前不允许提交。' } });
+    const { data } = await api.post<RbJudgeResponse>(`/puzzles/${props.puzzle}/submit`, { answer, sid }, { errorHints: { [-1]: t('puzzleSubmit.invalidAnswer'), [-2]: t('puzzleSubmit.duplicatedAnswer'), [-3]: t('puzzleSubmit.notAllowed') } });
     const result = data.result;
 
-    const action = judgeActionConsts[result.action];
+    const action = judgeActions.value[result.action];
     const currencyPenaltySuffix = formatCurrencyPenaltySuffix(data.currency_penalty);
     const description = result.result || action.desc;
 
@@ -106,7 +108,7 @@ async function submitAnswer(answer: string) {
 
     if (data.unlocks && data.unlocks.length > 0) {
       toast.add({
-        title: `解锁了新的谜题！`,
+        title: t('puzzleSubmit.newPuzzleUnlocked'),
         actions: data.unlocks.map(puzzle => {
           return {
             icon: 'material-symbols:arrow-forward-rounded',
@@ -126,8 +128,8 @@ async function submitAnswer(answer: string) {
     return data;
   } catch (error) {
     sidStore.clear(sid);
-    const toastData = { duration: 5000, ...getErrorToast(error, `提交失败 [${answer}]`, true) };
-    toastData.description = toastData.description || '请尝试稍后重新提交。';
+    const toastData = { duration: 5000, ...getErrorToast(error, t('puzzleSubmit.submitFailed', { answer }), true) };
+    toastData.description = toastData.description || t('puzzleSubmit.retryLater');
 
     if (curToast) {
       toast.update(curToast.id, toastData);
@@ -153,13 +155,13 @@ function submit() {
 }
 
 const inputStyle = computed(() => {
-  if (cooldown.value > 0) return { placeholder: `提交冷却中：${formatTime(cooldown.value)}`, icon: 'material-symbols:schedule-outline-rounded' };
-  if (remainSubmit.value === 0) return { placeholder: `剩余提交次数：0/${maxSubmit.value}`, icon: 'material-symbols:block-outline' };
-  if (props.externallyBlocked) return { placeholder: props.blockedHint || '尚未满足答案提交要求', icon: 'material-symbols:lock-outline' };
-  if (props.success) return { placeholder: `你的队伍已通过本题`, icon: 'material-symbols:check-rounded' };
-  return { placeholder: `提交答案`, icon: 'material-symbols:send-outline-rounded' };
+  if (cooldown.value > 0) return { placeholder: t('puzzleSubmit.cooldown', { time: formatTime(cooldown.value) }), icon: 'material-symbols:schedule-outline-rounded' };
+  if (remainSubmit.value === 0) return { placeholder: t('puzzleSubmit.remainingZero', { max: maxSubmit.value }), icon: 'material-symbols:block-outline' };
+  if (props.externallyBlocked) return { placeholder: props.blockedHint || t('puzzleSubmit.blocked'), icon: 'material-symbols:lock-outline' };
+  if (props.success) return { placeholder: t('puzzleSubmit.solved'), icon: 'material-symbols:check-rounded' };
+  return { placeholder: t('puzzleSubmit.placeholder'), icon: 'material-symbols:send-outline-rounded' };
 });
-const submitHint = computed(() => props.blockedHint || (maxSubmit.value === undefined ? undefined : `剩余提交次数：${remainSubmit.value}/${maxSubmit.value}`));
+const submitHint = computed(() => props.blockedHint || (maxSubmit.value === undefined ? undefined : t('puzzleSubmit.remaining', { remain: remainSubmit.value, max: maxSubmit.value })));
 </script>
 
 <template>
@@ -176,7 +178,7 @@ const submitHint = computed(() => props.blockedHint || (maxSubmit.value === unde
         :disabled="submitBlocked"
         @keyup.enter="submit"
       />
-      <u-button :loading="submitLoading" :disabled="state.answer.trim().length < 1 || submitBlocked" :color="color" class="-ms-px justify-center cursor-pointer h-full rounded-none rounded-r-lg px-3" variant="subtle" @click="submit">提交</u-button>
+      <u-button :loading="submitLoading" :disabled="state.answer.trim().length < 1 || submitBlocked" :color="color" class="-ms-px justify-center cursor-pointer h-full rounded-none rounded-r-lg px-3" variant="subtle" @click="submit">{{ t('puzzleSubmit.submit') }}</u-button>
     </div>
     <div v-if="submitHint" class="mt-1 text-right text-xs text-muted">
       {{ submitHint }}

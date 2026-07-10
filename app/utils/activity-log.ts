@@ -88,6 +88,8 @@ export interface ActivityLogCurrencyInfo {
   prec?: number | null;
 }
 
+export type ActivityLogTranslateFn = (key: string, params?: Record<string, unknown>) => string;
+
 export function activityUserLabel(value: ActivityLogUserRef | null | undefined, fallbackId?: number | null) {
   if (value?.nickname) return value.nickname;
   if (value?.name) return value.name;
@@ -96,62 +98,44 @@ export function activityUserLabel(value: ActivityLogUserRef | null | undefined, 
   return '';
 }
 
-export function activityActorName(entry: ActivityLogEntry, teamMemberFallback = false) {
+export function activityActorName(entry: ActivityLogEntry, teamMemberFallback = false, t?: ActivityLogTranslateFn) {
   const name = activityUserLabel(entry.data.user, entry.user_id);
   if (name) return name;
-  if (teamMemberFallback && entry.type.startsWith('team.member.')) return '队伍管理';
+  if (teamMemberFallback && entry.type.startsWith('team.member.')) return t ? t('activity.teamManagement') : 'Team management';
   return '';
 }
 
-export function activityActorTitle(entry: ActivityLogEntry, action: string, teamMemberFallback = false) {
-  const actor = activityActorName(entry, teamMemberFallback);
+export function activityActorTitle(entry: ActivityLogEntry, action: string, teamMemberFallback = false, t?: ActivityLogTranslateFn) {
+  const actor = activityActorName(entry, teamMemberFallback, t);
   return actor ? `${actor} ${action}` : action;
-}
-
-export function activityNamedLabel(value: ActivityLogNamedRef | null | undefined, fallbackId: number | null | undefined, fallbackName: string) {
-  if (value?.title) return `「${value.title}」`;
-  if (value?.name) return `「${value.name}」`;
-  if (value?.id || fallbackId) return `${fallbackName} #${value?.id ?? fallbackId}`;
-  return fallbackName;
-}
-
-export function activitySimpleNamedLabel(value: ActivityLogNamedRef | null | undefined, fallbackName: string) {
-  if (value?.title) return `「${value.title}」`;
-  if (value?.name) return `「${value.name}」`;
-  return fallbackName;
-}
-
-export function activityTicketLabel(ticket: ActivityLogNamedRef | null | undefined, puzzle: ActivityLogNamedRef | null | undefined) {
-  if (ticket?.id && puzzle?.title) return `「${puzzle.title}#${ticket.id}」`;
-  if (ticket?.id) return `#${ticket.id}`;
-  return '';
 }
 
 export function isStaffActivityLog(entry: ActivityLogEntry) {
   return Boolean(entry.data.staff);
 }
 
-export function activityJudgeResultLabel(action: number | null | undefined) {
+export function activityJudgeResultLabel(action: number | null | undefined, ignoredOrT?: boolean | ActivityLogTranslateFn, t?: ActivityLogTranslateFn) {
+  const translate = typeof ignoredOrT === 'function' ? ignoredOrT : t;
   return (() => {
     switch (action) {
       case -2:
-        return '评测故障';
+        return translate ? translate('judge.error') : 'Judge error';
       case -1:
-        return '评测中';
+        return translate ? translate('judge.pending') : 'Judging';
       case 0:
-        return '回答错误';
+        return translate ? translate('judge.fail') : 'Incorrect';
       case 1:
-        return '回答正确';
+        return translate ? translate('judge.correct') : 'Correct';
       case 2:
-        return '里程碑';
+        return translate ? translate('judge.milestone') : 'Milestone';
       case 3:
-        return '开始比赛';
+        return translate ? translate('judge.startGame') : 'Game started';
       case 4:
-        return '触发彩蛋';
+        return translate ? translate('judge.easterEgg') : 'Easter egg';
       case 5:
-        return '回答正确，完成比赛';
+        return translate ? translate('judge.finishGameLabel') : 'Correct, game finished';
       default:
-        return '已记录';
+        return translate ? translate('judge.recorded') : 'Recorded';
     }
   })();
 }
@@ -163,9 +147,12 @@ export function formatActivityLogCurrencyAmount(data: ActivityLogPayload, amount
   return currency?.name ? `${text} ${currency.name}` : text;
 }
 
-export function activityCurrencyDetails(entry: ActivityLogEntry) {
+export function activityCurrencyDetails(entry: ActivityLogEntry, t?: ActivityLogTranslateFn) {
   const delta = Number(entry.data.delta ?? entry.delta_amount ?? 0);
-  return [delta ? `变动：${formatActivityLogCurrencyAmount(entry.data, delta)}` : '', entry.data.after !== undefined ? `结余：${formatActivityLogCurrencyAmount(entry.data, Number(entry.data.after), false)}` : ''].filter(Boolean);
+  return [
+    delta ? (t ? t('activity.changeDetail', { change: formatActivityLogCurrencyAmount(entry.data, delta) }) : `Change: ${formatActivityLogCurrencyAmount(entry.data, delta)}`) : '',
+    entry.data.after !== undefined ? (t ? t('activity.balanceDetail', { balance: formatActivityLogCurrencyAmount(entry.data, Number(entry.data.after), false) }) : `Balance: ${formatActivityLogCurrencyAmount(entry.data, Number(entry.data.after), false)}`) : '',
+  ].filter(Boolean);
 }
 
 export function formatActivityLogCurrency(entry: ActivityLogEntry) {
@@ -181,28 +168,29 @@ export function activityCurrencyAfter(entry: ActivityLogEntry) {
   return `${currency.name ?? ''} ${intPrecString(Number(entry.data.after), currency.prec ?? 0)}`;
 }
 
-export function activityCurrencyReasonTitle(entry: ActivityLogEntry) {
+export function activityCurrencyReasonTitle(entry: ActivityLogEntry, t?: ActivityLogTranslateFn) {
   const reason = typeof entry.data.reason === 'string' ? entry.data.reason.trim() : '';
   if (reason) return reason;
-  return `${activitySimpleNamedLabel(entry.data.puzzle, '题目')}变动了货币`;
+  const puzzle = entry.data.puzzle?.title ?? entry.data.puzzle?.name ?? '';
+  return t ? t('activityLog.currencyChangedByPuzzle', { puzzle }) : puzzle ? `Currency changed by ${puzzle}` : 'Puzzle currency changed';
 }
 
-export function activityConsequenceText(entry: ActivityLogEntry, currencyById: (id: number) => ActivityLogCurrencyInfo | undefined, formatTime: (value: string) => string) {
+export function activityConsequenceText(entry: ActivityLogEntry, currencyById: (id: number) => ActivityLogCurrencyInfo | undefined, formatTime: (value: string) => string, t?: ActivityLogTranslateFn) {
   const parts: string[] = [];
   const data = entry.data;
 
   if (data.cooldown_seconds) {
-    parts.push(`提交冷却 ${data.cooldown_seconds} 秒`);
+    parts.push(t ? t('activityLog.cooldownSeconds', { seconds: data.cooldown_seconds }) : `Submission cooldown: ${data.cooldown_seconds} seconds`);
   } else if (data.cooldown_till) {
-    parts.push(`提交冷却至 ${formatTime(data.cooldown_till)}`);
+    parts.push(t ? t('activityLog.cooldownUntil', { time: formatTime(data.cooldown_till) }) : `Submission cooldown until ${formatTime(data.cooldown_till)}`);
   }
 
   for (const item of data.currency_penalty ?? []) {
     const currencyId = item.currency_id;
     const currency = typeof currencyId === 'number' ? currencyById(currencyId) : undefined;
     const amount = -Number(item.amount ?? 0);
-    parts.push(`${currency?.name ?? item.name ?? '货币'} ${intPrecString(amount, currency?.prec ?? item.prec ?? 0, true, ' ')}`);
+    parts.push(`${currency?.name ?? item.name ?? (t ? t('currency.fallbackName') : 'Currency')} ${intPrecString(amount, currency?.prec ?? item.prec ?? 0, true, ' ')}`);
   }
 
-  return parts.join('，');
+  return t ? t('activity.consequenceList', { consequences: parts }) : parts.join(', ');
 }

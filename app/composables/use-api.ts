@@ -36,7 +36,7 @@ export function useApi() {
       const code = typeof envelope.code === 'number' ? envelope.code : 0;
 
       if (code < 0) {
-        const hint = errorHints?.[code] ?? defaultErrorHints[code];
+        const hint = errorHints?.[code] ?? defaultErrorHint(code);
         const resolvedMessage = envelope.message ?? hint;
         if (code === RbErrorCode.Maintenance) handleMaintenance(resolvedMessage);
         const statusMessage = resolvedMessage ?? `API error ${code}`;
@@ -109,7 +109,7 @@ export function useApi() {
         if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'code' in payload) {
           const envelope = payload as ApiEnvelope<TResponse> & Record<string, unknown>;
           const code = typeof envelope.code === 'number' ? envelope.code : 0;
-          const hint = errorHints?.[code] ?? defaultErrorHints[code];
+          const hint = errorHints?.[code] ?? defaultErrorHint(code);
           const resolvedMessage = envelope.message ?? hint;
           if (code === RbErrorCode.Maintenance) handleMaintenance(resolvedMessage);
           const statusMessage = resolvedMessage ?? fetchError.message;

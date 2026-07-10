@@ -23,6 +23,7 @@ interface AdminLogResponse {
 }
 
 const pageSize = 50;
+const { t } = useI18n();
 const api = useApi();
 const logs = ref<AdminLogData[]>([]);
 const loading = ref(false);
@@ -105,9 +106,11 @@ function fieldDetails(fields: Record<string, boolean> | null | undefined, names:
 
 function logView(log: AdminLogData) {
   const data = log.data;
-  const puzzle = activityNamedLabel(data.puzzle, log.puzzle_id, '题目');
-  const hint = activityNamedLabel(data.hint, log.hint_id, '提示');
-  const ticket = activityTicketLabel(data.ticket, data.puzzle);
+  const actor = activityUserLabel(data.user, log.user_id);
+  const puzzle = data.puzzle?.title ?? data.puzzle?.name ?? '';
+  const hint = data.hint?.title ?? data.hint?.name ?? '';
+  const teamName = data.team?.name ?? data.team?.title ?? '';
+  const ticketId = data.ticket?.id ?? log.ticket_id ?? '';
   const targetUser = activityUserLabel(data.target_user, log.target_user_id);
   const severity = severityMeta(log.severity);
 
@@ -141,7 +144,7 @@ function logView(log: AdminLogData) {
     case 'user.profile_updated':
       return { icon: 'material-symbols:manage-accounts-outline-rounded', color: 'neutral' as const, title: actorTitle(log, '更新了个人资料'), details: fieldDetails(data.fields, { nickname: '用户名', bio: '个人简介' }) };
     case 'team.created':
-      return { icon: 'material-symbols:group-add-outline-rounded', color: 'success' as const, title: actorTitle(log, `创建了队伍${activityNamedLabel(data.team, log.team_id, '队伍')}`), details: [] };
+      return { icon: 'material-symbols:group-add-outline-rounded', color: 'success' as const, title: t('activityLog.teamCreated', { actor, team: teamName }), details: [] };
     case 'team.updated':
       return { icon: 'material-symbols:edit-outline-rounded', color: 'neutral' as const, title: actorTitle(log, '更新了队伍信息'), details: fieldDetails(data.fields, { name: '队伍名称', pass: '队伍密码', bio: '队伍简介' }) };
     case 'team.member.joined':
@@ -153,45 +156,45 @@ function logView(log: AdminLogData) {
     case 'team.member.promoted':
       return { icon: 'material-symbols:award-star-outline-rounded', color: 'primary' as const, title: targetUser ? `将 ${targetUser} 设置为队长` : '变更了队长', details: [] };
     case 'team.disbanded':
-      return { icon: 'material-symbols:group-remove-outline-rounded', color: 'warning' as const, title: `解散了${activityNamedLabel(data.team, log.team_id, '队伍')}`, details: [] };
+      return { icon: 'material-symbols:group-remove-outline-rounded', color: 'warning' as const, title: t('activityLog.teamDisbanded', { team: teamName, teamId: data.team?.id ?? log.team_id ?? '' }), details: [] };
     case 'submission.judged':
     case 'submission.backend_added':
       return {
         icon: 'material-symbols:assignment-turned-in-outline-rounded',
         color: data.submission?.action && data.submission?.action > 0 ? ('success' as const) : data.submission?.action === 0 ? ('warning' as const) : ('info' as const),
-        title: actorTitle(log, `向${puzzle}提交了答案`),
+        title: t('activityLog.submittedAnswer', { actor, puzzle, answer: '' }),
         details: submissionDetails(log),
       };
     case 'puzzle.solved':
     case 'puzzle.backend_solved':
-      return { icon: 'material-symbols:check-circle-outline-rounded', color: 'success' as const, title: actorTitle(log, `解出了${puzzle}`), details: [] };
+      return { icon: 'material-symbols:check-circle-outline-rounded', color: 'success' as const, title: t('activityLog.solvedPuzzle', { actor, puzzle }), details: [] };
     case 'puzzle.unlocked':
-      return { icon: 'material-symbols:lock-open-outline-rounded', color: 'primary' as const, title: `开放了题目${puzzle}`, details: [] };
+      return { icon: 'material-symbols:lock-open-outline-rounded', color: 'primary' as const, title: t('activityLog.openedPuzzle', { puzzle }), details: [] };
     case 'game.started':
       return { icon: 'material-symbols:flag-outline-rounded', color: 'success' as const, title: actorTitle(log, '开始了比赛'), details: [] };
     case 'hint.purchased':
       return {
         icon: 'material-symbols:emoji-objects-outline-rounded',
         color: 'primary' as const,
-        title: actorTitle(log, `在${puzzle}解锁了提示${hint}`),
+        title: t('activityLog.unlockedHint', { actor, puzzle, hint }),
         details: activityCurrencyDetails(log),
       };
     case 'currency.penalty':
-      return { icon: 'material-symbols:payments-outline-rounded', color: 'warning' as const, title: actorTitle(log, data.puzzle?.title ? `在${puzzle}触发了错误惩罚` : '触发了错误惩罚'), details: activityCurrencyDetails(log) };
+      return { icon: 'material-symbols:payments-outline-rounded', color: 'warning' as const, title: puzzle ? t('activityLog.wrongSubmissionPenalty', { actor, puzzle }) : t('activityLog.submissionPenalty', { actor }), details: activityCurrencyDetails(log) };
     case 'currency.cost':
     case 'currency.added':
       return {
         icon: 'material-symbols:account-balance-wallet-outline-rounded',
         color: log.delta_amount && log.delta_amount < 0 ? ('warning' as const) : ('success' as const),
-        title: actorTitle(log, activityCurrencyReasonTitle(log)),
+        title: actorTitle(log, activityCurrencyReasonTitle(log, t)),
         details: activityCurrencyDetails(log),
       };
     case 'ticket.opened':
-      return { icon: 'material-symbols:near-me-outline-rounded', color: 'success' as const, title: actorTitle(log, `开启了人工提示${ticket}`), details: [] };
+      return { icon: 'material-symbols:near-me-outline-rounded', color: 'success' as const, title: t('activityLog.openedTicket', { actor, puzzle, ticketId }), details: [] };
     case 'ticket.closed':
-      return { icon: 'material-symbols:check-circle-outline-rounded', color: 'neutral' as const, title: actorTitle(log, `关闭了人工提示${ticket}`), details: [] };
+      return { icon: 'material-symbols:check-circle-outline-rounded', color: 'neutral' as const, title: t('activityLog.closedTicket', { actor, puzzle, ticketId }), details: [] };
     case 'ticket.message_purchased':
-      return { icon: 'material-symbols:mark-email-read-outline-rounded', color: 'primary' as const, title: actorTitle(log, `在人工提示${ticket}中购买了付费消息`), details: [] };
+      return { icon: 'material-symbols:mark-email-read-outline-rounded', color: 'primary' as const, title: t('activityLog.purchasedTicketMessage', { actor, puzzle, ticketId }), details: [] };
     default:
       return {
         icon: severity.color === 'error' ? 'material-symbols:error-outline-rounded' : severity.color === 'warning' ? 'material-symbols:warning-outline-rounded' : 'material-symbols:history-rounded',

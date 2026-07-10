@@ -16,6 +16,7 @@ const round = ref<RbRoundUserData>();
 const game = useGame().ref;
 const sidStore = useSid();
 const releaseRevision = useGameReleaseSync().revision;
+const { t } = useI18n();
 
 useHead({
   titleTemplate: computed(() => buildTitleParts([{ text: round.value?.data.title }, { text: game.value?.title, sep: ' - ' }])),
@@ -129,7 +130,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
 
       <template v-if="round.state.puzzles.length > 0">
         <u-separator icon="material-symbols:extension-outline-rounded" class="mt-6 mb-2" />
-        <div class="text-3xl font-bold text-center">谜题</div>
+        <div class="text-3xl font-bold text-center">{{ t('puzzle.puzzles') }}</div>
         <div class="flex justify-center gap-2 my-4 flex-wrap">
           <rbph-puzzle-card v-for="puzzle in round.state.puzzles" :key="puzzle.id" class="md:max-w-7/12 w-full" :puzzle="puzzle" :game-id="round.data.game_id" />
         </div>
@@ -152,7 +153,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
       <rbph-submit-result ref="submit-result" />
 
       <div class="mt-6 w-full" variant="soft">
-        <div class="text-lg font-bold mb-4">最近成功提交</div>
+        <div class="text-lg font-bold mb-4">{{ t('puzzle.recentSuccessfulSubmissions') }}</div>
         <rbph-submissions ref="ok-submissions" :puzzle-id="round.data.puzzle" :only-ok="true" />
       </div>
     </template>

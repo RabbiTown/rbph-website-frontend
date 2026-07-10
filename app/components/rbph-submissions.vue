@@ -15,6 +15,8 @@ const props = withDefaults(
 );
 
 const api = useApi();
+const { t } = useI18n();
+const judgeActions = useJudgeActionConsts();
 
 const curPage = ref(props.initPage);
 const pageData = ref<RbSubmissionPage>();
@@ -26,11 +28,11 @@ const UBadge = resolveComponent('u-badge');
 const columns = ref<TableColumn<RbSubmission>[]>([
   {
     accessorKey: 'user_name',
-    header: '提交者',
+    header: t('submissions.submitter'),
   },
   {
     accessorKey: 'user_answer',
-    header: () => h('span', ['内容', h(RbTooltip, { text: '鼠标悬停可查看规范化结果' }, () => h(Icon, { name: 'material-symbols:help-outline-rounded', class: 'size-4 align-middle mb-0.5 ms-1 text-secondary cursor-help' }))]),
+    header: () => h('span', [t('submissions.content'), h(RbTooltip, { text: t('submissions.contentHelp') }, () => h(Icon, { name: 'material-symbols:help-outline-rounded', class: 'size-4 align-middle mb-0.5 ms-1 text-secondary cursor-help' }))]),
     cell: ({ row, getValue }) => {
       return h(RbTooltip, { text: row.original.norm_answer }, () => h('span', { variant: 'ghost', color: 'neutral', class: 'cursor-help' }, getValue<string>()));
     },
@@ -42,9 +44,9 @@ const columns = ref<TableColumn<RbSubmission>[]>([
   },
   {
     accessorKey: 'saction',
-    header: '结果',
+    header: t('submissions.result'),
     cell: ({ getValue }) => {
-      const action = judgeActionConsts[getValue<RbJudgeAction>()];
+      const action = judgeActions.value[getValue<RbJudgeAction>()];
       return h(UBadge, { color: action.color, variant: 'soft', icon: action.icon }, () => action.name);
     },
     meta: {
@@ -55,8 +57,8 @@ const columns = ref<TableColumn<RbSubmission>[]>([
   },
   {
     accessorKey: 'sresult',
-    header: '信息',
-    cell: ({ row, getValue }) => getValue() || judgeActionConsts[row.getValue<RbJudgeAction>('saction')].desc,
+    header: t('submissions.message'),
+    cell: ({ row, getValue }) => getValue() || judgeActions.value[row.getValue<RbJudgeAction>('saction')].desc,
     meta: {
       class: {
         th: 'min-w-[15em]',
@@ -66,7 +68,7 @@ const columns = ref<TableColumn<RbSubmission>[]>([
   },
   {
     accessorKey: 'ctime_at',
-    header: '时间',
+    header: t('submissions.time'),
     cell: ({ cell }) => formatDate(cell.getValue<string>()),
     meta: {
       class: {
@@ -87,7 +89,7 @@ async function updateData(newId: number | undefined = undefined) {
       const { data } = await api.get<RbSubmissionPage>(`/puzzles/${puzzleId}/submissions`, { query: { only_ok: props.onlyOk, page: curPage.value } });
       pageData.value = data;
     } catch (error) {
-      handleError(error, '获取提交记录失败');
+      handleError(error, t('submissions.fetchFailed'));
     }
   }
 
@@ -118,7 +120,7 @@ defineExpose({
   <div>
     <div v-if="pageData">
       <u-table v-if="pageData.data.length > 0" :loading="loading" :data="pageData.data" :columns="columns" />
-      <u-empty v-else :description="onlyOk ? '暂无成功提交' : '暂无提交'" />
+      <u-empty v-else :description="onlyOk ? t('submissions.noSuccessfulSubmissions') : t('submissions.noSubmissions')" />
     </div>
     <div v-else class="h-full">
       <u-skeleton class="w-full h-full min-h-24" />

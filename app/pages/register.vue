@@ -3,15 +3,17 @@ import type { Schema } from 'inspector/promises';
 import * as v from 'valibot';
 import type { FormSubmitEvent } from '@nuxt/ui';
 
+const { t } = useI18n();
+
 useHead({
-  titleTemplate: '注册 - RBPH',
+  titleTemplate: computed(() => `${t('auth.register')} - RBPH`),
 });
 
 const route = useRoute();
 
 const schema = v.object({
-  email: v.pipe(v.string(), v.email('无效邮箱')),
-  password: v.pipe(v.string(), v.minLength(8, '至少需要 8 个字符'), v.maxLength(64, '最多可用 64 个字符'), v.regex(/^[!-~]{8,64}$/, '存在无效字符')),
+  email: v.pipe(v.string(), v.email(t('auth.invalidEmail'))),
+  password: v.pipe(v.string(), v.minLength(8, t('auth.passwordMin')), v.maxLength(64, t('auth.passwordMax')), v.regex(/^[!-~]{8,64}$/, t('auth.passwordInvalid'))),
 });
 
 type Schema = v.InferOutput<typeof schema>;
@@ -38,7 +40,7 @@ const captchaToken = ref<string>();
 const captchaConfig = computed(() => authConfig.ref.value?.captcha ?? undefined);
 const captchaRequired = computed(() => Boolean(captchaConfig.value?.registration_required));
 const submitLoading = computed(() => loginLoading.value || waitingCaptcha.value);
-const submitLabel = computed(() => (waitingCaptcha.value ? '等待验证码' : '注册'));
+const submitLabel = computed(() => (waitingCaptcha.value ? t('auth.waitCaptcha') : t('auth.register')));
 
 watch(captchaToken, token => {
   if (!token || !pendingSubmit.value) return;
@@ -68,15 +70,15 @@ async function submit(event: FormSubmitEvent<Schema>) {
   try {
     const { code } = await api.post('/auth/register', { ...event.data, captcha_token: captchaToken.value }, {
       errorHints: {
-        [-3]: '系统已关闭注册。',
-        [-2]: '请求无效。',
-        [-1]: '邮箱已占用。',
+        [-3]: t('auth.registerClosedHint'),
+        [-2]: t('auth.registerInvalid'),
+        [-1]: t('auth.registerEmailTaken'),
       },
     });
     if (code == 0) {
       toast.add({
-        title: '注册成功！',
-        description: '即将跳转到登录页面…',
+        title: t('auth.registerSuccess'),
+        description: t('auth.registerSuccessDesc'),
         icon: 'material-symbols:check-rounded',
         color: 'success',
       });
@@ -89,16 +91,16 @@ async function submit(event: FormSubmitEvent<Schema>) {
       }, 3000);
     } else if (code == 1) {
       toast.add({
-        title: '验证码已发送！',
-        description: `请检查收件箱和垃圾信箱。`,
+        title: t('auth.verifySent'),
+        description: t('auth.verifySentDesc'),
         icon: 'material-symbols:check-rounded',
         color: 'success',
         duration: 10000,
       });
     } else if (code == 2) {
       toast.add({
-        title: '已发送过验证码',
-        description: `请检查收件箱和垃圾信箱，或寻求站方帮助。`,
+        title: t('auth.verifySentBefore'),
+        description: t('auth.verifySentBeforeDesc'),
         icon: 'material-symbols:error-med-outline-rounded',
         color: 'error',
         duration: 10000,
@@ -109,7 +111,7 @@ async function submit(event: FormSubmitEvent<Schema>) {
     waitingCaptcha.value = false;
     captchaInteractive.value = false;
     captcha.value?.reset();
-    handleError(error, '注册失败', true);
+    handleError(error, t('auth.registerFailed'), true);
   } finally {
     loginLoading.value = false;
   }
@@ -120,19 +122,19 @@ async function submit(event: FormSubmitEvent<Schema>) {
   <div class="min-h-screen">
     <div class="flex items-center justify-center p-6">
       <div class="w-full max-w-xs">
-        <u-empty v-if="!systemStatus.ref.value?.registration_open" icon="material-symbols:person-cancel-outline-rounded" title="注册已关闭" description="当前不接受新用户注册。">
-          <template #actions><u-button to="/login" icon="material-symbols:login-rounded" label="前往登录" /></template>
+        <u-empty v-if="!systemStatus.ref.value?.registration_open" icon="material-symbols:person-cancel-outline-rounded" :title="t('auth.registrationClosed')" :description="t('auth.registrationClosedDesc')">
+          <template #actions><u-button to="/login" icon="material-symbols:login-rounded" :label="t('auth.goLoginShort')" /></template>
         </u-empty>
         <template v-else>
           <div class="w-full flex justify-center my-4">
             <u-icon name="material-symbols:deployed-code" size="40px" />
           </div>
-          <div class="text-2xl font-bold mb-8 text-center">注册</div>
+          <div class="text-2xl font-bold mb-8 text-center">{{ t('auth.register') }}</div>
           <u-form :schema="schema" :state="state" class="space-y-4" @submit="submit">
-            <u-form-field label="邮箱" name="email">
+            <u-form-field :label="t('auth.email')" name="email">
               <u-input v-model="state.email" class="w-full" icon="material-symbols:alternate-email-rounded" />
             </u-form-field>
-            <u-form-field label="密码" name="password">
+            <u-form-field :label="t('auth.password')" name="password">
               <u-input v-model="state.password" class="w-full" :type="showPwd ? 'text' : 'password'" icon="material-symbols:password-rounded">
                 <template #trailing>
                   <UButton
@@ -140,7 +142,7 @@ async function submit(event: FormSubmitEvent<Schema>) {
                     variant="link"
                     size="sm"
                     :icon="showPwd ? 'material-symbols:visibility-off-outline-rounded' : 'material-symbols:visibility-outline-rounded'"
-                    :aria-label="showPwd ? '隐藏密码' : '显示密码'"
+                    :aria-label="showPwd ? t('auth.hidePassword') : t('auth.showPassword')"
                     :aria-pressed="showPwd"
                     aria-controls="password"
                     @click="showPwd = !showPwd"
@@ -153,7 +155,7 @@ async function submit(event: FormSubmitEvent<Schema>) {
               <u-button type="submit" :loading="submitLoading" class="w-full justify-center cursor-pointer" size="lg">{{ submitLabel }}</u-button>
             </div>
             <div>
-              <u-button class="w-full justify-center cursor-pointer" variant="outline" size="md" to="/login">前往登录页面</u-button>
+              <u-button class="w-full justify-center cursor-pointer" variant="outline" size="md" to="/login">{{ t('auth.goLogin') }}</u-button>
             </div>
           </u-form>
         </template>

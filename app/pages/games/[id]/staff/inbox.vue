@@ -1,6 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'game', middleware: 'staff' });
 
+const { t } = useI18n();
 const api = useApi();
 const route = useRoute();
 const user = useUser().ref;
@@ -42,7 +43,7 @@ const teamCurrency = computed(() => {
 const threadCurrency = computed(() => teamCurrency.value);
 const allowedCurrencyTypes = computed(() => thread.value?.perm.currency ?? []);
 const currencyTypeItems = computed(() => [
-  { label: '无需解锁', value: null, icon: 'material-symbols:lock-open-right-outline-rounded' },
+  { label: t('ticket.noUnlock'), value: null, icon: 'material-symbols:lock-open-right-outline-rounded' },
   ...allowedCurrencyTypes.value.map(id => ({ label: teamCurrency.value[id]?.name ?? `#${id}`, value: id, icon: 'material-symbols:emoji-objects-outline-rounded' })),
 ]);
 const reqCurrencyId = ref<number | null>(null);
@@ -50,8 +51,8 @@ const reqCurrencyAmount = ref(0);
 const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined : teamCurrency.value[reqCurrencyId.value]));
 const sendConflictDescription = computed(() => {
   if (!sendConflictAssignee.value) return '';
-  const action = sendConflictAction.value === 'close' ? '回复并关闭' : '继续回复';
-  return `该会话已由 ${sendConflictAssignee.value.nickname} 认领，是否仍要${action}？`;
+  const action = sendConflictAction.value === 'close' ? t('pages.staffInbox.replyAndClose') : t('pages.staffInbox.continueReply');
+  return t('pages.staffInbox.conflictDescription', { name: sendConflictAssignee.value.nickname, action });
 });
 
 const kind = ref((route.query.kind as string) || 'all');
@@ -63,7 +64,7 @@ const puzzleId = computed(() => {
   return Number.isFinite(value) && value > 0 ? value : undefined;
 });
 
-useHead({ titleTemplate: computed(() => buildTitleParts([{ text: '消息工作台' }, { text: useGame().ref.value?.title, sep: ' - ' }])) });
+useHead({ titleTemplate: computed(() => buildTitleParts([{ text: t('pages.staffInbox.title') }, { text: useGame().ref.value?.title, sep: ' - ' }])) });
 
 async function loadTickets(_silent = false, append = false) {
   if (!gameId.value || (append && (!listHasMore.value || listLoading.value))) return;
@@ -88,7 +89,7 @@ async function loadTickets(_silent = false, append = false) {
     }
     listHasMore.value = data.has_more;
   } catch (error) {
-    handleError(error, '获取消息列表失败');
+    handleError(error, t('pages.staffInbox.loadListFailed'));
   } finally {
     listLoading.value = false;
   }
@@ -112,7 +113,7 @@ async function loadThread(ticketId = selectedId.value, silent = false, force = f
     reqCurrencyId.value = null;
     reqCurrencyAmount.value = 0;
   } catch (error) {
-    handleError(error, '获取会话失败');
+    handleError(error, t('pages.staffInbox.loadThreadFailed'));
   } finally {
     if (!silent) threadLoading.value = false;
   }
@@ -139,7 +140,7 @@ async function loadThreadHistory() {
       };
     }
   } catch (error) {
-    handleError(error, '加载更早会话记录失败');
+    handleError(error, t('pages.staffInbox.loadEarlierFailed'));
   } finally {
     threadHistoryLoading.value = false;
   }
@@ -161,7 +162,7 @@ async function loadThreadNewer(ticketId: number) {
       };
     }
   } catch (error) {
-    handleError(error, '更新会话失败');
+    handleError(error, t('pages.staffInbox.updateFailed'));
   }
 }
 
@@ -191,7 +192,7 @@ function conflictAssignee(error: unknown): TicketAggreInfoUser | undefined {
 }
 
 function ticketDisplayTitle(ticket: TicketSummary) {
-  return ticket.puzzle ? `${ticket.puzzle.title} #${ticket.id}` : `站内信 #${ticket.id}`;
+  return ticket.puzzle ? `${ticket.puzzle.title} #${ticket.id}` : `${t('message.title')} #${ticket.id}`;
 }
 
 function openSendConflict(action: 'send' | 'close', assignee: TicketAggreInfoUser) {
@@ -225,7 +226,7 @@ async function sendMessage(forceAssignee = false) {
         cost_amount: puzzle ? reqCurrencyAmount.value : 0,
         force_assignee: forceAssignee,
       } satisfies TicketSendRequest,
-      { errorHints: { [-7]: '已有其他工作人员认领此会话。' } },
+      { errorHints: { [-7]: t('ticket.claimConflict') } },
     );
     draft.value = '';
     if (thread.value) {
@@ -239,7 +240,7 @@ async function sendMessage(forceAssignee = false) {
       openSendConflict('send', assignee);
       return;
     }
-    handleError(error, '回复失败');
+    handleError(error, t('pages.staffInbox.replyFailed'));
   } finally {
     submitLoading.value = false;
   }
@@ -261,7 +262,7 @@ async function closeWithMessage(forceAssignee = false) {
         cost_amount: reqCurrencyAmount.value,
         force_assignee: forceAssignee,
       } satisfies TicketSendRequest,
-      { errorHints: { [-7]: '已有其他工作人员认领此会话。' } },
+      { errorHints: { [-7]: t('ticket.claimConflict') } },
     );
     draft.value = '';
     if (thread.value) {
@@ -280,7 +281,7 @@ async function closeWithMessage(forceAssignee = false) {
       openSendConflict('close', assignee);
       return;
     }
-    handleError(error, '关闭工单失败');
+    handleError(error, t('ticket.closeFailed'));
   } finally {
     submitLoading.value = false;
   }
@@ -290,7 +291,7 @@ async function assignSelf(force = false) {
   if (!selectedId.value || assigneeLoading.value) return;
   assigneeLoading.value = true;
   try {
-    const { data } = await api.post<TicketAssignResponse>(`${ticketEndpoint(selectedId.value)}/assignee/self`, { force }, { errorHints: { [-7]: '已有其他工作人员认领此会话。' } });
+    const { data } = await api.post<TicketAssignResponse>(`${ticketEndpoint(selectedId.value)}/assignee/self`, { force }, { errorHints: { [-7]: t('ticket.claimConflict') } });
     if (thread.value?.ticket) thread.value.ticket.assignee = data.assignee ?? undefined;
     assigneeConfirmOpen.value = false;
     await loadTickets(true);
@@ -300,7 +301,7 @@ async function assignSelf(force = false) {
       assigneeConfirmOpen.value = true;
       return;
     }
-    handleError(error, '认领失败');
+    handleError(error, t('ticket.claimFailed'));
   } finally {
     assigneeLoading.value = false;
   }
@@ -314,7 +315,7 @@ async function unassign() {
     if (thread.value?.ticket) thread.value.ticket.assignee = undefined;
     await loadTickets(true);
   } catch (error) {
-    handleError(error, '取消认领失败');
+    handleError(error, t('ticket.unclaimFailed'));
   } finally {
     assigneeLoading.value = false;
   }
@@ -340,7 +341,7 @@ async function sendDm() {
       },
       {
         errorHints: {
-          [-8]: '站内信当前仅允许回复已有会话，无法向该队伍主动发起新会话。',
+          [-8]: t('pages.staffInbox.dmExistingOnly'),
         },
       },
     );
@@ -351,7 +352,7 @@ async function sendDm() {
     await loadTickets();
     if (data.ticket) await loadThread(data.ticket.id);
   } catch (error) {
-    handleError(error, '发送站内信失败');
+    handleError(error, t('pages.staffInbox.sendDmFailed'));
   } finally {
     submitLoading.value = false;
   }
@@ -371,8 +372,8 @@ async function unlockMessage(message: TicketMessage) {
     try {
       const { data } = await api.post<TicketUnlockResponse>(`/tickets/${ticketId}/messages/${message.id}/purchase`, undefined, {
         errorHints: {
-          [-2]: '余额不足。',
-          [-1]: '消息暂未开放或已购买。',
+          [-2]: t('ticket.insufficientBalance'),
+          [-1]: t('ticket.unavailableOrPurchased'),
         },
       });
       const messages =
@@ -387,13 +388,13 @@ async function unlockMessage(message: TicketMessage) {
         messages,
       };
       toast.add({
-        title: '已解锁消息',
-        description: '队伍可查看该条内容。',
+        title: t('ticket.unlockedToast'),
+        description: t('ticket.unlockedToastDesc'),
         icon: 'material-symbols:lock-open-right-outline-rounded',
         color: 'success',
       });
     } catch (error) {
-      handleError(error, '解锁消息失败');
+      handleError(error, t('ticket.unlockFailed'));
     }
   }
 
@@ -412,9 +413,9 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
   <div class="py-6">
     <div class="flex items-center justify-between gap-3 mb-5">
       <div>
-        <h1 class="text-3xl font-bold">消息工作台</h1>
+        <h1 class="text-3xl font-bold">{{ t('pages.staffInbox.title') }}</h1>
       </div>
-      <u-button icon="material-symbols:outgoing-mail-outline-rounded" label="发送站内信" @click="openDm" />
+      <u-button icon="material-symbols:outgoing-mail-outline-rounded" :label="t('pages.staffInbox.sendDm')" @click="openDm" />
     </div>
 
     <div class="grid min-h-[calc(100vh-10rem)] items-start gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
@@ -422,40 +423,40 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
         <u-card variant="subtle" :ui="{ body: 'flex min-h-0 flex-col gap-3 p-2 sm:p-2 lg:max-h-[calc(100vh-6rem)]' }">
           <div class="flex items-center gap-2 font-semibold text-highlighted">
             <u-icon name="material-symbols:inbox-outline-rounded" />
-            会话选择
+            {{ t('pages.staffInbox.sessionSelect') }}
           </div>
           <u-separator />
           <div class="grid grid-cols-2 gap-3 lg:grid-cols-1">
             <u-select
               v-model="kind"
               :items="[
-                { label: '全部类型', value: 'all' },
-                { label: '人工提示', value: 'puzzle' },
-                { label: '站内信', value: 'dm' },
+                { label: t('pages.staffInbox.allTypes'), value: 'all' },
+                { label: t('pages.puzzlePage.tickets'), value: 'puzzle' },
+                { label: t('message.title'), value: 'dm' },
               ]"
             />
             <u-select
               v-model="state"
               :items="[
-                { label: '全部状态', value: 'all' },
-                { label: '开放中', value: 'open' },
-                { label: '已关闭', value: 'closed' },
+                { label: t('pages.staffInbox.allStates'), value: 'all' },
+                { label: t('ticket.open'), value: 'open' },
+                { label: t('ticket.closedState'), value: 'closed' },
               ]"
             />
             <u-select
               v-model="waitingFor"
               :items="[
-                { label: '全部消息', value: 'all' },
-                { label: '等待工作人员', value: 'staff' },
-                { label: '等待队伍', value: 'team' },
+                { label: t('pages.staffInbox.allMessages'), value: 'all' },
+                { label: t('pages.staffInbox.waitingStaff'), value: 'staff' },
+                { label: t('pages.staffInbox.waitingTeam'), value: 'team' },
               ]"
             />
             <u-select
               v-model="assigneeFilter"
               :items="[
-                { label: '全部负责人', value: 'all' },
-                { label: '由我处理', value: 'me' },
-                { label: '无人处理', value: 'none' },
+                { label: t('pages.staffInbox.allAssignees'), value: 'all' },
+                { label: t('pages.staffInbox.handledByMe'), value: 'me' },
+                { label: t('pages.staffInbox.unassigned'), value: 'none' },
               ]"
             />
           </div>
@@ -480,23 +481,23 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
                   <u-icon :name="ticket.puzzle ? 'material-symbols:near-me-outline-rounded' : 'material-symbols:mail-outline-rounded'" class="size-5 shrink-0 text-muted" />
                   <span class="truncate">{{ ticketDisplayTitle(ticket) }}</span>
                 </span>
-                <u-badge v-if="ticket.last_by === RbTicketSenderType.Team" color="warning" variant="soft">待回复</u-badge>
+                <u-badge v-if="ticket.last_by === RbTicketSenderType.Team" color="warning" variant="soft">{{ t('pages.staffInbox.pendingReply') }}</u-badge>
               </div>
               <div class="mt-2 min-w-0">
                 <div class="flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
                   <rb-user-badge v-if="ticket.assignee" :user="ticket.assignee" class="min-w-0 max-w-full">
                     <span class="min-w-0 truncate">{{ ticket.assignee.nickname }}</span>
                   </rb-user-badge>
-                  <u-badge v-else color="neutral" variant="soft" icon="material-symbols:person-off-outline-rounded" class="max-w-full">未认领</u-badge>
+                  <u-badge v-else color="neutral" variant="soft" icon="material-symbols:person-off-outline-rounded" class="max-w-full">{{ t('ticket.unclaimed') }}</u-badge>
                   <u-badge color="primary" variant="soft" icon="material-symbols:groups-2-outline-rounded" class="min-w-0 max-w-full">
                     <span class="min-w-0 truncate">{{ ticket.team?.name }}</span>
                   </u-badge>
                 </div>
-                <div class="mt-1.5 text-xs text-muted text-right -mb-0.5">{{ ticket.last_at ? formatDate(ticket.last_at) : '暂无消息' }}</div>
+                <div class="mt-1.5 text-xs text-muted text-right -mb-0.5">{{ ticket.last_at ? formatDate(ticket.last_at) : t('pages.staffInbox.noMessages') }}</div>
               </div>
             </u-card>
             <div v-if="listLoading && tickets.length > 0" class="flex justify-center py-3"><u-icon name="material-symbols:progress-activity" class="size-5 animate-spin text-muted" /></div>
-            <u-empty v-if="!listLoading && tickets.length === 0" title="没有匹配的会话" icon="material-symbols:inbox-outline-rounded" />
+            <u-empty v-if="!listLoading && tickets.length === 0" :title="t('pages.staffInbox.noMatch')" icon="material-symbols:inbox-outline-rounded" />
           </div>
         </u-card>
       </aside>
@@ -511,11 +512,11 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
                 <u-button v-if="!thread.ticket.assignee" :class="assigneeActionButtonClass" size="xs" color="neutral" variant="soft" :loading="assigneeLoading" @click="assignSelf()">
                   <span :class="assigneeActionNormalClass">
                     <u-icon name="material-symbols:person-off-outline-rounded" class="size-4 shrink-0" />
-                    <span>未认领</span>
+                    <span>{{ t('ticket.unclaimed') }}</span>
                   </span>
                   <span :class="assigneeActionHoverClass">
                     <u-icon name="material-symbols:person-add-outline-rounded" class="size-4 shrink-0" />
-                    <span>认领会话</span>
+                    <span>{{ t('ticket.claim') }}</span>
                   </span>
                 </u-button>
 
@@ -526,7 +527,7 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
                   </span>
                   <span :class="assigneeActionHoverClass">
                     <u-icon name="material-symbols:person-remove-outline-rounded" class="size-4 shrink-0" />
-                    <span>取消认领</span>
+                    <span>{{ t('ticket.unclaim') }}</span>
                   </span>
                 </u-button>
 
@@ -538,14 +539,14 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
                     </span>
                     <span :class="assigneeActionHoverClass">
                       <u-icon name="material-symbols:person-add-outline-rounded" class="size-4 shrink-0" />
-                      <span>认领会话</span>
+                      <span>{{ t('ticket.claim') }}</span>
                     </span>
                   </u-button>
                   <template #content>
                     <div class="flex items-center gap-2 px-4 py-2 text-xs">
                       <u-icon name="material-symbols:warning-outline-rounded" />
-                      <span>会话已由 {{ thread.ticket.assignee.nickname }} 认领，确定覆盖认领吗？</span>
-                      <u-button :loading="assigneeLoading" class="cursor-pointer" color="warning" variant="soft" size="xs" @click="assignSelf(true)">确定</u-button>
+                      <span>{{ t('ticket.claimConfirm', { name: thread.ticket.assignee.nickname }) }}</span>
+                      <u-button :loading="assigneeLoading" class="cursor-pointer" color="warning" variant="soft" size="xs" @click="assignSelf(true)">{{ t('common.confirm') }}</u-button>
                     </div>
                   </template>
                 </u-popover>
@@ -575,7 +576,7 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
           <rbph-message-edit
             v-model:draft="draft"
             v-model:content-type="contentType"
-            placeholder="回复当前会话"
+            :placeholder="t('pages.staffInbox.replyCurrent')"
             :content-types="thread.perm.content_type"
             :loading="submitLoading"
             :disabled="submitLoading"
@@ -594,7 +595,7 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
               <div v-if="isTicketMessage(item)" class="rounded-md border border-default p-3">
                 <div class="flex justify-between text-xs text-muted mb-2">
                   <span>
-                    <u-badge v-if="item.sender_type === RbTicketSenderType.Host" variant="soft" color="warning" class="me-1">工作人员</u-badge>
+                    <u-badge v-if="item.sender_type === RbTicketSenderType.Host" variant="soft" color="warning" class="me-1">{{ t('message.staffMember') }}</u-badge>
                     {{ item.sender.nickname }}
                   </span>
                   <span>{{ formatDate(item.ctime_at) }}</span>
@@ -605,24 +606,24 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
             <div v-if="threadHistoryLoading" class="flex justify-center py-3"><u-icon name="material-symbols:progress-activity" class="size-5 animate-spin text-muted" /></div>
           </div>
         </template>
-        <u-empty v-else class="min-h-112" title="选择一个会话" description="从左侧列表打开人工提示或站内信" icon="material-symbols:forum-outline-rounded" />
+        <u-empty v-else class="min-h-112" :title="t('pages.staffInbox.selectSession')" :description="t('pages.staffInbox.selectSessionDesc')" icon="material-symbols:forum-outline-rounded" />
       </main>
     </div>
 
-    <u-modal v-model:open="dmOpen" title="发送队伍站内信" description="选择队伍并发送消息">
+    <u-modal v-model:open="dmOpen" :title="t('pages.staffInbox.sendTeamDmTitle')" :description="t('pages.staffInbox.sendTeamDmDesc')">
       <template #body>
         <div class="space-y-4">
-          <rbph-staff-team-select v-model="dmTeam" :game-id="gameId" placeholder="输入队伍名称搜索" />
-          <rbph-message-edit v-model:draft="dmDraft" v-model:content-type="contentType" placeholder="输入站内信" :content-types="[RbContentType.UnsafeMarkdown]" :loading="submitLoading" :disabled="!dmTeam || submitLoading" @submit="sendDm" />
+          <rbph-staff-team-select v-model="dmTeam" :game-id="gameId" :placeholder="t('pages.staffInbox.searchTeam')" />
+          <rbph-message-edit v-model:draft="dmDraft" v-model:content-type="contentType" :placeholder="t('pages.staffInbox.dmPlaceholder')" :content-types="[RbContentType.UnsafeMarkdown]" :loading="submitLoading" :disabled="!dmTeam || submitLoading" @submit="sendDm" />
         </div>
       </template>
     </u-modal>
 
     <rb-confirm-modal
       v-model:open="sendConflictOpen"
-      title="已有工作人员认领"
+      :title="t('pages.staffInbox.sendConflict')"
       :description="sendConflictDescription"
-      confirm-label="仍要继续"
+      :confirm-label="t('pages.staffInbox.continueAnyway')"
       confirm-color="warning"
       confirm-icon="material-symbols:send-outline-rounded"
       :busy="submitLoading"

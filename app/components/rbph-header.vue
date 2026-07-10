@@ -12,6 +12,7 @@ const notificationState = useNotificationUnread();
 const notificationUnread = notificationState.count;
 const dmUnread = notificationState.dmCount;
 const userMenuOpen = ref<string>();
+const { t, locale } = useI18n();
 
 function normalizeNavigationBadge(badge: NavigationMenuChildItem['badge']): BadgeProps | undefined {
   if (typeof badge === 'string' || typeof badge === 'number') return { label: badge };
@@ -41,7 +42,7 @@ const navItems = computed(() => {
 
   result.push({
     value: 'game-home',
-    label: '主页',
+    label: t('nav.home'),
     icon: 'material-symbols:home-outline-rounded',
     to: `/games/${game.value.id}`,
     exact: true,
@@ -51,13 +52,13 @@ const navItems = computed(() => {
     const inPuzzlePage = route.path.startsWith(`/games/${game.value?.id}/puzzles`) || route.path.startsWith('/puzzles');
     result.push({
       value: 'game-puzzles',
-      label: '谜题',
+      label: t('nav.puzzles'),
       icon: 'material-symbols:group-work-outline',
       children: game.value.rounds.map(x => {
         return {
           value: `game-round-${x.id}`,
           label: x.title,
-          description: '谜题区域',
+          description: t('nav.puzzleRound'),
           icon: 'material-symbols:grid-view-outline-rounded',
           to: gameRoundSimpleRoute(game.value?.id, x),
           active: route.path.startsWith(`/games/${game.value?.id}/rounds/${x.slug || x.id}`) || route.path.startsWith(`/rounds/${x.id}`) || (inPuzzlePage && currentPuzzle.value?.data.round.id === x.id),
@@ -68,7 +69,7 @@ const navItems = computed(() => {
   } else if (!team.value) {
     result.push({
       value: 'game-profile',
-      label: '参与比赛',
+      label: t('nav.joinGame'),
       icon: 'material-symbols:how-to-reg-outline-rounded',
       to: `/games/${game.value.id}/profile`,
       active: route.path.startsWith(`/games/${game.value.id}/profile`),
@@ -77,7 +78,7 @@ const navItems = computed(() => {
 
   result.push({
     value: 'game-announcements',
-    label: '公告',
+    label: t('nav.announcements'),
     icon: 'material-symbols:chat-info-outline-rounded',
     to: `/games/${game.value.id}/info`,
   });
@@ -85,7 +86,7 @@ const navItems = computed(() => {
   if (user.value) {
     result.push({
       value: 'game-leaderboard',
-      label: '排行榜',
+      label: t('nav.leaderboard'),
       icon: 'material-symbols:leaderboard-outline-rounded',
       to: `/games/${game.value.id}/leaderboard`,
     });
@@ -104,21 +105,21 @@ const userNav = computed(() => {
 
     children.push({
       label: user.value.nickname + (team.value ? ` @ ${team.value?.name}` : ''),
-      description: '用户/队伍信息',
+      description: t('nav.profile'),
       icon: 'material-symbols:person-2-outline-rounded',
       to: `/games/${game.value.id}/profile`,
     });
 
     if (team.value) {
       children.push({
-        label: '队伍动态',
+        label: t('nav.teamActivity'),
         icon: 'material-symbols:dynamic-form-outline-rounded',
         badge: notificationUnread.value > 0 ? { label: notificationUnread.value, color: 'error', variant: 'soft' } : undefined,
         to: notificationUnread.value > 0 ? `/games/${game.value.id}/activity?tab=notifications` : `/games/${game.value.id}/activity`,
       });
 
       children.push({
-        label: '站内信',
+        label: t('nav.directMessages'),
         icon: 'material-symbols:mail-outline-rounded',
         badge: dmUnread.value > 0 ? { label: dmUnread.value, color: 'error', variant: 'soft' } : undefined,
         to: `/games/${game.value.id}/ticket`,
@@ -127,7 +128,7 @@ const userNav = computed(() => {
 
     if (user.value.urole >= RbUserRole.Moderator) {
       children.push({
-        label: '消息工作台',
+        label: t('nav.staffInbox'),
         icon: 'material-symbols:inbox-outline-rounded',
         to: `/games/${game.value.id}/staff/inbox`,
         class: 'text-warning',
@@ -136,7 +137,7 @@ const userNav = computed(() => {
 
     if (user.value.urole >= RbUserRole.Admin) {
       children.push({
-        label: '管理后台',
+        label: t('nav.admin'),
         icon: 'material-symbols:space-dashboard-outline-rounded',
         to: `/admin`,
         class: 'text-warning',
@@ -144,7 +145,7 @@ const userNav = computed(() => {
     }
 
     children.push({
-      label: '退出登录',
+      label: t('nav.logout'),
       icon: 'material-symbols:logout-rounded',
       to: `/logout`,
       class: 'text-error',
@@ -152,7 +153,7 @@ const userNav = computed(() => {
 
     result.push({
       value: 'user-menu',
-      label: '用户',
+      label: t('nav.user'),
       icon: 'material-symbols:deployed-code-account-outline-rounded',
       avatar: {
         src: user.value.avatar,
@@ -166,7 +167,7 @@ const userNav = computed(() => {
   } else {
     result.push({
       value: 'login',
-      label: '登录',
+      label: t('nav.login'),
       icon: 'material-symbols:login-rounded',
       to: `/login?url=/games/${game.value.id}`,
     });
@@ -190,18 +191,18 @@ const userNavMobile = computed(() => {
     if (team.value) {
       userSpecial.push(
         {
-          label: '用户/队伍信息',
+          label: t('nav.profile'),
           icon: 'material-symbols:groups-2-outline-rounded',
           to: `/games/${game.value.id}/profile`,
         },
         {
-          label: '队伍动态',
+          label: t('nav.teamActivity'),
           icon: 'material-symbols:dynamic-form-outline-rounded',
           badge: notificationUnread.value > 0 ? { label: notificationUnread.value, color: 'error', variant: 'soft' } : undefined,
           to: notificationUnread.value > 0 ? `/games/${game.value.id}/activity?tab=notifications` : `/games/${game.value.id}/activity`,
         },
         {
-          label: '站内信',
+          label: t('nav.directMessages'),
           icon: 'material-symbols:mail-outline-rounded',
           badge: dmUnread.value > 0 ? { label: dmUnread.value, color: 'error', variant: 'soft' } : undefined,
           to: `/games/${game.value.id}/ticket`,
@@ -209,7 +210,7 @@ const userNavMobile = computed(() => {
       );
     } else {
       userSpecial.push({
-        label: '用户/队伍信息',
+        label: t('nav.profile'),
         icon: 'material-symbols:person-2-outline-rounded',
         to: `/games/${game.value.id}/profile`,
       });
@@ -217,7 +218,7 @@ const userNavMobile = computed(() => {
 
     if (user.value.urole >= RbUserRole.Moderator) {
       userSpecial.push({
-        label: '消息工作台',
+        label: t('nav.staffInbox'),
         icon: 'material-symbols:inbox-outline-rounded',
         to: `/games/${game.value.id}/staff/inbox`,
         class: 'text-warning',
@@ -230,7 +231,7 @@ const userNavMobile = computed(() => {
 
     if (user.value.urole >= RbUserRole.Admin) {
       lastSpecial.push({
-        label: '管理后台',
+        label: t('nav.admin'),
         icon: 'material-symbols:space-dashboard-outline-rounded',
         to: `/admin`,
         class: 'text-warning',
@@ -238,7 +239,7 @@ const userNavMobile = computed(() => {
     }
 
     lastSpecial.push({
-      label: '退出登录',
+      label: t('nav.logout'),
       icon: 'material-symbols:logout-rounded',
       to: `/logout`,
       class: 'text-error',
@@ -248,7 +249,7 @@ const userNavMobile = computed(() => {
   } else {
     result.push([
       {
-        label: '登录',
+        label: t('nav.login'),
         icon: 'material-symbols:login-rounded',
         to: `/login?url=/games/${game.value.id}`,
       },
@@ -264,7 +265,7 @@ const userNavMobile = computed(() => {
     <template #title>
       {{ game?.title }}
     </template>
-    <u-navigation-menu :key="`game-nav-${game?.id ?? 'none'}-${game?.rounds?.length ?? 'none'}-${user?.id ?? 'guest'}-${team?.id ?? 'none'}`" v-model="userMenuOpen" :items="[...navItems, ...userNav]" content-orientation="vertical">
+    <u-navigation-menu :key="`game-nav-${locale}-${game?.id ?? 'none'}-${game?.rounds?.length ?? 'none'}-${user?.id ?? 'guest'}-${team?.id ?? 'none'}`" v-model="userMenuOpen" :items="[...navItems, ...userNav]" content-orientation="vertical">
       <template #user-menu-content="{ item }">
         <ul class="grid w-full min-w-0 gap-1 p-2">
           <li v-for="child in item.children" :key="child.label">
@@ -291,10 +292,11 @@ const userNavMobile = computed(() => {
       </template>
     </u-navigation-menu>
     <template #right>
+      <rb-language-switcher />
       <u-color-mode-button />
     </template>
     <template #body>
-      <u-navigation-menu :key="`game-nav-mobile-${game?.id ?? 'none'}-${game?.rounds?.length ?? 'none'}-${user?.id ?? 'guest'}-${team?.id ?? 'none'}`" :items="[navItems, ...userNavMobile]" orientation="vertical" />
+      <u-navigation-menu :key="`game-nav-mobile-${locale}-${game?.id ?? 'none'}-${game?.rounds?.length ?? 'none'}-${user?.id ?? 'guest'}-${team?.id ?? 'none'}`" :items="[navItems, ...userNavMobile]" orientation="vertical" />
     </template>
   </u-header>
 </template>

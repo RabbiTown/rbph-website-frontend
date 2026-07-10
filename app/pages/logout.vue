@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n();
 const api = useApi();
 const route = useRoute();
 const toast = useToast();
@@ -6,7 +7,7 @@ const toast = useToast();
 const success = ref('load');
 
 useHead({
-  titleTemplate: '退出登录 - RBPH',
+  titleTemplate: computed(() => t('pages.logout.headTitle')),
 });
 
 onMounted(async () => {
@@ -14,8 +15,8 @@ onMounted(async () => {
     const { code } = await api.post('/auth/logout');
     if (code == 0) {
       toast.add({
-        title: '已退出登录！',
-        description: '将在三秒内进行跳转…',
+        title: t('pages.logout.success'),
+        description: t('pages.logout.description'),
         icon: 'material-symbols:check-rounded',
         color: 'success',
       });

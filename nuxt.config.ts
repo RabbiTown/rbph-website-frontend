@@ -11,7 +11,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
-  modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/ui', '@nuxtjs/mdc', '@vueuse/nuxt'],
+  modules: ['@nuxt/eslint', '@nuxt/image', '@nuxt/ui', '@nuxtjs/i18n', '@nuxtjs/mdc', '@vueuse/nuxt'],
   css: ['katex/dist/katex.min.css', '~/assets/css/main.css'],
   ssr: false,
   image: {
@@ -21,6 +21,23 @@ export default defineNuxtConfig({
     components: {
       prose: true,
     },
+  },
+  i18n: {
+    strategy: 'no_prefix',
+    defaultLocale: 'zh-CN',
+    langDir: 'locales',
+    locales: [
+      { code: 'zh-CN', language: 'zh-CN', name: '简体中文', file: 'zh-CN.ts' },
+      { code: 'zh-TW', language: 'zh-TW', name: '繁體中文', file: 'zh-TW.ts' },
+      { code: 'en', language: 'en', name: 'English', file: 'en.ts' },
+      { code: 'ja', language: 'ja', name: '日本語', file: 'ja.ts' },
+    ],
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'rbph_locale',
+      redirectOn: 'root',
+    },
+    vueI18n: './i18n.config.ts',
   },
   components: {
     global: true,

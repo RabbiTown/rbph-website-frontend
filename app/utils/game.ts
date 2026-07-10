@@ -155,7 +155,7 @@ export const judgeActionConsts: Record<RbJudgeAction, JudgeActionConst> = {
   [RbJudgeAction.Fail]: { name: '回答错误', icon: 'material-symbols:close-rounded', color: 'error', desc: '你没有得到任何信息。' },
   [RbJudgeAction.Correct]: { name: '回答正确', icon: 'material-symbols:check-rounded', color: 'success', desc: '恭喜通过本题！' },
   [RbJudgeAction.Milestone]: { name: '里程碑', icon: 'material-symbols:flag-outline-rounded', color: 'warning', desc: '这是本题的一个中间答案。' },
-  [RbJudgeAction.StartGame]: { name: '开始游戏', icon: 'material-symbols:celebration-rounded', color: 'success', desc: '你的队伍已开始游戏。' },
+  [RbJudgeAction.StartGame]: { name: '开始比赛', icon: 'material-symbols:celebration-rounded', color: 'success', desc: '你的队伍已开始比赛。' },
   [RbJudgeAction.EasterEgg]: { name: '彩蛋', icon: 'material-symbols:auto-awesome-outline-rounded', color: 'primary', desc: '这是一个彩蛋！' },
   [RbJudgeAction.FinishGame]: { name: '恭喜完赛', icon: 'material-symbols:auto-awesome-outline-rounded', color: 'success', desc: '回答正确，恭喜完赛！' },
 };

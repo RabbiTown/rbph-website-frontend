@@ -5,12 +5,13 @@ definePageMeta({
   layout: 'game',
 });
 
+const { t } = useI18n();
 useUser().required();
 
 const game = useGame().ref;
 
 useHead({
-  titleTemplate: computed(() => buildTitleParts([{ text: '排行榜' }, { text: game.value?.title, sep: ' - ' }])),
+  titleTemplate: computed(() => buildTitleParts([{ text: t('pages.leaderboard.title') }, { text: game.value?.title, sep: ' - ' }])),
 });
 
 const api = useApi();
@@ -21,7 +22,13 @@ const pageData = ref<LeaderBoardInfo>();
 const Icon = resolveComponent('icon');
 const UBadge = resolveComponent('u-badge');
 
-const columns = ref<TableColumn<LeaderBoardTeamInfo>[]>([
+function solveCountText(count: unknown) {
+  const value = Number(count);
+  if (!Number.isFinite(value)) return `${String(count ?? '')} solves`;
+  return t('pages.leaderboard.solvedCount', { count: value });
+}
+
+const columns = computed<TableColumn<LeaderBoardTeamInfo>[]>(() => [
   {
     header: '#',
     cell: ({ row }) => row.original.rank,
@@ -33,7 +40,7 @@ const columns = ref<TableColumn<LeaderBoardTeamInfo>[]>([
   },
   {
     accessorKey: 'name',
-    header: '队伍',
+    header: t('pages.leaderboard.team'),
     cell: ({ row, getValue }) => [
       h('div', { class: 'text-lg text-highlighted font-bold' }, [getValue<string>(), row.original.id === team.ref.value?.id ? h(Icon, { name: 'material-symbols:location-on-outline-rounded', class: 'text-warning align-middle ms-1 mb-0.5' }) : null]),
       h('div', row.original.bio),
@@ -46,15 +53,14 @@ const columns = ref<TableColumn<LeaderBoardTeamInfo>[]>([
   },
   {
     accessorKey: 'finish_at',
-    header: '完赛状态',
+    header: t('pages.leaderboard.finishStatus'),
     cell: ({ getValue }) => {
       const state = getValue<string>();
 
       if (state) {
-        return [h(UBadge, { color: 'success', variant: 'soft', icon: 'material-symbols:flag-rounded' }, () => '已完赛'), h('div', { class: 'mt-1 ms-1 text-xs' }, formatDate(state))];
-      } else {
-        return h(UBadge, { color: 'secondary', variant: 'soft', icon: 'material-symbols:flag-outline-rounded' }, () => '未完赛');
+        return [h(UBadge, { color: 'success', variant: 'soft', icon: 'material-symbols:flag-rounded' }, () => t('pages.leaderboard.finished')), h('div', { class: 'mt-1 ms-1 text-xs' }, formatDate(state))];
       }
+      return h(UBadge, { color: 'secondary', variant: 'soft', icon: 'material-symbols:flag-outline-rounded' }, () => t('pages.leaderboard.unfinished'));
     },
     meta: {
       class: {
@@ -65,15 +71,14 @@ const columns = ref<TableColumn<LeaderBoardTeamInfo>[]>([
   },
   {
     accessorKey: 'solves',
-    header: '解出题数',
+    header: t('pages.leaderboard.solvedCountHeader'),
     cell: ({ row, getValue }) => {
       const state = getValue<string>();
 
       if (state) {
-        return [h(UBadge, { color: 'success', variant: 'soft', icon: 'material-symbols:check-rounded' }, () => `解出 ${state} 题`), h('div', { class: 'mt-1 ms-1 text-xs' }, formatDate(row.original.last_solved_at))];
-      } else {
-        return h(UBadge, { color: 'secondary', variant: 'soft', icon: 'material-symbols:coffee-rounded' }, () => '暂无解出');
+        return [h(UBadge, { color: 'success', variant: 'soft', icon: 'material-symbols:check-rounded' }, () => solveCountText(state)), h('div', { class: 'mt-1 ms-1 text-xs' }, formatDate(row.original.last_solved_at))];
       }
+      return h(UBadge, { color: 'secondary', variant: 'soft', icon: 'material-symbols:coffee-rounded' }, () => t('pages.leaderboard.noSolved'));
     },
     meta: {
       class: {
@@ -83,32 +88,22 @@ const columns = ref<TableColumn<LeaderBoardTeamInfo>[]>([
     },
   },
   {
-    header: '状态',
+    header: t('pages.leaderboard.status'),
     cell: ({ row }) => {
       const result = [];
 
       const finishState = row.getValue<string>('finish_at');
       if (finishState) {
-        result.push(
-          h(
-            'div',
-            h(UBadge, { color: 'success', variant: 'soft', icon: 'material-symbols:flag-rounded' }, () => '已完赛')
-          )
-        );
+        result.push(h('div', h(UBadge, { color: 'success', variant: 'soft', icon: 'material-symbols:flag-rounded' }, () => t('pages.leaderboard.finished'))));
       } else {
-        result.push(
-          h(
-            'div',
-            h(UBadge, { color: 'secondary', variant: 'soft', icon: 'material-symbols:flag-outline-rounded' }, () => '未完赛')
-          )
-        );
+        result.push(h('div', h(UBadge, { color: 'secondary', variant: 'soft', icon: 'material-symbols:flag-outline-rounded' }, () => t('pages.leaderboard.unfinished'))));
       }
 
       const solveState = row.getValue<string>('solves');
       if (solveState) {
-        result.push(h('div', { class: 'mt-1 ms-1' }, () => `解出 ${solveState} 题`));
+        result.push(h('div', { class: 'mt-1 ms-1' }, () => solveCountText(solveState)));
       } else {
-        result.push(h('div', { class: 'mt-1 ms-1' }, () => '暂无解出'));
+        result.push(h('div', { class: 'mt-1 ms-1' }, () => t('pages.leaderboard.noSolved')));
       }
 
       return result;
@@ -140,7 +135,7 @@ async function updateData(newId: number | undefined = undefined): Promise<boolea
         return true;
       }
     } catch (error) {
-      handleError(error, '获取排行榜信息失败');
+      handleError(error, t('pages.leaderboard.loadFailed'));
     }
   }
   return false;
@@ -162,34 +157,25 @@ async function loadMore() {
       pageData.value = { ...data, data: [...current.data, ...data.data.filter(item => !seen.has(item.id))] };
     }
   } catch (error) {
-    handleError(error, '加载更多排行榜队伍失败');
+    handleError(error, t('pages.leaderboard.loadMoreFailed'));
   } finally {
     loadingMore.value = false;
   }
 }
 
-watch(
-  game,
-  async newGame => {
-    pageData.value = undefined;
-    updateData(newGame?.id);
-  },
-  { immediate: true }
-);
+watch(game, async newGame => {
+  pageData.value = undefined;
+  updateData(newGame?.id);
+}, { immediate: true });
 
 const updateTime = ref(Date.now());
-
 let timer: number | null = null;
 
 onMounted(() => {
-  useInfiniteScroll(
-    window,
-    loadMore,
-    {
-      distance: 50,
-      canLoadMore: () => Boolean(pageData.value?.has_more) && !loadingMore.value,
-    }
-  );
+  useInfiniteScroll(window, loadMore, {
+    distance: 50,
+    canLoadMore: () => Boolean(pageData.value?.has_more) && !loadingMore.value,
+  });
 
   timer = window.setInterval(() => {
     if (pageData.value?.state === 'locked') return;
@@ -208,10 +194,10 @@ onUnmounted(() => {
   <div>
     <div class="py-6">
       <div class="flex items-baseline justify-between md:flex-row flex-col">
-        <div class="text-3xl font-bold">排行榜</div>
+        <div class="text-3xl font-bold">{{ t('pages.leaderboard.title') }}</div>
         <div class="mt-2 text-secondary ms-0.5 text-xs">
           <u-icon name="material-symbols:schedule-outline-rounded" class="align-middle mb-0.5" />
-          更新于 {{ formatDate(updateTime) }}
+          {{ t('pages.leaderboard.updatedAt', { time: formatDate(updateTime) }) }}
         </div>
       </div>
     </div>
@@ -222,12 +208,12 @@ onUnmounted(() => {
         variant="subtle"
         color="warning"
         icon="material-symbols:lock-clock-outline-rounded"
-        title="排行榜已锁定"
-        :description="pageData.locked_at ? `当前展示的是 ${formatDate(pageData.locked_at)} 的排名快照，之后的提交仍然有效但不会改变此处排名。` : '之后的提交仍然有效，但不会改变此处排名。'"
+        :title="t('pages.leaderboard.locked')"
+        :description="pageData.locked_at ? t('pages.leaderboard.lockedDesc', { time: formatDate(pageData.locked_at) }) : t('pages.leaderboard.lockedDescShort')"
       />
       <u-table v-if="pageData.data.length > 0" :data="pageData.data" :columns="columns" :ui="{ base: 'md:table-auto table-fixed w-full' }" />
       <div v-if="loadingMore" class="flex justify-center py-4"><u-icon name="material-symbols:progress-activity" class="size-5 animate-spin text-muted" /></div>
-      <u-empty v-if="pageData.data.length === 0" description="暂无有效队伍" />
+      <u-empty v-if="pageData.data.length === 0" :description="t('pages.leaderboard.noValidTeams')" />
     </div>
     <div v-else class="h-full">
       <u-skeleton class="w-full h-full min-h-24" />

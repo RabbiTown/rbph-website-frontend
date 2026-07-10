@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n();
 const props = defineProps<{ ticket: Partial<TicketAggreInfo> }>();
 
 const color = computed(() => {
@@ -15,11 +16,11 @@ const color = computed(() => {
 const puzzleStateLabel = computed(() => {
   switch (props.ticket.puzzle?.state) {
     case RbTeamPuzzleState.Solved:
-      return '谜题已通过';
+      return t('ticket.puzzleSolved');
     case RbTeamPuzzleState.Unlocked:
-      return '谜题未通过';
+      return t('ticket.puzzleUnsolved');
     default:
-      return '谜题未解锁';
+      return t('ticket.puzzleLocked');
   }
 });
 
@@ -39,9 +40,9 @@ const puzzleStateIcon = computed(() => {
   <u-card variant="soft" :class="`transition-colors border border-${color}/25 border-dashed hover:border-${color} has-focus-visible:border-${color} cursor-pointer`" @click="navigateTo(`/tickets/${ticket.id}`)">
     <div class="flex gap-3 flex-col">
       <div class="flex items-baseline gap-2 flex-wrap">
-        <u-badge v-if="ticket?.state === RbTicketState.Open" class="rounded-full py-1.5 px-2.5" color="success" variant="subtle" icon="material-symbols:add-circle-outline-rounded">开放中</u-badge>
-        <u-badge v-else-if="ticket?.state === RbTicketState.Closed" class="rounded-full py-1.5 px-2.5" color="error" variant="subtle" icon="material-symbols:check-circle-outline-rounded">已关闭</u-badge>
-        <span class="text-xl font-bold">人工提示 </span>
+        <u-badge v-if="ticket?.state === RbTicketState.Open" class="rounded-full py-1.5 px-2.5" color="success" variant="subtle" icon="material-symbols:add-circle-outline-rounded">{{ t('ticket.open') }}</u-badge>
+        <u-badge v-else-if="ticket?.state === RbTicketState.Closed" class="rounded-full py-1.5 px-2.5" color="error" variant="subtle" icon="material-symbols:check-circle-outline-rounded">{{ t('ticket.closedState') }}</u-badge>
+        <span class="text-xl font-bold">{{ t('ticket.title') }} </span>
         <span class="text-muted text-1xl">#{{ ticket?.id }}</span>
       </div>
       <div v-if="ticket.puzzle || ticket.team" class="flex gap-3 text-muted text-sm leading-none flex-wrap">

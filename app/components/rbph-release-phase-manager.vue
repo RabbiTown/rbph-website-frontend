@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n();
 const props = defineProps<{ gameId?: number }>();
 const emit = defineEmits<{ 'update:dirty': [value: boolean] }>();
 
@@ -118,7 +119,7 @@ function removeFeatureChange(phase: PhaseState, feature: RbGameFeature) {
 function featureChangeLabel(change: RbFeatureChange) {
   const option = featureOption(change.feature);
   const state = option?.states.find(item => item.value === change.state);
-  return `${option?.label ?? change.feature}：${state?.label ?? change.state}`;
+  return t('releasePhase.featureState', { feature: option?.label ?? change.feature, state: state?.label ?? change.state });
 }
 
 function setFeaturePopoverOpen(phase: PhaseState, open: boolean) {

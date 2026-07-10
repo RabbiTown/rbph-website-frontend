@@ -13,6 +13,7 @@ const currencyStore = useCurrency();
 const currencies = currencyStore.ref;
 const route = useRoute();
 const notificationUnread = useNotificationUnread().count;
+const { t } = useI18n();
 
 const activeTab = ref(route.query.tab === 'notifications' ? 'notifications' : 'team');
 const activityList = useTemplateRef<{ reload: () => Promise<void> }>('activity-list');
@@ -22,18 +23,18 @@ const refreshLoading = ref(false);
 
 const tabItems = computed(() => [
   {
-    label: '队伍动态',
+    label: t('activity.title'),
     icon: 'material-symbols:dynamic-form-outline-rounded',
     value: 'team',
   },
   {
-    label: '通知',
+    label: t('activity.notifications'),
     icon: 'material-symbols:notifications-outline-rounded',
     badge: notificationUnread.value > 0 ? { label: notificationUnread.value, color: 'error', variant: 'soft', size: 'sm' } : undefined,
     value: 'notifications',
   },
   ...(currencies.value ?? []).map(currency => ({
-    label: `${currency.name} 变动记录`,
+    label: t('activity.currencyChangeRecords', { currency: currency.name }),
     icon: 'material-symbols:emoji-objects-outline-rounded',
     value: `currency-${currency.id}`,
   })),
@@ -68,7 +69,7 @@ async function refreshCurrent() {
 }
 
 useHead({
-  titleTemplate: computed(() => buildTitleParts([{ text: '队伍动态' }, { text: game.value?.title, sep: ' - ' }])),
+  titleTemplate: computed(() => buildTitleParts([{ text: t('activity.title') }, { text: game.value?.title, sep: ' - ' }])),
 });
 </script>
 
@@ -76,13 +77,13 @@ useHead({
   <u-main class="py-8">
     <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 sm:px-6 lg:px-8">
       <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <h1 class="text-2xl font-semibold text-highlighted">队伍动态</h1>
+        <h1 class="text-2xl font-semibold text-highlighted">{{ t('activity.title') }}</h1>
         <div class="flex flex-wrap items-center gap-2 text-xs text-muted">
           <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" size="sm" :loading="refreshLoading" @click="refreshCurrent" />
           <span>
             <u-icon name="material-symbols:schedule-outline-rounded" class="mb-0.5 align-middle" />
-            <template v-if="updateTime">更新于 {{ formatDate(updateTime) }}</template>
-            <template v-else>尚未更新</template>
+            <template v-if="updateTime">{{ t('common.updatedAt', { time: formatDate(updateTime) }) }}</template>
+            <template v-else>{{ t('activity.notUpdated') }}</template>
           </span>
         </div>
       </div>

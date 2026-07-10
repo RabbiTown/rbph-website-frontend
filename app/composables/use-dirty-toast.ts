@@ -9,6 +9,7 @@ interface DirtyToastOptions {
 
 export function useDirtyToast() {
   const toast = useToast();
+  const { t } = useI18n();
   let current: Toast | undefined;
   let currentOptions: DirtyToastOptions | undefined;
   let syncingDirtyToast = false;
@@ -27,7 +28,7 @@ export function useDirtyToast() {
   function confirmLeave() {
     if (!isGuardEnabled()) return true;
 
-    const confirmed = window.confirm(currentOptions?.leaveConfirmMessage ?? '修改尚未保存，离开后将放弃这些修改。');
+    const confirmed = window.confirm(currentOptions?.leaveConfirmMessage ?? t('dirtyToast.leaveConfirm'));
     if (confirmed) {
       currentOptions?.reset();
       clear();
@@ -80,8 +81,8 @@ export function useDirtyToast() {
     currentOptions = options;
 
     const toastData: Partial<Toast> = {
-      title: options.title ?? '已修改数据',
-      description: options.description ?? '修改尚未保存。',
+      title: options.title ?? t('dirtyToast.title'),
+      description: options.description ?? t('dirtyToast.description'),
       icon: 'material-symbols:edit-note-outline-rounded',
       color: 'warning',
       duration: Infinity,
@@ -89,14 +90,14 @@ export function useDirtyToast() {
       orientation: 'horizontal',
       actions: [
         {
-          label: '重置',
+          label: t('dirtyToast.reset'),
           icon: 'material-symbols:restart-alt-rounded',
           color: 'neutral',
           variant: 'soft',
           onClick: () => options.reset(),
         },
         {
-          label: '应用',
+          label: t('dirtyToast.apply'),
           icon: 'material-symbols:check-rounded',
           color: 'primary',
           variant: 'solid',

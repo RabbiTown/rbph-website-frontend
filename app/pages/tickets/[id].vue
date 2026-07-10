@@ -8,6 +8,7 @@ definePageMeta({
 
 useUser().required();
 const user = useUser().ref;
+const { t } = useI18n();
 
 const api = useApi();
 const route = useRoute();
@@ -29,7 +30,7 @@ const draftContentType = ref(RbContentType.UnsafeMarkdown);
 const ticket_id = computed(() => route.params.id as string);
 
 useHead({
-  titleTemplate: computed(() => buildTitleParts([{ text: `人工提示 #${ticket_id.value}` }, { text: game.value?.title, sep: ' - ' }])),
+  titleTemplate: computed(() => buildTitleParts([{ text: `${t('ticket.title')} #${ticket_id.value}` }, { text: game.value?.title, sep: ' - ' }])),
 });
 
 async function updateData(new_id: string | undefined = undefined) {
@@ -74,7 +75,7 @@ async function loadHistory() {
       };
     }
   } catch (error) {
-    handleError(error, '加载更早人工提示记录失败');
+    handleError(error, t('ticket.loadEarlierFailed'));
   } finally {
     historyLoading.value = false;
   }
@@ -95,7 +96,7 @@ async function loadNewer() {
       };
     }
   } catch (error) {
-    handleError(error, '更新人工提示失败');
+    handleError(error, t('ticket.updateFailed'));
   }
 }
 
@@ -124,7 +125,7 @@ const breadItems = computed<BreadcrumbItem[]>(() => [
     icon: 'material-symbols:extension-outline-rounded',
   },
   {
-    label: `人工提示 #${ticket.value?.id}`,
+    label: `${t('ticket.title')} #${ticket.value?.id}`,
     to: `/tickets/${ticket.value?.id}`,
     icon: 'material-symbols:near-me-outline-rounded',
   },
@@ -158,13 +159,13 @@ async function submitMessage(senderType: RbTicketSenderType, forceAssignee = fal
       } satisfies TicketSendRequest;
       const { code, data } = await api.post<TicketSendResponse>(`/tickets/${ticketId}/send`, payload, {
         errorHints: {
-          [-1]: '这条人工提示已关闭。',
-          [-2]: '积压信息过多，请先等待工作人员回复。',
-          [-3]: '内容类型无效或无权使用。',
-          [-4]: '发送的信息过长。',
-          [-5]: '信息要求的费用无效。',
-          [-8]: '比赛当前已关闭人工提示功能。',
-          [-9]: '本队伍的人工提示功能已被封禁。',
+          [-1]: t('ticket.closedMessage'),
+          [-2]: t('ticket.pendingOverflow'),
+          [-3]: t('ticket.sendBlockType'),
+          [-4]: t('ticket.sendBlockLength'),
+          [-5]: t('ticket.sendBlockCost'),
+          [-8]: t('ticket.featureClosed'),
+          [-9]: t('ticket.teamFeatureBanned'),
         },
       });
       draftMessage.value = '';
@@ -172,8 +173,8 @@ async function submitMessage(senderType: RbTicketSenderType, forceAssignee = fal
       if (code === 0) {
         const hostReply = senderType === RbTicketSenderType.Host;
         toast.add({
-          title: hostReply ? '已发送工作人员回复' : '已发送进一步询问',
-          description: hostReply ? '该队伍可以看到你的回复。' : '请等待工作人员回复。',
+          title: hostReply ? t('ticket.repliedByStaff') : t('ticket.repliedByTeam'),
+          description: hostReply ? t('ticket.repliedByStaffDesc') : t('ticket.repliedByTeamDesc'),
           icon: 'material-symbols:check-rounded',
           color: 'success',
         });
@@ -195,11 +196,11 @@ async function submitMessage(senderType: RbTicketSenderType, forceAssignee = fal
       }
     } catch (error) {
       const assignee = (error as { data?: { payload?: { assignee?: { nickname: string } } } }).data?.payload?.assignee;
-      if (senderType === RbTicketSenderType.Host && !forceAssignee && assignee && window.confirm(`该会话已由 ${assignee.nickname} 认领，仍要继续回复吗？`)) {
+      if (senderType === RbTicketSenderType.Host && !forceAssignee && assignee && window.confirm(t('ticket.assigneeAlready', { name: assignee.nickname }))) {
         submitLoading.value = false;
         return submitMessage(senderType, true);
       }
-      handleError(error, '站内信发送失败');
+      handleError(error, t('ticket.sendFailed'));
     }
   }
 
@@ -218,7 +219,7 @@ async function assignSelf(force = false) {
   if (!ticket.value?.id || assigneeLoading.value) return;
   assigneeLoading.value = true;
   try {
-    const { data } = await api.post<TicketAssignResponse>(`/tickets/${ticket.value.id}/assignee/self`, { force }, { errorHints: { [-7]: '已有其他工作人员认领此会话。' } });
+    const { data } = await api.post<TicketAssignResponse>(`/tickets/${ticket.value.id}/assignee/self`, { force }, { errorHints: { [-7]: t('ticket.claimConflict') } });
     ticket.value.assignee = data.assignee ?? undefined;
     assigneeConfirmOpen.value = false;
   } catch (error) {
@@ -228,7 +229,7 @@ async function assignSelf(force = false) {
       assigneeConfirmOpen.value = true;
       return;
     }
-    handleError(error, '认领失败');
+    handleError(error, t('ticket.claimFailed'));
   } finally {
     assigneeLoading.value = false;
   }
@@ -241,7 +242,7 @@ async function unassign() {
     await api.del(`/tickets/${ticket.value.id}/assignee`);
     ticket.value.assignee = undefined;
   } catch (error) {
-    handleError(error, '取消认领失败');
+    handleError(error, t('ticket.unclaimFailed'));
   } finally {
     assigneeLoading.value = false;
   }
@@ -267,8 +268,8 @@ async function submitClose(forceAssignee = false) {
       draftMessage.value = '';
 
       toast.add({
-        title: '已关闭工单',
-        description: '队伍仍可查看历史记录。',
+        title: t('ticket.closedToast'),
+        description: t('ticket.closedToastDesc'),
         icon: 'material-symbols:check-rounded',
         color: 'success',
       });
@@ -288,11 +289,11 @@ async function submitClose(forceAssignee = false) {
       draftContentType.value = getDefaultTicketContentType(pageData.value.perm);
     } catch (error) {
       const assignee = (error as { data?: { payload?: { assignee?: { nickname: string } } } }).data?.payload?.assignee;
-      if (!forceAssignee && assignee && window.confirm(`该会话已由 ${assignee.nickname} 认领，仍要回复并关闭吗？`)) {
+      if (!forceAssignee && assignee && window.confirm(t('ticket.closeConfirm', { name: assignee.nickname }))) {
         submitLoading.value = false;
         return submitClose(true);
       }
-      handleError(error, '关闭工单失败');
+      handleError(error, t('ticket.closeFailed'));
     }
   }
 
@@ -310,8 +311,8 @@ async function unlockMessage(message: TicketMessage) {
     try {
       const { data } = await api.post<TicketUnlockResponse>(`/tickets/${ticketId}/messages/${message.id}/purchase`, undefined, {
         errorHints: {
-          [-2]: '余额不足。',
-          [-1]: '消息暂未开放或已购买。',
+          [-2]: t('ticket.insufficientBalance'),
+          [-1]: t('ticket.unavailableOrPurchased'),
         },
       });
       const messages =
@@ -326,13 +327,13 @@ async function unlockMessage(message: TicketMessage) {
         messages,
       };
       toast.add({
-        title: '已解锁消息',
-        description: '队伍可查看该条内容。',
+        title: t('ticket.unlockedToast'),
+        description: t('ticket.unlockedToastDesc'),
         icon: 'material-symbols:lock-open-right-outline-rounded',
         color: 'success',
       });
     } catch (error) {
-      handleError(error, '解锁消息失败');
+      handleError(error, t('ticket.unlockFailed'));
     }
   }
 
@@ -347,12 +348,12 @@ interface SendBlockConst {
 }
 
 const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
-  [RbTicketSendBlock.NoAccess]: { icon: 'material-symbols:error-med-outline-rounded', color: 'error', title: '没有发送权限。' },
-  [RbTicketSendBlock.Closed]: { icon: 'material-symbols:check-rounded', color: 'success', title: '人工提示已关闭，不再接受新的回复。' },
-  [RbTicketSendBlock.Pending]: { icon: 'material-symbols:more-horiz', color: 'warning', title: '请等待工作人员回复。' },
-  [RbTicketSendBlock.FeatureClosed]: { icon: 'material-symbols:lock-outline', color: 'warning', title: '比赛当前已关闭人工提示功能。' },
-  [RbTicketSendBlock.FeatureExistingOnly]: { icon: 'material-symbols:history-rounded', color: 'warning', title: '比赛当前仅允许回复已有人工提示。' },
-  [RbTicketSendBlock.TeamFeatureBanned]: { icon: 'material-symbols:block-outline', color: 'error', title: '本队伍的人工提示功能已被封禁。', teamRestriction: true },
+  [RbTicketSendBlock.NoAccess]: { icon: 'material-symbols:error-med-outline-rounded', color: 'error', title: t('ticket.noAccess') },
+  [RbTicketSendBlock.Closed]: { icon: 'material-symbols:check-rounded', color: 'success', title: t('ticket.closed') },
+  [RbTicketSendBlock.Pending]: { icon: 'material-symbols:more-horiz', color: 'warning', title: t('ticket.pending') },
+  [RbTicketSendBlock.FeatureClosed]: { icon: 'material-symbols:lock-outline', color: 'warning', title: t('ticket.featureClosed') },
+  [RbTicketSendBlock.FeatureExistingOnly]: { icon: 'material-symbols:history-rounded', color: 'warning', title: t('ticket.featureExistingOnly') },
+  [RbTicketSendBlock.TeamFeatureBanned]: { icon: 'material-symbols:block-outline', color: 'error', title: t('ticket.teamFeatureBanned'), teamRestriction: true },
 };
 
 const tabItems = computed(
@@ -361,7 +362,7 @@ const tabItems = computed(
       ...(pageData.value?.perm.send_block !== RbTicketSendBlock.NoAccess
         ? [
             {
-              label: '作为队伍成员',
+              label: t('ticket.asTeam'),
               icon: 'material-symbols:group-outline-rounded',
               slot: 'as-team' as const,
             },
@@ -370,7 +371,7 @@ const tabItems = computed(
       ...(pageData.value?.perm.can_host
         ? [
             {
-              label: '作为工作人员',
+              label: t('ticket.asStaff'),
               icon: 'material-symbols:near-me-outline-rounded',
               slot: 'as-host' as const,
             },
@@ -393,7 +394,7 @@ const teamCurrency = computed(() => {
   return result;
 });
 const currencyTypeItems = computed(() => [
-  { label: '无需解锁', value: null, icon: 'material-symbols:lock-open-right-outline-rounded' },
+  { label: t('ticket.noUnlock'), value: null, icon: 'material-symbols:lock-open-right-outline-rounded' },
   ...allowedCurrencyTypes.value.map(id => {
     return { label: teamCurrency.value[id]?.name ?? `#${id}`, value: id, icon: 'material-symbols:emoji-objects-outline-rounded' } satisfies SelectItem;
   }),
@@ -412,21 +413,21 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
     <div>
       <div>
         <div class="flex items-baseline gap-2 flex-wrap">
-          <span class="text-3xl font-bold">人工提示 </span>
+          <span class="text-3xl font-bold">{{ t('ticket.title') }} </span>
           <span class="text-muted text-2xl">#{{ ticket?.id }}</span>
-          <u-badge v-if="ticket?.state === RbTicketState.Open" class="rounded-full py-1.5 px-2.5" color="success" variant="subtle" icon="material-symbols:add-circle-outline-rounded">开放中</u-badge>
-          <u-badge v-else-if="ticket?.state === RbTicketState.Closed" class="rounded-full py-1.5 px-2.5" color="error" variant="subtle" icon="material-symbols:check-circle-outline-rounded">已关闭</u-badge>
+          <u-badge v-if="ticket?.state === RbTicketState.Open" class="rounded-full py-1.5 px-2.5" color="success" variant="subtle" icon="material-symbols:add-circle-outline-rounded">{{ t('ticket.open') }}</u-badge>
+          <u-badge v-else-if="ticket?.state === RbTicketState.Closed" class="rounded-full py-1.5 px-2.5" color="error" variant="subtle" icon="material-symbols:check-circle-outline-rounded">{{ t('ticket.closedState') }}</u-badge>
         </div>
 
         <div v-if="pageData?.perm.can_host" class="mt-2 flex flex-wrap items-center gap-2">
           <u-button v-if="!ticket.assignee" :class="assigneeActionButtonClass" size="xs" color="neutral" variant="soft" :loading="assigneeLoading" @click="assignSelf()">
             <span :class="assigneeActionNormalClass">
               <u-icon name="material-symbols:person-off-outline-rounded" class="size-4 shrink-0" />
-              <span>未认领</span>
+              <span>{{ t('ticket.unclaimed') }}</span>
             </span>
             <span :class="assigneeActionHoverClass">
               <u-icon name="material-symbols:person-add-outline-rounded" class="size-4 shrink-0" />
-              <span>认领会话</span>
+              <span>{{ t('ticket.claim') }}</span>
             </span>
           </u-button>
 
@@ -437,7 +438,7 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
             </span>
             <span :class="assigneeActionHoverClass">
               <u-icon name="material-symbols:person-remove-outline-rounded" class="size-4 shrink-0" />
-              <span>取消认领</span>
+              <span>{{ t('ticket.unclaim') }}</span>
             </span>
           </u-button>
 
@@ -449,14 +450,14 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
               </span>
               <span :class="assigneeActionHoverClass">
                 <u-icon name="material-symbols:person-add-outline-rounded" class="size-4 shrink-0" />
-                <span>认领会话</span>
+                <span>{{ t('ticket.claim') }}</span>
               </span>
             </u-button>
             <template #content>
               <div class="flex items-center gap-2 px-4 py-2 text-xs">
                 <u-icon name="material-symbols:warning-outline-rounded" />
-                <span>会话已由 {{ ticket.assignee.nickname }} 认领，确定覆盖认领吗？</span>
-                <u-button :loading="assigneeLoading" class="cursor-pointer" color="warning" variant="soft" size="xs" @click="assignSelf(true)">确定</u-button>
+                <span>{{ t('ticket.claimConfirm', { name: ticket.assignee.nickname }) }}</span>
+                <u-button :loading="assigneeLoading" class="cursor-pointer" color="warning" variant="soft" size="xs" @click="assignSelf(true)">{{ t('common.confirm') }}</u-button>
               </div>
             </template>
           </u-popover>
@@ -469,7 +470,7 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
 
       <!-- <div class="mt-2 text-secondary ms-0.5 text-xs">
         <u-icon name="material-symbols:schedule-outline-rounded" class="align-middle mb-0.5" />
-        创建于 {{ formatDate(ticket.?.state.utime_at) }}
+        {{ t('common.createdAt', { time: formatDate(ticket?.state.utime_at) }) }}
       </div> -->
     </div>
     <rbph-ticket-timeline
@@ -488,20 +489,18 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
 
     <u-tabs :items="tabItems" variant="link" :ui="{ list: tabItems.length > 1 ? undefined : 'hidden' }">
       <template #as-team>
-        <u-alert v-if="teamBanned && canSend" class="mb-2" variant="subtle" title="队伍当前处于封禁状态，但仍可回复人工提示。" icon="material-symbols:warning-outline-rounded" color="warning">
+        <u-alert v-if="teamBanned && canSend" class="mb-2" variant="subtle" :title="t('ticket.teamBannedWarning')" icon="material-symbols:warning-outline-rounded" color="warning">
           <template #description>
-            <span class="whitespace-nowrap">
-              具体原因可在
-              <u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" label="队伍动态" class="p-0 align-middle mb-0.5" />
-              中查看。
-            </span>
+            <i18n-t keypath="ticket.restrictionDetails" tag="span" class="whitespace-nowrap">
+              <template #activity><u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" :label="t('nav.teamActivity')" class="p-0 align-middle mb-0.5" /></template>
+            </i18n-t>
           </template>
         </u-alert>
         <rbph-message-edit
           v-if="canSend"
           v-model:draft="draftMessage"
           v-model:content-type="draftContentType"
-          placeholder="进一步询问"
+          :placeholder="t('ticket.replyPlaceholder')"
           :content-types="pageData?.perm.content_type"
           :disabled="!canSend || submitLoading"
           :loading="!pageData || submitLoading"
@@ -509,21 +508,19 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
         />
         <u-alert v-if="sendBlock" variant="subtle" :title="sendBlock.title" :icon="sendBlock.icon" :color="sendBlock.color">
           <template v-if="sendBlock.teamRestriction" #description>
-            <span class="whitespace-nowrap">
-              具体原因可在
-              <u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" label="队伍动态" class="p-0 align-middle mb-0.5" />
-              中查看。
-            </span>
+            <i18n-t keypath="ticket.restrictionDetails" tag="span" class="whitespace-nowrap">
+              <template #activity><u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" :label="t('nav.teamActivity')" class="p-0 align-middle mb-0.5" /></template>
+            </i18n-t>
           </template>
         </u-alert>
       </template>
       <template #as-host>
-        <u-alert v-if="pageData?.ticket?.state === RbTicketState.Closed" class="mb-2" variant="subtle" title="工单已关闭。" description="你仍然可以作为工作人员回复，但是该队伍无法再追问。" icon="material-symbols:check-rounded" color="success" />
-        <u-alert v-else class="mb-2" variant="subtle" title="将作为工作人员回复。" description="请向该队伍提供必要的帮助。" icon="material-symbols:near-me-outline-rounded" color="warning" />
+        <u-alert v-if="pageData?.ticket?.state === RbTicketState.Closed" class="mb-2" variant="subtle" :title="t('ticket.hostClosedTitle')" :description="t('ticket.hostClosedDesc')" icon="material-symbols:check-rounded" color="success" />
+        <u-alert v-else class="mb-2" variant="subtle" :title="t('ticket.sendAsStaff')" :description="t('ticket.hostReplyDesc')" icon="material-symbols:near-me-outline-rounded" color="warning" />
         <rbph-message-edit
           v-model:draft="draftMessage"
           v-model:content-type="draftContentType"
-          placeholder="回复人工提示请求"
+          :placeholder="t('ticket.staffReplyPlaceholder')"
           :content-types="pageData?.perm.content_type"
           :disabled="submitLoading"
           :loading="!pageData || submitLoading"

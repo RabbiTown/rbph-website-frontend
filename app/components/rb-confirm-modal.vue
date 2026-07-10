@@ -15,6 +15,8 @@ const emits = defineEmits<{
   confirm: [];
 }>();
 
+const { t } = useI18n();
+
 function onConfirm() {
   emits('confirm');
 }
@@ -28,8 +30,8 @@ function onConfirm() {
     <template #footer>
       <slot name="footer">
         <div class="flex justify-end gap-2 w-full">
-          <u-button color="neutral" variant="soft" :disabled="busy" @click="open = false"> 取消 </u-button>
-          <u-button :color="confirmColor ?? 'primary'" :icon="confirmIcon" :loading="busy" :disabled="busy || confirmDisabled" :label="confirmLabel ?? '确认'" @click="onConfirm" />
+          <u-button color="neutral" variant="soft" :disabled="busy" @click="open = false">{{ t('common.cancel') }}</u-button>
+          <u-button :color="confirmColor ?? 'primary'" :icon="confirmIcon" :loading="busy" :disabled="busy || confirmDisabled" :label="confirmLabel ?? t('common.confirm')" @click="onConfirm" />
         </div>
       </slot>
     </template>

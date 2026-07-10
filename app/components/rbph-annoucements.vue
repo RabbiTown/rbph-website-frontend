@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { t } = useI18n();
+
 const props = defineProps<{
   data?: (Partial<RbAnnouncementInfo> & Pick<RbAnnouncementInfo, 'id' | 'content' | 'content_type' | 'utime_at'>)[];
   tag?: string;
@@ -41,8 +43,8 @@ function puzzleRoute(anmt: Partial<RbAnnouncementInfo>, puzzle: RbAnnouncementPu
           <div class="text-sm flex-1 flex flex-wrap justify-between">
             <div>
               {{ anmt.title }}
-              <u-badge v-if="anmt.game_id === null" variant="soft" color="error" class="ms-1">全站</u-badge>
-              <u-badge v-if="anmt.is_pinned" variant="soft" color="warning" class="ms-1">置顶</u-badge>
+              <u-badge v-if="anmt.game_id === null" variant="soft" color="error" class="ms-1">{{ t('components.announcement.allSite') }}</u-badge>
+              <u-badge v-if="anmt.is_pinned" variant="soft" color="warning" class="ms-1">{{ t('components.announcement.pinned') }}</u-badge>
             </div>
             <div v-if="anmt.utime_at" class="text-secondary text-xs flex items-center ms-1">
               <u-icon name="material-symbols:schedule-outline-rounded" class="align-middle me-0.5" />
@@ -57,7 +59,7 @@ function puzzleRoute(anmt: Partial<RbAnnouncementInfo>, puzzle: RbAnnouncementPu
             icon="material-symbols:arrow-forward-rounded"
             :to="puzzleRoute(anmt, anmt.puzzles[0]!)"
           >
-            <span class="hidden md:inline">前往题目</span>
+            <span class="hidden md:inline">{{ t('components.announcement.goToPuzzle') }}</span>
           </u-button>
           <u-icon name="material-symbols:expand-more-rounded" class="-me-1 size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
         </div>
@@ -81,5 +83,5 @@ function puzzleRoute(anmt: Partial<RbAnnouncementInfo>, puzzle: RbAnnouncementPu
       </u-collapsible>
     </u-card>
   </div>
-  <u-empty v-else-if="processedData" icon="material-symbols:contact-support-outline-rounded" title="暂无公告" description="请等待主办方发布" />
+  <u-empty v-else-if="processedData" icon="material-symbols:contact-support-outline-rounded" :title="t('components.announcement.noAnnouncements')" :description="t('components.announcement.waitForPublish')" />
 </template>

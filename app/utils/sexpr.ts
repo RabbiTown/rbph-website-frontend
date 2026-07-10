@@ -101,7 +101,7 @@ function translateSexpr(expr: Sexpr): string | undefined {
   if (!Array.isArray(expr) || typeof expr[0] !== 'string') return undefined;
 
   const [op, ...args] = expr;
-  if (op === 'game-started' && args.length === 0) return '队伍开始游戏';
+  if (op === 'game-started' && args.length === 0) return '队伍开始比赛';
 
   if (op === 'solved' && args.length === 1) {
     const puzzle = refLabel(args[0]);

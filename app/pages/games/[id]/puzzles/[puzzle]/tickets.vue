@@ -1,9 +1,10 @@
 <script setup lang="ts">
+const { t } = useI18n();
 const puzzle = usePuzzle().ref;
 const game = useGame().ref;
 
 useHead({
-  titleTemplate: computed(() => buildTitleParts([{ text: puzzle.value?.data.title, end: ' @ ' }, { text: '人工提示' }, { text: game.value?.title, sep: ' - ' }])),
+  titleTemplate: computed(() => buildTitleParts([{ text: puzzle.value?.data.title, end: ' @ ' }, { text: t('pages.puzzlePage.tickets') }, { text: game.value?.title, sep: ' - ' }])),
 });
 </script>
 

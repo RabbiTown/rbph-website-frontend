@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { MDCNode, MDCParserResult, MDCRoot } from '@nuxtjs/mdc';
 
+const { t } = useI18n();
+
 const props = withDefaults(
   defineProps<{
     content: RbContent;
@@ -168,5 +170,5 @@ watch(
     <MDCRenderer v-if="mdAst?.body" class="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0" :body="mdAst.body" :data="mdAst.data" />
     <u-skeleton v-else class="h-24 w-full" />
   </template>
-  <u-empty v-else description="内容类型无效" />
+  <u-empty v-else :description="t('components.puzzleContent.invalidType')" />
 </template>

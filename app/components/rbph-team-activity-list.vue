@@ -27,6 +27,7 @@ const pageSize = 20;
 const api = useApi();
 const game = useGame().ref;
 const currency = useCurrency().getAllCurrent();
+const { t } = useI18n();
 const activities = ref<RbTeamActivity[]>([]);
 const currencySummary = ref<CurrencyActivitySummary | null>(null);
 const loading = ref(false);
@@ -34,6 +35,8 @@ const pageIndex = ref(0);
 const cursors = ref<(number | undefined)[]>([undefined]);
 const reachedEnd = ref(false);
 const isCurrencyMode = computed(() => props.currencyId !== undefined && props.currencyId !== null);
+
+const selectedCurrency = computed(() => (props.currencyId !== undefined && props.currencyId !== null ? currency.value[props.currencyId] : undefined));
 
 const paginationTotal = computed(() => {
   if (activities.value.length === 0) return 0;
@@ -80,7 +83,7 @@ async function loadPage(index: number) {
     reachedEnd.value = data.length < pageSize;
     emit('updated', Date.now());
   } catch (error) {
-    handleError(error, '队伍动态获取失败');
+    handleError(error, t('activity.loadFailed'));
   } finally {
     loading.value = false;
   }
@@ -132,97 +135,117 @@ function formatCurrencyCost(currencyId: number | null | undefined, amount: numbe
 
 function activityView(activity: RbTeamActivity) {
   const data = activity.data;
-  const puzzleTitle = activitySimpleNamedLabel(data.puzzle, '题目');
-  const hintTitle = activitySimpleNamedLabel(data.hint, '提示');
-  const teamTitle = activitySimpleNamedLabel(data.team, '队伍');
-  const ticketTitle = activityTicketLabel(data.ticket, data.puzzle);
+  const puzzle = data.puzzle?.title ?? data.puzzle?.name ?? '';
+  const hint = data.hint?.title ?? data.hint?.name ?? '';
+  const teamName = data.team?.name ?? data.team?.title ?? '';
+  const ticketId = data.ticket?.id ?? '';
   const currencyText = formatActivityLogCurrency(activity);
   const targetUser = activityUserLabel(data.target_user, activity.target_user_id);
-  const actorTitle = (action: string) => activityActorTitle(activity, action, true);
+  const actor = activityUserLabel(data.user, activity.user_id) || (activity.type.startsWith('team.member.') ? t('activity.teamManagement') : '');
   const accessChangeLabels: Record<string, string> = {
-    'team:banned': '封禁了队伍',
-    'team:unbanned': '解封了队伍',
-    'team:locked': '锁定了队伍',
-    'team:unlocked': '解锁了队伍',
-    'direct_message:banned': '封禁了站内信',
-    'direct_message:unbanned': '解封了站内信',
-    'puzzle_ticket:banned': '封禁了人工提示',
-    'puzzle_ticket:unbanned': '解封了人工提示',
-    'leaderboard:banned': '封禁了排行榜',
-    'leaderboard:unbanned': '解封了排行榜',
+    'team:banned': t('activityLog.access.teamBanned'),
+    'team:unbanned': t('activityLog.access.teamUnbanned'),
+    'team:locked': t('activityLog.access.teamLocked'),
+    'team:unlocked': t('activityLog.access.teamUnlocked'),
+    'direct_message:banned': t('activityLog.access.directMessageBanned'),
+    'direct_message:unbanned': t('activityLog.access.directMessageUnbanned'),
+    'puzzle_ticket:banned': t('activityLog.access.puzzleTicketBanned'),
+    'puzzle_ticket:unbanned': t('activityLog.access.puzzleTicketUnbanned'),
+    'leaderboard:banned': t('activityLog.access.leaderboardBanned'),
+    'leaderboard:unbanned': t('activityLog.access.leaderboardUnbanned'),
   };
 
   switch (activity.type) {
     case 'team.created':
-      return { icon: 'material-symbols:group-add-outline-rounded', color: 'success' as const, title: actorTitle(`创建了队伍${data.team?.name ? teamTitle : ''}`), details: [] };
+      return { icon: 'material-symbols:group-add-outline-rounded', color: 'success' as const, title: t('activityLog.teamCreated', { actor, team: teamName }), details: [] };
     case 'team.updated':
-      return { icon: 'material-symbols:edit-outline-rounded', color: 'neutral' as const, title: actorTitle('更新了队伍信息'), details: [] };
+      return { icon: 'material-symbols:edit-outline-rounded', color: 'neutral' as const, title: t('activityLog.teamUpdated', { actor }), details: [] };
     case 'team.access_changed': {
       const changes = (data.changes ?? []).map(change => accessChangeLabels[`${change.target === 'feature' ? change.feature : 'team'}:${change.action}`]).filter(Boolean);
+      const restricted = (data.changes ?? []).some(change => change.action === 'banned' || change.action === 'locked');
       const reason = typeof data.reason === 'string' ? data.reason.trim() : '';
       return {
         icon: 'material-symbols:admin-panel-settings-outline-rounded',
-        color: changes.some(change => change.startsWith('封禁') || change.startsWith('锁定')) ? ('warning' as const) : ('primary' as const),
-        title: actorTitle(changes.length > 0 ? changes.join('、') : '调整了队伍权限'),
-        details: reason ? [`原因：${reason}`] : [],
+        color: restricted ? ('warning' as const) : ('primary' as const),
+        title: t('activityLog.teamAccessChanged', { actor, changes }),
+        details: reason ? [t('activity.reasonDetail', { reason })] : [],
       };
     }
     case 'team.member.joined':
-      return { icon: 'material-symbols:person-add-outline-rounded', color: 'success' as const, title: actorTitle('加入了队伍'), details: [] };
+      return { icon: 'material-symbols:person-add-outline-rounded', color: 'success' as const, title: t('activityLog.memberJoined', { actor }), details: [] };
     case 'team.member.left':
-      return { icon: 'material-symbols:logout-rounded', color: 'neutral' as const, title: actorTitle('离开了队伍'), details: [] };
+      return { icon: 'material-symbols:logout-rounded', color: 'neutral' as const, title: t('activityLog.memberLeft', { actor }), details: [] };
     case 'team.member.kicked':
-      return { icon: 'material-symbols:person-remove-outline-rounded', color: 'warning' as const, title: actorTitle(targetUser ? `移除了成员 ${targetUser}` : '移除了成员'), details: [] };
+      return { icon: 'material-symbols:person-remove-outline-rounded', color: 'warning' as const, title: t('activityLog.memberKicked', { actor, target: targetUser }), details: [] };
     case 'team.member.promoted':
-      return { icon: 'material-symbols:award-star-outline-rounded', color: 'primary' as const, title: actorTitle(targetUser ? `将 ${targetUser} 设置为队长` : '变更了队长'), details: [] };
+      return { icon: 'material-symbols:award-star-outline-rounded', color: 'primary' as const, title: t('activityLog.memberPromoted', { actor, target: targetUser }), details: [] };
     case 'submission.judged':
     case 'submission.backend_added': {
       const submission = data.submission;
-      const consequences = activityConsequenceText(activity, id => currency.value[id], formatDate);
-      const answer = submission?.answer !== undefined && submission.answer !== null ? ` [${submission.answer}]` : '';
+      const consequences = activityConsequenceText(activity, id => currency.value[id], formatDate, t);
+      const answer = submission?.answer !== undefined && submission.answer !== null ? submission.answer : '';
       return {
         icon: 'material-symbols:assignment-turned-in-outline-rounded',
         color: submission?.action !== undefined && submission.action !== null && submission.action > 0 ? ('success' as const) : submission?.action === 0 ? ('warning' as const) : ('info' as const),
-        title: actorTitle(`向${puzzleTitle}提交了答案${answer}`),
-        details: [`提交结果：${activityJudgeResultLabel(submission?.action)}${consequences ? `（${consequences}）` : ''}${submission?.result ? `（${submission.result}）` : ''}`],
+        title: t('activityLog.submittedAnswer', { actor, puzzle, answer }),
+        details: [
+          t('activityLog.submissionDetail', {
+            result: activityJudgeResultLabel(submission?.action, t),
+            consequences: consequences ? t('activityLog.consequenceGroup', { text: consequences }) : '',
+            feedback: submission?.result ? t('activityLog.consequenceGroup', { text: submission.result }) : '',
+          }),
+        ],
       };
     }
     case 'puzzle.solved':
     case 'puzzle.backend_solved':
-      return { icon: 'material-symbols:check-circle-outline-rounded', color: 'success' as const, title: actorTitle(`解出了${puzzleTitle}`), details: [] };
+      return { icon: 'material-symbols:check-circle-outline-rounded', color: 'success' as const, title: t('activityLog.solvedPuzzle', { actor, puzzle }), details: [] };
     case 'puzzle.unlocked':
-      return { icon: 'material-symbols:lock-open-outline-rounded', color: 'primary' as const, title: `开放了题目${puzzleTitle}`, details: [] };
+      return { icon: 'material-symbols:lock-open-outline-rounded', color: 'primary' as const, title: t('activityLog.openedPuzzle', { puzzle }), details: [] };
     case 'game.started':
-      return { icon: 'material-symbols:flag-outline-rounded', color: 'success' as const, title: actorTitle('开始了比赛'), details: [] };
+      return { icon: 'material-symbols:flag-outline-rounded', color: 'success' as const, title: t('activityLog.startedGame', { actor }), details: [] };
     case 'hint.purchased':
       return {
         icon: 'material-symbols:emoji-objects-outline-rounded',
         color: 'primary' as const,
-        title: actorTitle(`在${puzzleTitle}解锁了提示${hintTitle}`),
-        details: [data.hint?.cost_id && data.hint?.cost_amount ? `已花费 ${formatCurrencyCost(data.hint.cost_id, data.hint.cost_amount)} 解锁提示` : ''].filter(Boolean),
+        title: t('activityLog.unlockedHint', { actor, hint, puzzle }),
+        details: [data.hint?.cost_id && data.hint?.cost_amount ? t('activityLog.spentHint', { amount: formatCurrencyCost(data.hint.cost_id, data.hint.cost_amount) }) : ''].filter(Boolean),
       };
     case 'currency.penalty':
-      return { icon: 'material-symbols:payments-outline-rounded', color: 'warning' as const, title: actorTitle(data.puzzle?.title ? `在${puzzleTitle}提交答案错误惩罚` : '提交答案错误惩罚'), details: [`变动：${currencyText}`] };
+      return { icon: 'material-symbols:payments-outline-rounded', color: 'warning' as const, title: puzzle ? t('activityLog.wrongSubmissionPenalty', { actor, puzzle }) : t('activityLog.submissionPenalty', { actor }), details: [t('activityLog.currencyChange', { change: currencyText })] };
     case 'currency.cost':
     case 'currency.added':
       return {
         icon: 'material-symbols:account-balance-wallet-outline-rounded',
         color: activity.delta_amount && activity.delta_amount < 0 ? ('warning' as const) : ('success' as const),
-        title: actorTitle(activityCurrencyReasonTitle(activity)),
-        details: [`变动：${currencyText}${activityCurrencyAfter(activity) ? `；余额：${activityCurrencyAfter(activity)}` : ''}`].filter(Boolean),
+        title: activityCurrencyReasonTitle(activity, t),
+        details: [t('activityLog.currencyDetail', { change: currencyText, balance: activityCurrencyAfter(activity) })],
       };
     case 'ticket.opened':
-      return { icon: 'material-symbols:near-me-outline-rounded', color: 'success' as const, title: actorTitle(`开启了人工提示${ticketTitle}`), details: [] };
+      return { icon: 'material-symbols:near-me-outline-rounded', color: 'success' as const, title: t('activityLog.openedTicket', { actor, puzzle, ticketId }), details: [] };
     case 'ticket.closed':
-      return { icon: 'material-symbols:check-circle-outline-rounded', color: 'neutral' as const, title: actorTitle(`关闭了人工提示${ticketTitle}`), details: [] };
+      return { icon: 'material-symbols:check-circle-outline-rounded', color: 'neutral' as const, title: t('activityLog.closedTicket', { actor, puzzle, ticketId }), details: [] };
     case 'ticket.message_purchased':
-      return { icon: 'material-symbols:mark-email-read-outline-rounded', color: 'primary' as const, title: actorTitle(`在人工提示${ticketTitle}中购买了付费消息`), details: [] };
+      return { icon: 'material-symbols:mark-email-read-outline-rounded', color: 'primary' as const, title: t('activityLog.purchasedTicketMessage', { actor, puzzle, ticketId }), details: [] };
     default:
-      return { icon: 'material-symbols:history-rounded', color: 'neutral' as const, title: actorTitle(activity.type), details: [] };
+      return { icon: 'material-symbols:history-rounded', color: 'neutral' as const, title: `${actor} ${activity.type}`, details: [] };
   }
 }
 
-const selectedCurrency = computed(() => (props.currencyId !== undefined && props.currencyId !== null ? currency.value[props.currencyId] : undefined));
+function activityIconClass(activity: RbTeamActivity) {
+  const color = activityView(activity).color;
+  if (color === 'success') return 'size-4 text-success';
+  if (color === 'warning') return 'size-4 text-warning';
+  if (color === 'primary') return 'size-4 text-primary';
+  if (color === 'info') return 'size-4 text-info';
+  return 'size-4 text-muted';
+}
+
+watch(
+  () => [game.value?.id, props.currencyId] as const,
+  () => reloadActivities(),
+  { immediate: true },
+);
 
 const currencyRows = computed<CurrencyActivityRow[]>(() => {
   const rows: CurrencyActivityRow[] = [];
@@ -255,15 +278,10 @@ const currencyRows = computed<CurrencyActivityRow[]>(() => {
 const currencyColumns = computed<TableColumn<CurrencyActivityRow>[]>(() => [
   {
     accessorKey: 'event',
-    header: '事件',
+    header: t('activity.event'),
     cell: ({ row }) => {
-      if (row.original.kind === 'auto') {
-        return h('div', { class: 'wrap-break-word py-1 text-sm font-medium text-highlighted' }, '随时间变化自动获得');
-      }
-      if (row.original.kind === 'init') {
-        return h('div', { class: 'wrap-break-word py-1 text-sm font-medium text-highlighted' }, '初始获得');
-      }
-
+      if (row.original.kind === 'auto') return h('div', { class: 'wrap-break-word py-1 text-sm font-medium text-highlighted' }, t('activity.automaticGain'));
+      if (row.original.kind === 'init') return h('div', { class: 'wrap-break-word py-1 text-sm font-medium text-highlighted' }, t('activity.initialGain'));
       const activity = row.original.activity;
       const view = activityView(activity);
       return h('div', { class: 'min-w-0 py-1' }, [h('div', { class: 'wrap-break-word text-sm font-medium text-highlighted' }, view.title), h('time', { class: 'mt-1 block text-xs text-muted' }, formatDate(activity.ctime_at))]);
@@ -277,7 +295,7 @@ const currencyColumns = computed<TableColumn<CurrencyActivityRow>[]>(() => [
   },
   {
     accessorKey: 'delta',
-    header: '变动',
+    header: t('activity.change'),
     cell: ({ row }) => {
       const delta = row.original.kind === 'activity' ? Number(row.original.activity.data.delta ?? row.original.activity.delta_amount ?? 0) : row.original.delta;
       const color = delta > 0 ? 'text-success' : delta < 0 ? 'text-warning' : 'text-muted';
@@ -292,7 +310,7 @@ const currencyColumns = computed<TableColumn<CurrencyActivityRow>[]>(() => [
   },
   {
     accessorKey: 'balance',
-    header: '结余',
+    header: t('activity.balance'),
     cell: ({ row }) => {
       const balance = row.original.kind === 'activity' ? Number(row.original.activity.data.after ?? 0) : row.original.balance;
       return h('span', { class: 'text-highlighted' }, formatCurrencyBalance(balance));
@@ -306,21 +324,6 @@ const currencyColumns = computed<TableColumn<CurrencyActivityRow>[]>(() => [
   },
 ]);
 
-function activityIconClass(activity: RbTeamActivity) {
-  const color = activityView(activity).color;
-  if (color === 'success') return 'size-4 text-success';
-  if (color === 'warning') return 'size-4 text-warning';
-  if (color === 'primary') return 'size-4 text-primary';
-  if (color === 'info') return 'size-4 text-info';
-  return 'size-4 text-muted';
-}
-
-watch(
-  () => [game.value?.id, props.currencyId] as const,
-  () => reloadActivities(),
-  { immediate: true },
-);
-
 defineExpose({
   reload: reloadActivities,
 });
@@ -330,9 +333,9 @@ defineExpose({
   <div>
     <div v-if="loading && activities.length === 0" class="flex items-center gap-2 py-1 text-sm text-muted">
       <u-icon name="material-symbols:progress-activity" class="size-4 animate-spin" />
-      <span>加载中</span>
+      <span>{{ t('common.loading') }}</span>
     </div>
-    <div v-else-if="isCurrencyMode ? currencyRows.length === 0 : activities.length === 0" class="text-sm text-muted">暂无记录</div>
+    <div v-else-if="isCurrencyMode ? currencyRows.length === 0 : activities.length === 0" class="text-sm text-muted">{{ t('activity.noRecords') }}</div>
     <u-table v-else-if="isCurrencyMode" :loading="loading" :data="currencyRows" :columns="currencyColumns" :ui="{ base: 'table-fixed w-full' }" />
     <div v-else class="divide-y divide-default">
       <div v-for="activity in activities" :key="activity.id" :class="['flex gap-3 py-4 first:pt-0 last:pb-0', activityView(activity).details.length === 0 ? 'items-center' : 'items-start']">
@@ -342,7 +345,7 @@ defineExpose({
         <div class="min-w-0 flex-1">
           <div :class="['flex justify-between gap-3', activityView(activity).details.length === 0 ? 'items-center' : 'items-start']">
             <div class="min-w-0 wrap-break-word text-sm font-medium text-highlighted">
-              <u-badge v-if="isStaffActivityLog(activity)" size="sm" color="warning" variant="soft" class="mr-1 align-middle mb-0.5">工作人员</u-badge>
+              <u-badge v-if="isStaffActivityLog(activity)" size="sm" color="warning" variant="soft" class="mr-1 align-middle mb-0.5">{{ t('activity.staff') }}</u-badge>
               <span>{{ activityView(activity).title }}</span>
               <time class="mt-1 block text-xs font-normal text-muted sm:hidden">{{ formatDate(activity.ctime_at) }}</time>
             </div>

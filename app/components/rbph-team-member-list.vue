@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { t, tm } = useI18n();
+
 const props = withDefaults(
   defineProps<{
     members: RbTeamMember[];
@@ -34,35 +36,35 @@ function removeDisabled() {
 }
 
 function removeHint() {
-  if (props.locked && !props.allowLockedManagement) return '队伍已锁定，不能移除成员';
-  if (props.members.length <= 1) return '不能移除最后一个成员';
-  return '移除成员';
+  if (props.locked && !props.allowLockedManagement) return t('components.teamMemberList.lockedRemoveHint');
+  if (props.members.length <= 1) return t('components.teamMemberList.lastMemberRemoveHint');
+  return t('components.teamMemberList.remove');
 }
 </script>
 
 <template>
   <div class="divide-y divide-default rounded-lg bg-elevated/60 px-4 ring ring-default">
     <div v-for="member in sortedMembers" :key="member.id" class="flex items-center justify-between gap-3 py-3">
-      <rb-user :name="member.nickname" :description="`加入于 ${formatDate(member.ctime_at)}`" :avatar="{ src: member.avatar, text: member.nickname, icon: 'material-symbols:person-2-rounded' }" class="min-w-0">
+      <rb-user :name="member.nickname" :description="t('components.teamMemberList.joinedAt', { time: formatDate(member.ctime_at) })" :avatar="{ src: member.avatar, text: member.nickname, icon: 'material-symbols:person-2-rounded' }" class="min-w-0">
         <template #name>
           <div class="flex min-w-0 items-center gap-2">
             <span class="truncate font-medium text-highlighted">{{ member.nickname }}</span>
-            <u-badge v-if="member.is_captain" color="primary" variant="soft">队长</u-badge>
-            <u-badge v-if="member.id === currentUserId" color="neutral" variant="soft">你</u-badge>
+            <u-badge v-if="member.is_captain" color="primary" variant="soft">{{ t('components.teamMemberList.captain') }}</u-badge>
+            <u-badge v-if="member.id === currentUserId" color="neutral" variant="soft">{{ t('components.teamMemberList.you') }}</u-badge>
           </div>
         </template>
       </rb-user>
 
       <div v-if="canManage && !member.is_captain" class="flex shrink-0 gap-1">
         <u-popover arrow>
-          <rb-tooltip text="设为队长">
+          <rb-tooltip :text="t('components.teamMemberList.setCaptain')">
             <u-button icon="material-symbols:workspace-premium-outline-rounded" color="neutral" variant="ghost" :disabled="busy" />
           </rb-tooltip>
           <template #content>
             <div class="w-56 p-3 text-sm">
-              <div class="font-medium text-highlighted">将 {{ member.nickname }} 设为队长？</div>
+              <div class="font-medium text-highlighted">{{ t('components.teamMemberList.confirmSetCaptain', { name: member.nickname }) }}</div>
               <div class="mt-3 flex justify-end">
-                <u-button size="xs" color="primary" variant="soft" icon="material-symbols:workspace-premium-outline-rounded" :loading="busy" label="确认" @click="emit('promote', member)" />
+                <u-button size="xs" color="primary" variant="soft" icon="material-symbols:workspace-premium-outline-rounded" :loading="busy" :label="t('components.teamMemberList.confirm')" @click="emit('promote', member)" />
               </div>
             </div>
           </template>
@@ -76,10 +78,10 @@ function removeHint() {
             <u-button icon="material-symbols:person-remove-outline-rounded" color="error" variant="ghost" />
             <template #content>
               <div class="w-56 p-3 text-sm">
-                <div class="font-medium text-highlighted">移除 {{ member.nickname }}？</div>
-                <div class="mt-1 text-xs text-muted">这个操作不可撤销。</div>
+                <div class="font-medium text-highlighted">{{ t('components.teamMemberList.confirmRemove', { name: member.nickname }) }}</div>
+                <div class="mt-1 text-xs text-muted">{{ t('components.teamMemberList.confirmRemoveDesc') }}</div>
                 <div class="mt-3 flex justify-end">
-                  <u-button size="xs" color="error" variant="soft" icon="material-symbols:person-remove-outline-rounded" :loading="busy" label="确认移除" @click="emit('remove', member)" />
+                  <u-button size="xs" color="error" variant="soft" icon="material-symbols:person-remove-outline-rounded" :loading="busy" :label="t('components.teamMemberList.confirmRemoveButton')" @click="emit('remove', member)" />
                 </div>
               </div>
             </template>

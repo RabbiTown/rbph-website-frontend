@@ -1,6 +1,8 @@
 <script setup lang="ts">
+const { t } = useI18n();
+
 useHead({
-  titleTemplate: '选择比赛 - RBPH',
+  titleTemplate: computed(() => t('pages.transit.headTitle')),
 });
 
 const api = useApi();
@@ -57,7 +59,7 @@ try {
 
     <section v-else-if="games.length > 1" class="w-full space-y-5">
       <div>
-        <h1 class="text-2xl font-semibold text-highlighted">选择比赛</h1>
+        <h1 class="text-2xl font-semibold text-highlighted">{{ t('pages.transit.title') }}</h1>
       </div>
 
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -84,9 +86,9 @@ try {
       </div>
     </section>
 
-    <u-empty v-else-if="games.length === 0" class="w-full" icon="material-symbols:event-busy-outline-rounded" title="暂无公开活动">
+    <u-empty v-else-if="games.length === 0" class="w-full" icon="material-symbols:event-busy-outline-rounded" :title="t('pages.transit.noGames')">
       <template v-if="!userMgr.ref.value" #actions>
-        <u-button to="/login" color="neutral" variant="outline" icon="material-symbols:login-rounded" label="登录" />
+        <u-button to="/login" color="neutral" variant="outline" icon="material-symbols:login-rounded" :label="t('pages.transit.login')" />
       </template>
     </u-empty>
   </main>

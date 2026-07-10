@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n();
 import type { BreadcrumbItem, NavigationMenuItem } from '@nuxt/ui';
 
 const { puzzle, puzzleRoute, roundRoute } = usePuzzleContext();
@@ -9,23 +10,23 @@ const navItems = computed<NavigationMenuItem[]>(() =>
   puzzleId.value
     ? [
         {
-          label: '题目',
+          label: t('pages.puzzlePage.puzzle'),
           icon: 'material-symbols:extension-outline-rounded',
           to: puzzleRoute(),
           exact: true,
         },
         {
-          label: '提示',
+          label: t('pages.puzzlePage.hints'),
           icon: 'material-symbols:lightbulb-outline-rounded',
           to: puzzleRoute('hints'),
         },
         {
-          label: '提交记录',
+          label: t('pages.puzzlePage.submissions'),
           icon: 'material-symbols:history-rounded',
           to: puzzleRoute('submissions'),
         },
         {
-          label: '人工提示',
+          label: t('pages.puzzlePage.tickets'),
           icon: 'material-symbols:near-me-outline-rounded',
           to: puzzleRoute('tickets'),
         },
@@ -82,7 +83,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
       </div>
       <div class="mt-2 text-secondary ms-0.5 text-xs">
         <u-icon name="material-symbols:schedule-outline-rounded" class="align-middle mb-0.5" />
-        解锁于 {{ formatDate(puzzle?.state.utime_at) }}
+        {{ t('pages.puzzlePage.unlockedAt', { time: formatDate(puzzle?.state.utime_at) }) }}
       </div>
     </div>
 

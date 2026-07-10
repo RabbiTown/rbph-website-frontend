@@ -17,15 +17,21 @@ export enum RbErrorCode {
   InternalServerError = -100,
 }
 
-export const defaultErrorHints: Record<number, string> = {
-  [RbErrorCode.ServiceUnavailable]: '认证服务暂时不可用，请稍后重试。',
-  [RbErrorCode.TooManyRequests]: '操作过于频繁，请稍后重试。',
-  [RbErrorCode.CaptchaUnavailable]: '验证码服务暂时不可用。',
-  [RbErrorCode.CaptchaInvalid]: '验证码验证失败，请重试。',
-  [RbErrorCode.Maintenance]: '系统正在维护。',
-  [RbErrorCode.NotFound]: '请求的资源不存在。',
-  [RbErrorCode.Forbidden]: '权限不足。',
-  [RbErrorCode.Unauthorized]: '登录失效，请重新登录。',
-  [RbErrorCode.InternalServerError]: '出现内部错误，请联系管理员。',
-  [RbErrorCode.PasswordChangeRequired]: '必须先修改临时密码。',
+const defaultErrorHintKeys: Record<number, string> = {
+  [RbErrorCode.ServiceUnavailable]: 'errors.serviceUnavailable',
+  [RbErrorCode.TooManyRequests]: 'errors.tooManyRequests',
+  [RbErrorCode.CaptchaUnavailable]: 'errors.captchaUnavailable',
+  [RbErrorCode.CaptchaInvalid]: 'errors.captchaInvalid',
+  [RbErrorCode.Maintenance]: 'errors.maintenance',
+  [RbErrorCode.NotFound]: 'errors.notFound',
+  [RbErrorCode.Forbidden]: 'errors.forbidden',
+  [RbErrorCode.Unauthorized]: 'errors.unauthorized',
+  [RbErrorCode.InternalServerError]: 'errors.internalServerError',
+  [RbErrorCode.PasswordChangeRequired]: 'errors.passwordChangeRequired',
 };
+
+export function defaultErrorHint(code: number | undefined, t?: (key: string) => string) {
+  if (code === undefined) return undefined;
+  const key = defaultErrorHintKeys[code];
+  return key ? (t ? t(key) : key) : undefined;
+}

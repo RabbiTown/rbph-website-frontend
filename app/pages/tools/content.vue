@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { SelectItem } from '@nuxt/ui/runtime/components/Select.vue.js';
 
+const { t } = useI18n();
+
 useHead({
-  titleTemplate: '内容测试页 - RBPH',
+  titleTemplate: computed(() => t('pages.contentTest.headTitle')),
 });
 
 const content = reactive<RbContent>({
@@ -17,7 +19,7 @@ const typeItems = [
     icon: 'material-symbols:markdown-outline-rounded',
   },
   {
-    label: 'Html',
+    label: 'HTML',
     value: RbContentType.Html,
     icon: 'material-symbols:code-blocks-outline-rounded',
   },
@@ -35,7 +37,7 @@ const full = ref(false);
   <u-container class="h-screen flex flex-col">
     <div class="py-6">
       <div class="flex items-baseline justify-between md:flex-row flex-col">
-        <div class="text-3xl font-bold">内容测试页</div>
+        <div class="text-3xl font-bold">{{ t('pages.contentTest.title') }}</div>
       </div>
     </div>
     <div class="flex flex-1 pb-6 gap-4">

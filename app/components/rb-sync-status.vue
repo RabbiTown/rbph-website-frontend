@@ -3,6 +3,7 @@ const STORAGE_KEY = 'rbph::sync-status-position';
 const HEADER_OFFSET = 72;
 const VIEWPORT_MARGIN = 12;
 
+const { t, locale } = useI18n();
 const sync = useSync();
 const panel = useTemplateRef<HTMLElement>('panel');
 const position = reactive<{ side: 'left' | 'right'; offset: number; y: number; dragX?: number }>({
@@ -19,24 +20,24 @@ let panelResizeObserver: ResizeObserver | undefined;
 const status = computed(() => {
   switch (sync.state.value) {
     case 'connecting':
-      return { label: '同步中', title: '连接同步服务中', description: '正在建立实时数据连接。', icon: 'material-symbols:sync-rounded', color: 'warning' as const, iconClass: 'text-warning' };
+      return { label: t('components.syncStatus.connecting.label'), title: t('components.syncStatus.connecting.title'), description: t('components.syncStatus.connecting.description'), icon: 'material-symbols:sync-rounded', color: 'warning' as const, iconClass: 'text-warning' };
     case 'online':
-      return { label: '已连接', title: '同步服务已连接', description: '实时数据同步正常。', icon: 'material-symbols:cloud-done-outline-rounded', color: 'success' as const, iconClass: 'text-success' };
+      return { label: t('components.syncStatus.online.label'), title: t('components.syncStatus.online.title'), description: t('components.syncStatus.online.description'), icon: 'material-symbols:cloud-done-outline-rounded', color: 'success' as const, iconClass: 'text-success' };
     case 'reconnecting':
-      return { label: '重连中', title: '同步服务已断开', description: '正在尝试重新连接。', icon: 'material-symbols:sync-disabled-rounded', color: 'warning' as const, iconClass: 'text-warning' };
+      return { label: t('components.syncStatus.reconnecting.label'), title: t('components.syncStatus.reconnecting.title'), description: t('components.syncStatus.reconnecting.description'), icon: 'material-symbols:sync-disabled-rounded', color: 'warning' as const, iconClass: 'text-warning' };
     case 'limited':
-      return { label: '连接受限', title: '同步连接已被替换', description: '该账号的连接数超过系统上限。重新连接可能断开其他页面。', icon: 'material-symbols:devices-off-outline-rounded', color: 'error' as const, iconClass: 'text-error' };
+      return { label: t('components.syncStatus.limited.label'), title: t('components.syncStatus.limited.title'), description: t('components.syncStatus.limited.description'), icon: 'material-symbols:devices-off-outline-rounded', color: 'error' as const, iconClass: 'text-error' };
     case 'unsupported':
-      return { label: '不支持', title: '浏览器不支持同步服务', description: '请升级浏览器后重新打开页面。', icon: 'material-symbols:sync-problem-rounded', color: 'error' as const, iconClass: 'text-error' };
+      return { label: t('components.syncStatus.unsupported.label'), title: t('components.syncStatus.unsupported.title'), description: t('components.syncStatus.unsupported.description'), icon: 'material-symbols:sync-problem-rounded', color: 'error' as const, iconClass: 'text-error' };
     default:
       return undefined;
   }
 });
 
 const transportLabel = computed(() => {
-  if (sync.debug.transport.value === 'shared-worker') return `SharedWorker (${sync.debug.sharedClientCount.value})`;
-  if (sync.debug.transport.value === 'direct') return 'Direct WebSocket';
-  return '尚未选择';
+  if (sync.debug.transport.value === 'shared-worker') return t('components.syncStatus.transport.sharedWorker', { count: sync.debug.sharedClientCount.value });
+  if (sync.debug.transport.value === 'direct') return t('components.syncStatus.transport.directWebSocket');
+  return t('components.syncStatus.transport.unset');
 });
 
 const panelStyle = computed(() => {
@@ -129,7 +130,7 @@ function updatePopover(open: boolean) {
 }
 
 function debugTime(value: number) {
-  return new Date(value).toLocaleString('zh-CN', { hour12: false });
+  return new Date(value).toLocaleString(locale.value, { hour12: false });
 }
 
 function clampSavedPosition() {
@@ -200,8 +201,8 @@ onBeforeUnmount(() => {
   <transition enter-active-class="transition duration-200 ease-out" enter-from-class="translate-y-2 opacity-0" leave-active-class="transition duration-150 ease-in" leave-to-class="translate-y-2 opacity-0">
     <div v-if="status" ref="panel" role="status" :style="panelStyle" class="fixed z-50">
       <u-popover :open="popoverOpen" arrow :content="{ side: 'bottom', align: 'end', sideOffset: 8 }" @update:open="updatePopover">
-        <button type="button" class="grid cursor-grab touch-none rounded active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" aria-label="查看或拖动同步状态" @pointerdown="startDragging">
-          <u-badge aria-hidden="true" size="sm" variant="soft" color="error" icon="material-symbols:devices-off-outline-rounded" class="invisible col-start-1 row-start-1">连接受限</u-badge>
+        <button type="button" class="grid cursor-grab touch-none rounded active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" :aria-label="t('components.syncStatus.buttonAria')" @pointerdown="startDragging">
+          <u-badge aria-hidden="true" size="sm" variant="soft" color="error" icon="material-symbols:devices-off-outline-rounded" class="invisible col-start-1 row-start-1">{{ t('components.syncStatus.limited.label') }}</u-badge>
           <transition enter-active-class="transition-all duration-150" enter-from-class="translate-y-1 opacity-0" leave-active-class="transition-all duration-150" leave-to-class="-translate-y-1 opacity-0">
             <u-badge :key="sync.state.value" size="sm" variant="soft" :color="status.color" :icon="status.icon" class="col-start-1 row-start-1 justify-self-center">{{ status.label }}</u-badge>
           </transition>
@@ -216,31 +217,31 @@ onBeforeUnmount(() => {
               </div>
             </div>
             <div v-if="sync.state.value === 'limited'" class="mt-3 flex justify-end">
-              <u-button size="xs" color="neutral" variant="soft" icon="material-symbols:sync-rounded" label="重新连接" @click="sync.reconnect" />
+              <u-button size="xs" color="neutral" variant="soft" icon="material-symbols:sync-rounded" :label="t('components.syncStatus.reconnect')" @click="sync.reconnect" />
             </div>
             <u-collapsible class="mt-3 border-t border-default pt-3" :unmount-on-hide="false">
               <button type="button" class="group flex w-full cursor-pointer items-center justify-between gap-2 text-xs font-medium text-highlighted">
-                <span>调试信息</span>
+                <span>{{ t('components.syncStatus.debug.title') }}</span>
                 <u-icon name="material-symbols:expand-more-rounded" class="size-4 text-muted transition-transform group-data-[state=open]:rotate-180" />
               </button>
               <template #content>
                 <dl class="mt-2 grid grid-cols-[5rem_minmax(0,1fr)] gap-x-2 gap-y-1.5 text-xs">
-                  <dt class="text-muted">状态</dt>
+                  <dt class="text-muted">{{ t('components.syncStatus.debug.state') }}</dt>
                   <dd class="font-mono text-toned">{{ sync.state.value }}</dd>
-                  <dt class="text-muted">本地同步</dt>
+                  <dt class="text-muted">{{ t('components.syncStatus.debug.transport') }}</dt>
                   <dd class="font-mono text-toned">{{ transportLabel }}</dd>
-                  <dt class="text-muted">服务地址</dt>
-                  <dd class="break-all font-mono text-toned">{{ sync.debug.endpoint.value ?? '尚未生成' }}</dd>
-                  <dt class="text-muted">客户端 ID</dt>
+                  <dt class="text-muted">{{ t('components.syncStatus.debug.endpoint') }}</dt>
+                  <dd class="break-all font-mono text-toned">{{ sync.debug.endpoint.value ?? t('components.syncStatus.debug.unset') }}</dd>
+                  <dt class="text-muted">{{ t('components.syncStatus.debug.clientId') }}</dt>
                   <dd class="break-all font-mono text-toned">{{ sync.debug.clientId }}</dd>
-                  <dt class="text-muted">状态变更</dt>
+                  <dt class="text-muted">{{ t('components.syncStatus.debug.stateChangedAt') }}</dt>
                   <dd class="font-mono text-toned">{{ debugTime(sync.debug.stateChangedAt.value) }}</dd>
                   <template v-if="sync.debug.lastClose.value">
-                    <dt class="text-muted">最近关闭</dt>
-                    <dd class="font-mono text-toned">{{ sync.debug.lastClose.value.code }} · {{ sync.debug.lastClose.value.wasClean ? 'clean' : 'unclean' }}</dd>
-                    <dt class="text-muted">关闭原因</dt>
-                    <dd class="break-all font-mono text-toned">{{ sync.debug.lastClose.value.reason || '未提供' }}</dd>
-                    <dt class="text-muted">关闭时间</dt>
+                    <dt class="text-muted">{{ t('components.syncStatus.debug.lastClose') }}</dt>
+                    <dd class="font-mono text-toned">{{ sync.debug.lastClose.value.code }} · {{ sync.debug.lastClose.value.wasClean ? t('components.syncStatus.debug.clean') : t('components.syncStatus.debug.unclean') }}</dd>
+                    <dt class="text-muted">{{ t('components.syncStatus.debug.closeReason') }}</dt>
+                    <dd class="break-all font-mono text-toned">{{ sync.debug.lastClose.value.reason || t('components.syncStatus.debug.notProvided') }}</dd>
+                    <dt class="text-muted">{{ t('components.syncStatus.debug.closeAt') }}</dt>
                     <dd class="font-mono text-toned">{{ debugTime(sync.debug.lastClose.value.at) }}</dd>
                   </template>
                 </dl>
