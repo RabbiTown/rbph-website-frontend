@@ -110,8 +110,6 @@ export default defineNuxtPlugin(() => {
 
     if (data.currency?.length) {
       useCurrency().setData(data.currency);
-    } else {
-      useCurrency().updateData();
     }
 
     if (user.ref.value?.id !== data.user.id) {

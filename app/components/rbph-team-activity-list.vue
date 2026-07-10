@@ -184,7 +184,7 @@ function activityView(activity: RbTeamActivity) {
         icon: 'material-symbols:assignment-turned-in-outline-rounded',
         color: submission?.action !== undefined && submission.action !== null && submission.action > 0 ? ('success' as const) : submission?.action === 0 ? ('warning' as const) : ('info' as const),
         title: actorTitle(`向${puzzleTitle}提交了答案${answer}`),
-        details: [`提交结果：${activityJudgeResultLabel(submission?.action, submission?.ignored)}${consequences ? `（${consequences}）` : ''}${submission?.result ? `（${submission.result}）` : ''}`],
+        details: [`提交结果：${activityJudgeResultLabel(submission?.action)}${consequences ? `（${consequences}）` : ''}${submission?.result ? `（${submission.result}）` : ''}`],
       };
     }
     case 'puzzle.solved':

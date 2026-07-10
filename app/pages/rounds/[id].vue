@@ -24,12 +24,12 @@ const okSubmissionsComp = useTemplateRef('ok-submissions');
 const submitResultComp = useTemplateRef('submit-result');
 
 let fetchToken = 0;
-async function updateData(id: string | undefined = undefined) {
+async function updateData(id: string | undefined = undefined, clearExisting = true) {
   const token = ++fetchToken;
 
   const newId = id || roundId.value;
   if (newId) {
-    round.value = undefined;
+    if (clearExisting) round.value = undefined;
     try {
       const { data } = await api.get<RbRoundUserData>(`/rounds/${newId}`);
       const contents = await api.get<{ contents: RbContentBlock[] }>(`/rounds/${data.data.id}/contents`);
@@ -59,8 +59,6 @@ watch(releaseRevision, () => updateData());
 function onSubmitSuccess(action: RbJudgeAction) {
   if (action > 0) {
     if (action == RbJudgeAction.StartGame) {
-      updateData();
-      useCurrency().updateData();
       useGame().updateRoundState();
     }
     okSubmissionsComp.value?.updateData();
@@ -71,28 +69,24 @@ function onSelfSubmitSuccess(resp: RbJudgeResponse, answer: string) {
   onSubmitSuccess(resp.result.action);
   submitResultComp.value?.updateSuccess(resp.result, answer, resp.currency_penalty);
 
-  if (resp.cooldown_till && round.value?.state.puzzle) {
-    round.value.state.puzzle.cooldown_till = resp.cooldown_till;
-  }
   if (round.value?.state.puzzle) {
-    round.value.state.puzzle = mergePuzzleSubmitState(round.value.state.puzzle, resp.state, resp.result.action);
+    round.value.state.puzzle = applyPuzzleSubmitState(round.value.state.puzzle, {
+      action: resp.result.action,
+      cooldown_till: resp.cooldown_till,
+      solved: resp.solved,
+      state: resp.state,
+    });
   }
   if (resp.currency?.length) {
     useCurrency().setData(resp.currency);
   }
 
-  if (resp.solved && round.value?.state.puzzle) {
-    round.value.state.puzzle.state = RbTeamPuzzleState.Solved;
-  }
-
-  if (resp.unlocks?.some(x => x.round_id === round.value?.data.id)) {
-    updateData();
-  }
-
   if (resp.unlocks && resp.unlocks.length > 0) {
     useGame().updateRoundState();
   }
-  updateData();
+  if (shouldRefreshAfterPuzzleSubmit(resp.result.action, resp.unlocks, round.value?.data.id, resp.content_changed)) {
+    updateData(undefined, false);
+  }
 }
 
 function onSelfSubmitFailed(reason: string, answer: string) {
@@ -104,21 +98,16 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
 
   if (data.puzzle.id === round.value?.data.puzzle && !isSelfEcho) {
     if (round.value.state.puzzle) {
-      round.value.state.puzzle = mergePuzzleSubmitState(round.value.state.puzzle, data.state, data.action);
+      round.value.state.puzzle = applyPuzzleSubmitState(round.value.state.puzzle, data);
     }
     if (data.currency?.length) {
       useCurrency().setData(data.currency);
     }
     onSubmitSuccess(data.action);
-
-    if (data.cooldown_till && round.value.state.puzzle) {
-      round.value.state.puzzle.cooldown_till = data.cooldown_till;
-    }
   }
-  if (!isSelfEcho && ((data.solved && round.value?.state.puzzles.find(x => x.id === data.puzzle.id)) || data.unlocks?.find(x => x.round_id === round.value?.data.id))) {
-    updateData();
+  if (!isSelfEcho && shouldRefreshAfterPuzzleSubmit(data.action, data.unlocks, round.value?.data.id, data.content_changed)) {
+    updateData(undefined, false);
   }
-  else if (!isSelfEcho) updateData();
 });
 </script>
 

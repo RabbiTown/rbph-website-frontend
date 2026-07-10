@@ -122,7 +122,6 @@ async function submitAnswer(answer: string) {
       });
     }
 
-    useCurrency().updateData();
     submitLoading.value = false;
     return data;
   } catch (error) {

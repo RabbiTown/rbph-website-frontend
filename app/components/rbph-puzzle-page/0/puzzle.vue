@@ -16,7 +16,6 @@ const submitRequirementHint = computed(() => {
 });
 
 function onSubmitSuccess(action: RbJudgeAction) {
-  usePuzzle().updateState();
   if (action > 0) {
     if (action === RbJudgeAction.Correct || action === RbJudgeAction.FinishGame) {
       if (puzzle.value) puzzle.value.state.state = RbTeamPuzzleState.Solved;
@@ -33,22 +32,23 @@ function onSelfSubmitSuccess(resp: RbJudgeResponse, answer: string) {
   onSubmitSuccess(resp.result.action);
   submitResultComp.value?.updateSuccess(resp.result, answer, resp.currency_penalty);
 
-  if (resp.cooldown_till && puzzle.value) {
-    puzzle.value.state.cooldown_till = resp.cooldown_till;
-  }
   if (puzzle.value) {
-    puzzle.value.state = mergePuzzleSubmitState(puzzle.value.state, resp.state, resp.result.action);
+    puzzle.value.state = applyPuzzleSubmitState(puzzle.value.state, {
+      action: resp.result.action,
+      cooldown_till: resp.cooldown_till,
+      solved: resp.solved,
+      state: resp.state,
+    });
   }
   if (resp.currency?.length) {
     useCurrency().setData(resp.currency);
   }
 
-  if (resp.solved && puzzle.value) {
-    puzzle.value.state.state = RbTeamPuzzleState.Solved;
-  }
-
   if (resp.unlocks && resp.unlocks.length > 0) {
     useGame().updateRoundState();
+  }
+  if (resp.content_changed) {
+    usePuzzle().updateState();
   }
 }
 
@@ -57,12 +57,11 @@ function onSelfSubmitFailed(reason: string, answer: string) {
 }
 
 useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
-  if (useSid().consume(data.sid)) return;
+  const isSelfEcho = useSid().consume(data.sid);
 
-  if (data.puzzle.id === puzzle.value?.data.id) {
-    usePuzzle().updateState();
+  if (data.puzzle.id === puzzle.value?.data.id && !isSelfEcho) {
     if (puzzle.value) {
-      puzzle.value.state = mergePuzzleSubmitState(puzzle.value.state, data.state, data.action);
+      puzzle.value.state = applyPuzzleSubmitState(puzzle.value.state, data);
     }
     if (data.currency?.length) {
       useCurrency().setData(data.currency);
@@ -70,6 +69,9 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
     if (data.action > 0) {
       okSubmissionsComp.value?.updateData();
     }
+  }
+  if (!isSelfEcho && data.content_changed) {
+    usePuzzle().updateState();
   }
 });
 </script>

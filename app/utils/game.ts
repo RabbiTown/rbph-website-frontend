@@ -95,6 +95,30 @@ export function mergePuzzleSubmitState(current: RbPuzzleTeamData, next: RbPuzzle
   };
 }
 
+export interface PuzzleSubmitStatePatch {
+  action: RbJudgeAction;
+  cooldown_till?: string;
+  solved?: boolean;
+  state?: RbPuzzleTeamData;
+}
+
+export function applyPuzzleSubmitState(current: RbPuzzleTeamData, patch: PuzzleSubmitStatePatch): RbPuzzleTeamData {
+  const next = mergePuzzleSubmitState(current, patch.state, patch.action);
+  if (patch.cooldown_till) {
+    next.cooldown_till = patch.cooldown_till;
+  }
+  if (patch.solved) {
+    next.state = RbTeamPuzzleState.Solved;
+  }
+  return next;
+}
+
+export function shouldRefreshAfterPuzzleSubmit(action: RbJudgeAction, unlocks?: { round_id: number }[], currentRoundId?: number, contentChanged = false): boolean {
+  if (contentChanged) return true;
+  if (action === RbJudgeAction.StartGame || action === RbJudgeAction.FinishGame) return true;
+  return Boolean(currentRoundId !== undefined && unlocks?.some(puzzle => puzzle.round_id === currentRoundId));
+}
+
 export interface RbContent {
   content: string;
   content_type: RbContentType;
@@ -150,6 +174,7 @@ export interface RbJudgeResponse {
   state?: RbPuzzleTeamData;
   currency?: RbTeamCurrency[];
   currency_penalty?: RbCurrencyPenalty[];
+  content_changed?: boolean;
 }
 
 export interface RbSubmission {

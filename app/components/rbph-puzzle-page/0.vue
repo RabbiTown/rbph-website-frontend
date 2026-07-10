@@ -59,20 +59,16 @@ function onSubmitSuccess(action: RbJudgeAction) {
 }
 
 useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
-  if (useSid().consume(data.sid)) return;
+  const isSelfEcho = useSid().consume(data.sid);
 
-  if (data.puzzle.id === puzzle.value?.data.id) {
+  if (data.puzzle.id === puzzle.value?.data.id && !isSelfEcho) {
     if (puzzle.value) {
-      puzzle.value.state = mergePuzzleSubmitState(puzzle.value.state, data.state, data.action);
+      puzzle.value.state = applyPuzzleSubmitState(puzzle.value.state, data);
     }
     if (data.currency?.length) {
       useCurrency().setData(data.currency);
     }
     onSubmitSuccess(data.action);
-
-    if (data.cooldown_till && puzzle.value) {
-      puzzle.value.state.cooldown_till = data.cooldown_till;
-    }
   }
 });
 </script>

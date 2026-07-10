@@ -28,7 +28,6 @@ export interface ActivityLogCurrencyRef {
 export interface ActivityLogSubmission {
   answer?: string | null;
   action?: number | null;
-  ignored?: boolean | null;
   result?: string | null;
 }
 
@@ -132,8 +131,8 @@ export function isStaffActivityLog(entry: ActivityLogEntry) {
   return Boolean(entry.data.staff);
 }
 
-export function activityJudgeResultLabel(action: number | null | undefined, ignored?: boolean | null) {
-  const label = (() => {
+export function activityJudgeResultLabel(action: number | null | undefined) {
+  return (() => {
     switch (action) {
       case -2:
         return '评测故障';
@@ -155,7 +154,6 @@ export function activityJudgeResultLabel(action: number | null | undefined, igno
         return '已记录';
     }
   })();
-  return ignored ? `${label}（不占用提交次数）` : label;
 }
 
 export function formatActivityLogCurrencyAmount(data: ActivityLogPayload, amount: number | null | undefined, signed = true) {
