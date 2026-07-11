@@ -247,7 +247,7 @@ export default defineI18nLocale(() => ({
   nav: {
     home: 'ホーム',
     puzzles: '問題',
-    puzzleRound: '問題エリア',
+    puzzleRound: 'ラウンド',
     joinGame: 'ゲームに参加',
     announcements: 'お知らせ',
     leaderboard: 'ランキング',
@@ -734,7 +734,7 @@ export default defineI18nLocale(() => ({
       growthPerMinute: '1分あたりの増加量',
       puzzleNotFound: '問題が見つかりません。',
       roundNotFound: 'ラウンドが見つかりません。',
-      roundContent: 'ラウンド内容',
+      roundContent: '内容',
       roundSlug: 'ラウンドID',
       enabledState: '状態',
       createFailed: 'コンテンツブロックを作成できませんでした',

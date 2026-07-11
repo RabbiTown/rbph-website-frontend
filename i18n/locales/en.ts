@@ -248,7 +248,7 @@ export default defineI18nLocale(() => ({
   nav: {
     home: 'Home',
     puzzles: 'Puzzles',
-    puzzleRound: 'Puzzle round',
+    puzzleRound: 'Round',
     joinGame: 'Join game',
     announcements: 'Announcements',
     leaderboard: 'Leaderboard',
