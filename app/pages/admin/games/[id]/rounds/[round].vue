@@ -1,5 +1,7 @@
-<script setup lang="ts">
-import type { NavigationMenuItem } from '@nuxt/ui';
+<script setup lang="ts">import type { NavigationMenuItem } from '@nuxt/ui';
+
+
+const { t } = useI18n();
 
 const route = useRoute();
 const api = useApi();
@@ -84,8 +86,8 @@ async function createRoundPuzzle() {
 
     const { data } = await api.post<PuzzleResponse>('/admin/puzzles', body, {
       errorHints: {
-        [-2]: '谜题信息不合法。',
-        [-1]: '谜题不存在。',
+        [-2]: t('admin.common.puzzleInfoInvalid'),
+        [-1]: t('admin.common.puzzleNotFound'),
       },
     });
 
@@ -95,8 +97,8 @@ async function createRoundPuzzle() {
       { puzzle: data.puzzle.id },
       {
         errorHints: {
-          [-2]: '区域信息不合法。',
-          [-1]: '区域不存在。',
+          [-2]: t('admin.common.roundInfoInvalid'),
+          [-1]: t('admin.common.roundNotFound'),
         },
       },
     );
@@ -105,13 +107,13 @@ async function createRoundPuzzle() {
     syncHeaderFromRound();
     createRoundPuzzleOpen.value = false;
     toast.add({
-      title: '区域谜题已创建',
+      title: t('admin.pages.round.roundPuzzleCreated'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
     await navigateTo(`/admin/games/${gameId.value}/puzzles/${data.puzzle.id}/judge`, { replace: true });
   } catch (error) {
-    handleError(error, '创建区域谜题失败');
+    handleError(error, t('admin.pages.round.createRoundPuzzleFailed'));
   } finally {
     creatingRoundPuzzle.value = false;
   }
@@ -135,9 +137,9 @@ async function applyHeader() {
     type Response = { round: AdminRoundData };
     const response = await api.patch<Response>(`/admin/rounds/${round.value.id}`, body, {
       errorHints: {
-        [-2]: '区域标题或 slug 不合法。',
-        [-3]: '区域 slug 不合法或已被使用。',
-        [-1]: '区域不存在。',
+        [-2]: t('admin.pages.round.roundTitleOrSlugInvalid'),
+        [-3]: t('admin.pages.round.roundSlugInvalidOr'),
+        [-1]: t('admin.common.roundNotFound'),
       },
     });
 
@@ -146,13 +148,13 @@ async function applyHeader() {
     await fetchData();
 
     toast.add({
-      title: '区域信息已保存',
+      title: t('admin.pages.round.roundInfoSaved'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
     return true;
   } catch (error) {
-    handleError(error, '保存区域信息失败');
+    handleError(error, t('admin.pages.round.saveRoundInfoFailed'));
     return false;
   } finally {
     headerSaving.value = false;
@@ -168,12 +170,12 @@ async function fetchData() {
     type RoundResponse = { round: AdminRoundData };
     const roundResp = await api.get<RoundResponse>(`/admin/rounds/${roundId.value}`, {
       errorHints: {
-        [-1]: '区域不存在。',
+        [-1]: t('admin.common.roundNotFound'),
       },
     });
 
     if (roundResp.data.round.game_id !== gameId.value) {
-      showError({ statusCode: 404, statusMessage: '区域不存在' });
+      showError({ statusCode: 404, statusMessage: t('admin.pages.round.roundNotFound') });
       return;
     }
 
@@ -182,7 +184,7 @@ async function fetchData() {
   } catch (error) {
     round.value = undefined;
     syncHeaderFromRound();
-    handleError(error, '获取区域信息失败', true);
+    handleError(error, t('admin.pages.round.loadRoundInfoFailed'), true);
   } finally {
     loading.value = false;
   }
@@ -215,18 +217,18 @@ watch(
 );
 
 useHead({
-  titleTemplate: computed(() => buildTitleParts([{ text: round.value?.title }, { text: game.value?.title, sep: ' - ' }, { text: 'RBPH 管理后台', sep: ' - ' }])),
+  titleTemplate: computed(() => buildTitleParts([{ text: round.value?.title }, { text: game.value?.title, sep: ' - ' }, { text: t('admin.common.adminPanelTitle'), sep: ' - ' }])),
 });
 
 const navItems = computed<NavigationMenuItem[]>(() => [
   {
-    label: '区域内容',
+    label: t('admin.common.roundContent'),
     icon: 'material-symbols:article-outline-rounded',
     to: Number.isFinite(gameId.value) && Number.isFinite(roundId.value) ? `/admin/games/${gameId.value}/rounds/${roundId.value}` : undefined,
     exact: true,
   },
   {
-    label: '区域谜题',
+    label: t('admin.common.roundPuzzle'),
     icon: 'material-symbols:grid-view-outline-rounded',
     to: roundPuzzleRoute.value,
     onSelect: event => {
@@ -253,8 +255,8 @@ const navItems = computed<NavigationMenuItem[]>(() => [
                   ref="titleInput"
                   v-model="headerState.title"
                   class="min-w-0 flex-1 bg-transparent text-3xl/10 font-bold text-highlighted outline-none placeholder:text-dimmed"
-                  placeholder="区域标题"
-                  aria-label="区域标题"
+                  :placeholder="t('admin.pages.round.roundTitle')"
+                  :aria-label="t('admin.pages.round.roundTitle')"
                   :disabled="headerSaving"
                   @keydown.enter.prevent="focusContentEditor"
                   @keydown.down.prevent="focusContentEditor"
@@ -268,7 +270,7 @@ const navItems = computed<NavigationMenuItem[]>(() => [
               </div>
 
               <div class="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2">
-                <u-badge v-if="round.puzzle" variant="soft" color="primary" icon="material-symbols:extension-outline-rounded">区域谜题</u-badge>
+                <u-badge v-if="round.puzzle" variant="soft" color="primary" icon="material-symbols:extension-outline-rounded">{{ t('admin.common.roundPuzzle') }}</u-badge>
                 <label
                   v-if="isContentPage || round.slug"
                   class="inline-flex w-max max-w-full items-center gap-1.5 rounded-md px-2 py-1 font-mono text-xs text-muted transition"
@@ -281,7 +283,7 @@ const navItems = computed<NavigationMenuItem[]>(() => [
                     class="min-w-[4ch] max-w-[min(36ch,calc(100vw-8rem))] bg-transparent outline-none placeholder:text-dimmed"
                     :style="{ width: slugInputWidth }"
                     placeholder="slug"
-                    aria-label="区域 slug"
+                    :aria-label="t('admin.common.roundSlug')"
                     :disabled="headerSaving"
                   >
                   <span v-else>{{ round.slug }}</span>
@@ -300,9 +302,9 @@ const navItems = computed<NavigationMenuItem[]>(() => [
       <nuxt-page />
       <rb-confirm-modal
         v-model:open="createRoundPuzzleOpen"
-        title="创建区域谜题"
-        description="当前区域还没有区域谜题，是否现在创建？"
-        confirm-label="创建"
+        :title="t('admin.pages.round.createRoundPuzzle')"
+        :description="t('admin.pages.round.currentRoundRoundPuzzleCreate')"
+        :confirm-label="t('admin.pages.round.create')"
         confirm-icon="material-symbols:add-circle-outline-rounded"
         :busy="creatingRoundPuzzle"
         @confirm="createRoundPuzzle"
@@ -315,6 +317,6 @@ const navItems = computed<NavigationMenuItem[]>(() => [
       <u-skeleton class="h-52 w-full" />
     </div>
 
-    <u-empty v-else icon="material-symbols:grid-view-outline-rounded" title="区域不存在" />
+    <u-empty v-else icon="material-symbols:grid-view-outline-rounded" :title="t('admin.pages.round.roundNotFound')" />
   </div>
 </template>

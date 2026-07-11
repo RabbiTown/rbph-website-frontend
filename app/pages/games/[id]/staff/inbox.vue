@@ -192,7 +192,9 @@ function conflictAssignee(error: unknown): TicketAggreInfoUser | undefined {
 }
 
 function ticketDisplayTitle(ticket: TicketSummary) {
-  return ticket.puzzle ? `${ticket.puzzle.title} #${ticket.id}` : `${t('message.title')} #${ticket.id}`;
+  return ticket.puzzle
+    ? t('pages.staffInbox.puzzleTicketIdentifier', { puzzle: ticket.puzzle.title, id: ticket.id })
+    : t('pages.staffInbox.messageIdentifier', { id: ticket.id });
 }
 
 function openSendConflict(action: 'send' | 'close', assignee: TicketAggreInfoUser) {

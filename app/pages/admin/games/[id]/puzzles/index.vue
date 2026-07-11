@@ -1,5 +1,7 @@
-<script setup lang="ts">
-import type { ContextMenuItem } from '@nuxt/ui';
+<script setup lang="ts">import type { ContextMenuItem } from '@nuxt/ui';
+
+
+const { t } = useI18n();
 
 interface AdminRound {
   id: number;
@@ -149,12 +151,12 @@ const gameId = computed(() => Number(route.params.id));
 const selectedPuzzleCount = computed(() => selectedPuzzleIds.value.size);
 const selectionMode = computed(() => selectedPuzzleCount.value > 0);
 const batchPhaseItems = computed(() => [
-  { label: '不发布', value: 'unpublished' as const, icon: 'material-symbols:event-busy-outline-rounded' },
-  { label: '立即发布', value: 'immediate' as const, icon: 'material-symbols:rocket-launch-outline-rounded' },
+  { label: t('admin.common.notPublished'), value: 'unpublished' as const, icon: 'material-symbols:event-busy-outline-rounded' },
+  { label: t('admin.common.immediateRelease'), value: 'immediate' as const, icon: 'material-symbols:rocket-launch-outline-rounded' },
   ...releasePhases.value
     .filter(phase => !phase.released && new Date(phase.release_at).getTime() > Date.now())
     .map(phase => ({
-      label: `${phase.title} · ${formatDate(new Date(phase.release_at))}`,
+      label: t('admin.common.releasePhaseAt', { phase: phase.title, time: formatDate(new Date(phase.release_at)) }),
       value: phase.id,
       icon: 'material-symbols:event-available-outline-rounded',
     })),
@@ -236,7 +238,7 @@ function clearPuzzleSelection() {
 
 function togglePuzzleSelection(puzzle: AdminPuzzle) {
   if (!isPuzzleBatchEligible(puzzle)) {
-    toast.add({ title: '该谜题不能批量修改', description: '请先取消所属区域的删除操作。', icon: 'material-symbols:lock-outline', color: 'warning' });
+    toast.add({ title: t('admin.pages.puzzles.puzzleCannotBatchUpdate'), description: t('admin.pages.puzzles.cancelBelongingRoundDelete'), icon: 'material-symbols:lock-outline', color: 'warning' });
     return;
   }
 
@@ -456,7 +458,7 @@ function puzzleContextMenuItems(puzzle: AdminPuzzle): ContextMenuItem[][] {
   const multiple = puzzleIds.length > 1;
   const actions: ContextMenuItem[] = [
     {
-      label: '更改发布方式',
+      label: t('admin.pages.puzzles.releaseMethod'),
       icon: 'material-symbols:published-with-changes-rounded',
       disabled: batchUpdating.value || batchContentUploading.value || puzzleDeleting.value || hasChanges.value,
       onSelect: () => openBatchReleaseConfirm(puzzle),
@@ -465,7 +467,7 @@ function puzzleContextMenuItems(puzzle: AdminPuzzle): ContextMenuItem[][] {
 
   if (contentCdnAvailable.value) {
     actions.push({
-      label: '上传所有内容块',
+      label: t('admin.pages.puzzles.uploadAllContentBlock'),
       icon: 'material-symbols:upload-2-outline-rounded',
       disabled: batchUpdating.value || batchContentUploading.value || puzzleDeleting.value || hasChanges.value,
       onSelect: () => openBatchContentUploadConfirm(puzzle),
@@ -474,7 +476,7 @@ function puzzleContextMenuItems(puzzle: AdminPuzzle): ContextMenuItem[][] {
 
   if (!multiple) {
     actions.push({
-      label: '删除谜题',
+      label: t('admin.common.deletePuzzle'),
       icon: 'material-symbols:delete-outline-rounded',
       color: 'error',
       disabled: batchUpdating.value || puzzleDeleting.value || hasChanges.value,
@@ -482,7 +484,7 @@ function puzzleContextMenuItems(puzzle: AdminPuzzle): ContextMenuItem[][] {
     });
   }
 
-  return [[{ type: 'label', label: multiple ? `已选择 ${puzzleIds.length} 道谜题` : puzzleDisplayTitle(puzzle) }], actions];
+  return [[{ type: 'label', label: multiple ? t('admin.pages.puzzles.selectedPuzzleCountToast', { count: puzzleIds.length }) : puzzleDisplayTitle(puzzle) }], actions];
 }
 
 function openBatchReleaseConfirm(puzzle: AdminPuzzle) {
@@ -516,23 +518,23 @@ async function confirmBatchContentUpload() {
       },
       {
         errorHints: {
-          [-3]: '空内容块无法上传。',
-          [-2]: '内容 CDN 未配置，或所选谜题不合法。',
+          [-3]: t('admin.pages.puzzles.emptyContentBlockCannotUpload'),
+          [-2]: t('admin.pages.puzzles.cdnUnavailable'),
         },
       },
     );
     batchContentConfirmOpen.value = false;
     if (batchContentUsesSelection.value) clearPuzzleSelection();
     toast.add({
-      title: '内容块上传完成',
+      title: t('admin.pages.puzzles.contentBlockUpload'),
       description: data.skipped_empty > 0
-        ? `已上传 ${data.block_count} 个内容块，跳过 ${data.skipped_empty} 个空内容块。`
-        : `已上传 ${data.block_count} 个内容块。`,
+        ? t('admin.pages.puzzles.uploadSummaryWithSkipped', { uploaded: data.block_count, skipped: data.skipped_empty })
+        : t('admin.pages.puzzles.uploadSummary', { uploaded: data.block_count }),
       icon: 'material-symbols:cloud-done-outline-rounded',
       color: 'success',
     });
   } catch (error) {
-    handleError(error, '批量上传内容块失败');
+    handleError(error, t('admin.pages.puzzles.batchCdnUploadFailed'));
   } finally {
     batchContentUploading.value = false;
   }
@@ -585,8 +587,8 @@ async function applyChanges() {
           { sort: patch.sort },
           {
             errorHints: {
-              [-2]: '区域信息不合法。',
-              [-1]: '区域不存在。',
+              [-2]: t('admin.common.roundInfoInvalid'),
+              [-1]: t('admin.common.roundNotFound'),
             },
           },
         ),
@@ -597,8 +599,8 @@ async function applyChanges() {
           { sort: patch.sort, round_id: patch.round_id },
           {
             errorHints: {
-              [-2]: '谜题信息不合法。',
-              [-1]: '谜题不存在。',
+              [-2]: t('admin.common.puzzleInfoInvalid'),
+              [-1]: t('admin.common.puzzleNotFound'),
             },
           },
         ),
@@ -606,7 +608,7 @@ async function applyChanges() {
       ...deletedRoundIds.map(roundId =>
         api.del(`/admin/rounds/${roundId}`, {
           errorHints: {
-            [-1]: '区域不存在。',
+            [-1]: t('admin.common.roundNotFound'),
           },
         }),
       ),
@@ -614,13 +616,13 @@ async function applyChanges() {
 
     dirtyToast.clear();
     toast.add({
-      title: deletedRoundIds.length > 0 ? '修改已保存' : '排序已保存',
+      title: deletedRoundIds.length > 0 ? t('admin.pages.puzzles.updateSaved') : t('admin.pages.puzzles.orderSaved'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
     await fetchData();
   } catch (error) {
-    handleError(error, '保存排序失败', true);
+    handleError(error, t('admin.pages.puzzles.saveOrderFailed'), true);
   } finally {
     applyLoading.value = false;
   }
@@ -1147,7 +1149,7 @@ async function addRound() {
   if (applyLoading.value) return;
 
   const nextSort = rounds.value.reduce((max, round) => Math.max(max, round.sort), -1) + 1;
-  const title = `区域 ${rounds.value.length + 1}`;
+  const title = t('admin.pages.puzzles.roundLabel', { round: rounds.value.length + 1 });
   const body = {
     game_id: gameId.value,
     title,
@@ -1163,8 +1165,8 @@ async function addRound() {
     type Response = { round: AdminRound };
     const { data } = await api.post<Response>('/admin/rounds', body, {
       errorHints: {
-        [-2]: '区域信息不合法。',
-        [-1]: '区域不存在。',
+        [-2]: t('admin.common.roundInfoInvalid'),
+        [-1]: t('admin.common.roundNotFound'),
       },
     });
 
@@ -1173,12 +1175,12 @@ async function addRound() {
     originalRounds.value = cloneRounds(rounds.value);
     originalPuzzles.value = clonePuzzles(puzzles.value);
     toast.add({
-      title: '区域已创建',
+      title: t('admin.pages.puzzles.roundCreated'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
   } catch (error) {
-    handleError(error, '创建区域失败', true);
+    handleError(error, t('admin.pages.puzzles.createRoundFailed'), true);
   } finally {
     applyLoading.value = false;
   }
@@ -1188,15 +1190,15 @@ async function addPuzzle(roundId: number) {
   if (applyLoading.value || creatingRoundId.value !== null) return;
   if (hasChanges.value) {
     toast.add({
-      title: '请先保存修改',
-      description: '当前页面存在未保存的更改，无法新建谜题。',
+      title: t('admin.pages.puzzles.saveUpdate'),
+      description: t('admin.pages.puzzles.currentNotSaveCannotCreatePuzzle'),
       icon: 'material-symbols:warning-rounded',
       color: 'error',
     });
     return;
   }
 
-  const title = '新建谜题';
+  const title = t('admin.pages.puzzles.createPuzzle');
   const round = rounds.value.find(item => item.id === roundId);
   if (!round) return;
   const nextSort = puzzles.value.filter(puzzle => puzzle.round_id === roundId && !isRoundPuzzle(puzzle, roundId)).reduce((max, puzzle) => Math.max(max, puzzle.sort), -1) + 1;
@@ -1224,8 +1226,8 @@ async function addPuzzle(roundId: number) {
     type Response = { puzzle: AdminPuzzle };
     const { data } = await api.post<Response>('/admin/puzzles', body, {
       errorHints: {
-        [-2]: '谜题信息不合法。',
-        [-1]: '谜题不存在。',
+        [-2]: t('admin.common.puzzleInfoInvalid'),
+        [-1]: t('admin.common.puzzleNotFound'),
       },
     });
 
@@ -1233,13 +1235,13 @@ async function addPuzzle(roundId: number) {
     originalRounds.value = cloneRounds(rounds.value);
     originalPuzzles.value = clonePuzzles(puzzles.value);
     toast.add({
-      title: '谜题已创建',
+      title: t('admin.pages.puzzles.puzzleCreated'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
     await navigateTo(`/admin/games/${gameId.value}/puzzles/${data.puzzle.id}`);
   } catch (error) {
-    handleError(error, '创建谜题失败', true);
+    handleError(error, t('admin.pages.puzzles.createPuzzleFailed'), true);
   } finally {
     creatingRoundId.value = null;
     applyLoading.value = false;
@@ -1249,7 +1251,7 @@ async function addPuzzle(roundId: number) {
 async function applyBatchReleasePhase() {
   if (batchUpdating.value || batchPuzzleIds.value.length === 0 || !batchReleasePhaseId.value) return false;
   if (hasChanges.value) {
-    toast.add({ title: '请先保存修改', description: '当前页面存在未保存的排序或删除操作。', icon: 'material-symbols:warning-rounded', color: 'error' });
+    toast.add({ title: t('admin.pages.puzzles.saveUpdate'), description: t('admin.pages.puzzles.currentNotSaveOrderOrDelete'), icon: 'material-symbols:warning-rounded', color: 'error' });
     return false;
   }
 
@@ -1267,8 +1269,8 @@ async function applyBatchReleasePhase() {
       },
       {
         errorHints: {
-          [-2]: '部分谜题或目标阶段已经发生，无法批量修改。',
-          [-1]: '谜题或阶段不存在。',
+          [-2]: t('admin.pages.puzzles.batchUpdateUnavailable'),
+          [-1]: t('admin.pages.puzzles.puzzleOrPhaseNotFound'),
         },
       },
     );
@@ -1278,10 +1280,10 @@ async function applyBatchReleasePhase() {
     originalPuzzles.value = originalPuzzles.value.map(puzzle => updated.get(puzzle.id) ?? puzzle);
     const count = data.puzzles.length;
     if (batchUsesSelection.value) clearPuzzleSelection();
-    toast.add({ title: batchReleasePhaseId.value === 'immediate' ? '谜题已立即发布' : '开放时间已批量更新', description: `已更新 ${count} 道谜题。`, icon: 'material-symbols:check-rounded', color: 'success' });
+    toast.add({ title: batchReleasePhaseId.value === 'immediate' ? t('admin.common.puzzleReleasedImmediately') : t('admin.pages.puzzles.openTimeBatchUpdate'), description: t('admin.pages.puzzles.updatedPuzzleCount', { count: count }), icon: 'material-symbols:check-rounded', color: 'success' });
     return true;
   } catch (error) {
-    handleError(error, '批量修改开放时间失败');
+    handleError(error, t('admin.pages.puzzles.batchUpdateOpenTimeFailed'));
     return false;
   } finally {
     batchUpdating.value = false;
@@ -1300,7 +1302,7 @@ async function deleteContextPuzzle() {
   try {
     await api.del(`/admin/puzzles/${puzzle.id}`, {
       errorHints: {
-        [-1]: '谜题不存在。',
+        [-1]: t('admin.common.puzzleNotFound'),
       },
     });
 
@@ -1314,9 +1316,9 @@ async function deleteContextPuzzle() {
     nextSelected.delete(puzzle.id);
     selectedPuzzleIds.value = nextSelected;
     deletePuzzleConfirmOpen.value = false;
-    toast.add({ title: '谜题已删除', icon: 'material-symbols:check-rounded', color: 'success' });
+    toast.add({ title: t('admin.common.puzzleDeleted'), icon: 'material-symbols:check-rounded', color: 'success' });
   } catch (error) {
-    handleError(error, '删除谜题失败');
+    handleError(error, t('admin.common.deletePuzzleFailed'));
   } finally {
     puzzleDeleting.value = false;
   }
@@ -1523,7 +1525,7 @@ async function fetchData() {
     deletingRoundIds.value = new Set();
     clearPuzzleSelection();
     dirtyToast.clear();
-    handleError(error, '获取谜题列表失败', true);
+    handleError(error, t('admin.pages.puzzles.loadPuzzleListFailed'), true);
   } finally {
     loading.value = false;
   }
@@ -1546,7 +1548,7 @@ onBeforeUnmount(cleanupSelectionGesture);
       <u-skeleton v-for="item in 3" :key="item" class="h-32 w-full" />
     </div>
 
-    <u-empty v-else-if="groupedRounds.length === 0" icon="material-symbols:extension-off-outline-rounded" title="暂无谜题" description="新建区域以开始添加谜题" />
+    <u-empty v-else-if="groupedRounds.length === 0" icon="material-symbols:extension-off-outline-rounded" :title="t('admin.pages.puzzles.emptyPuzzle')" :description="t('admin.pages.puzzles.createRoundStartAddPuzzle')" />
 
     <template v-else>
       <section
@@ -1578,8 +1580,8 @@ onBeforeUnmount(cleanupSelectionGesture);
                 square
                 icon="material-symbols:drag-indicator"
                 class="mt-0.5 shrink-0 cursor-grab text-muted active:cursor-grabbing"
-                title="拖动调整区域顺序"
-                aria-label="拖动调整区域顺序"
+                :title="t('admin.pages.puzzles.dragRound')"
+                :aria-label="t('admin.pages.puzzles.dragRound')"
                 :disabled="selectionMode || isRoundDeleting(group.round.id)"
                 @dragstart="onRoundDragStart(group.round.id, $event)"
                 @dragend="clearDragState"
@@ -1593,45 +1595,45 @@ onBeforeUnmount(cleanupSelectionGesture);
                   <u-badge v-if="group.round.slug" size="sm" variant="soft" color="primary" icon="material-symbols:tag-rounded">
                     {{ group.round.slug }}
                   </u-badge>
-                  <u-tooltip text="编辑区域">
+                  <u-tooltip :text="t('admin.pages.puzzles.editRound')">
                     <u-button
                       color="neutral"
                       variant="ghost"
                       size="xs"
                       square
                       icon="material-symbols:edit-outline-rounded"
-                      aria-label="编辑区域"
+                      :aria-label="t('admin.pages.puzzles.editRound')"
                       :disabled="applyLoading || isRoundDeleting(group.round.id)"
                       @click.stop="navigateTo(`/admin/games/${gameId}/rounds/${group.round.id}`)"
                     />
                   </u-tooltip>
-                  <u-tooltip text="新建谜题">
+                  <u-tooltip :text="t('admin.pages.puzzles.createPuzzle')">
                     <u-button
                       color="neutral"
                       variant="ghost"
                       size="xs"
                       square
                       icon="material-symbols:add-circle-outline-rounded"
-                      aria-label="新建谜题"
+                      :aria-label="t('admin.pages.puzzles.createPuzzle')"
                       :disabled="selectionMode || applyLoading || isRoundBeingCreated(group.round.id) || isRoundDeleting(group.round.id)"
                       @click.stop="addPuzzle(group.round.id)"
                     />
                   </u-tooltip>
-                  <u-tooltip :text="isRoundDeleting(group.round.id) ? '恢复区域' : '删除区域'">
+                  <u-tooltip :text="isRoundDeleting(group.round.id) ? t('admin.pages.puzzles.restoreRound') : t('admin.pages.puzzles.deleteRound')">
                     <u-button
                       :color="isRoundDeleting(group.round.id) ? 'neutral' : 'error'"
                       variant="ghost"
                       size="xs"
                       square
                       :icon="isRoundDeleting(group.round.id) ? 'material-symbols:undo-rounded' : 'material-symbols:delete-outline-rounded'"
-                      :aria-label="isRoundDeleting(group.round.id) ? '恢复区域' : '删除区域'"
+                      :aria-label="isRoundDeleting(group.round.id) ? t('admin.pages.puzzles.restoreRound') : t('admin.pages.puzzles.deleteRound')"
                       :disabled="applyLoading || (!isRoundDeleting(group.round.id) && hasAnyPuzzle(group.round.id))"
                       @click.stop="isRoundDeleting(group.round.id) ? restoreRound(group.round.id) : deleteRound(group.round.id)"
                     />
                   </u-tooltip>
                 </div>
                 <div class="mt-1 flex flex-wrap gap-2 text-xs text-muted">
-                  <span>{{ group.puzzles.length }} 个谜题</span>
+                  <span>{{ t('admin.pages.puzzles.itemPuzzle', { count: group.puzzles.length }) }}</span>
                 </div>
               </div>
             </div>
@@ -1685,8 +1687,8 @@ onBeforeUnmount(cleanupSelectionGesture);
                         square
                         icon="material-symbols:drag-indicator"
                         class="cursor-grab text-muted active:cursor-grabbing"
-                        title="拖动调整谜题位置"
-                        aria-label="拖动调整谜题位置"
+                        :title="t('admin.pages.puzzles.dragPuzzleLocation')"
+                        :aria-label="t('admin.pages.puzzles.dragPuzzleLocation')"
                         :disabled="selectionMode"
                         @click.stop
                         @dragstart.stop="onPuzzleDragStart(puzzle, $event)"
@@ -1705,7 +1707,7 @@ onBeforeUnmount(cleanupSelectionGesture);
               <div class="flex size-9 items-center justify-center rounded-full border border-dashed border-current/60 bg-default/60 transition-transform" :class="isEmptyRoundDropActive(group.round.id) ? 'scale-110 border-solid' : ''">
                 <u-icon :name="isRoundDeleting(group.round.id) ? 'material-symbols:delete-outline-rounded' : isEmptyRoundDropActive(group.round.id) ? 'material-symbols:add-rounded' : 'material-symbols:extension-off-outline-rounded'" class="size-5" />
               </div>
-              <span>{{ isRoundDeleting(group.round.id) ? '即将删除' : '暂无谜题' }}</span>
+              <span>{{ isRoundDeleting(group.round.id) ? t('admin.pages.puzzles.delete') : t('admin.pages.puzzles.emptyPuzzle') }}</span>
             </div>
           </div>
         </div>
@@ -1714,12 +1716,12 @@ onBeforeUnmount(cleanupSelectionGesture);
 
     <div v-if="!loading" class="sticky bottom-4 z-30 flex justify-start" data-selection-ignore="true">
       <div v-if="selectionMode" class="flex w-full flex-wrap items-center gap-2 rounded-md bg-default/95 p-2 shadow-lg ring ring-default backdrop-blur-sm">
-        <u-badge color="primary" variant="soft" size="lg">已选择 {{ selectedPuzzleCount }} 道谜题</u-badge>
-        <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:select-all-rounded" label="全选" @click="selectAllEligiblePuzzles" />
-        <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:change-history-outline-rounded" label="反选" @click="invertEligiblePuzzleSelection" />
-        <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:deselect-rounded" label="清空" :disabled="selectedPuzzleCount === 0" @click="clearPuzzleSelection" />
+        <u-badge color="primary" variant="soft" size="lg">{{ t('admin.pages.puzzles.selectedCount', { count: selectedPuzzleCount }) }}</u-badge>
+        <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:select-all-rounded" :label="t('admin.pages.puzzles.selectAll')" @click="selectAllEligiblePuzzles" />
+        <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:change-history-outline-rounded" :label="t('admin.pages.puzzles.invertSelection')" @click="invertEligiblePuzzleSelection" />
+        <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:deselect-rounded" :label="t('admin.pages.puzzles.empty')" :disabled="selectedPuzzleCount === 0" @click="clearPuzzleSelection" />
       </div>
-      <u-button v-else icon="material-symbols:add-rounded" label="新建区域" size="lg" class="shadow-lg shadow-primary/20" :disabled="applyLoading" @click="addRound" />
+      <u-button v-else icon="material-symbols:add-rounded" :label="t('admin.pages.puzzles.createRound')" size="lg" class="shadow-lg shadow-primary/20" :disabled="applyLoading" @click="addRound" />
     </div>
 
     <div
@@ -1727,30 +1729,30 @@ onBeforeUnmount(cleanupSelectionGesture);
       class="pointer-events-none fixed z-50 border border-primary bg-primary/10 shadow-sm"
       :style="{ left: `${selectionRect.left}px`, top: `${selectionRect.top}px`, width: `${selectionRect.width}px`, height: `${selectionRect.height}px` }"
     />
-    <rb-confirm-modal v-model:open="batchConfirmOpen" title="更改发布方式" :description="`为 ${batchPuzzleIds.length} 道谜题设置新的发布方式。`" :busy="batchUpdating">
+    <rb-confirm-modal v-model:open="batchConfirmOpen" :title="t('admin.pages.puzzles.releaseMethod')" :description="t('admin.pages.puzzles.batchReleaseDescription', { count: batchPuzzleIds.length })" :busy="batchUpdating">
       <template #body>
-        <rb-form-field row narrow-label label="发布方式">
+        <rb-form-field row narrow-label :label="t('admin.pages.puzzles.releaseMethodLabel')">
           <u-select
             v-model="batchReleasePhaseId"
             :items="batchPhaseItems"
             :leading-icon="batchReleasePhaseId === 'unpublished' ? 'material-symbols:event-busy-outline-rounded' : batchReleasePhaseId === 'immediate' ? 'material-symbols:rocket-launch-outline-rounded' : selectedBatchPhase ? 'material-symbols:event-available-outline-rounded' : undefined"
-            placeholder="选择发布方式"
+            :placeholder="t('admin.pages.puzzles.selectReleaseMethod')"
             class="w-full"
             :disabled="batchUpdating"
           />
         </rb-form-field>
-        <p v-if="batchReleasePhaseId === 'unpublished'" class="mt-3 text-sm text-warning">撤销发布后玩家将无法访问这些谜题，已有队伍数据会保留。</p>
-        <p v-else-if="batchReleasePhaseId === 'immediate'" class="mt-3 text-sm text-warning">谜题将立即对已解锁的队伍开放，并推送一条发布提示。</p>
+        <p v-if="batchReleasePhaseId === 'unpublished'" class="mt-3 text-sm text-warning">{{ t('admin.pages.puzzles.unpublishDescription') }}</p>
+        <p v-else-if="batchReleasePhaseId === 'immediate'" class="mt-3 text-sm text-warning">{{ t('admin.pages.puzzles.releaseImmediatelyDescription') }}</p>
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
-          <u-button color="neutral" variant="soft" :disabled="batchUpdating" label="取消" @click="batchConfirmOpen = false" />
+          <u-button color="neutral" variant="soft" :disabled="batchUpdating" :label="t('admin.common.cancel')" @click="batchConfirmOpen = false" />
           <u-button
             :color="batchReleasePhaseId === 'unpublished' ? 'warning' : 'primary'"
             :icon="batchReleasePhaseId === 'unpublished' ? 'material-symbols:event-busy-outline-rounded' : batchReleasePhaseId === 'immediate' ? 'material-symbols:rocket-launch-outline-rounded' : 'material-symbols:event-available-outline-rounded'"
             :loading="batchUpdating"
             :disabled="batchUpdating || !batchReleasePhaseId"
-            label="确认修改"
+            :label="t('admin.pages.puzzles.confirmUpdate')"
             @click="confirmBatchRelease"
           />
         </div>
@@ -1758,9 +1760,9 @@ onBeforeUnmount(cleanupSelectionGesture);
     </rb-confirm-modal>
     <rb-confirm-modal
       v-model:open="batchContentConfirmOpen"
-      title="上传所有内容块"
-      :description="`将 ${batchContentPuzzleIds.length} 道谜题的全部非空内容块上传到 CDN。`"
-      confirm-label="确认上传"
+      :title="t('admin.pages.puzzles.uploadAllContentBlock')"
+      :description="t('admin.pages.puzzles.batchCdnUploadDescription', { count: batchContentPuzzleIds.length })"
+      :confirm-label="t('admin.common.confirmUpload')"
       confirm-icon="material-symbols:upload-2-outline-rounded"
       :busy="batchContentUploading"
       @confirm="confirmBatchContentUpload"
@@ -1770,16 +1772,16 @@ onBeforeUnmount(cleanupSelectionGesture);
           color="warning"
           variant="subtle"
           icon="material-symbols:warning-outline-rounded"
-          title="已有 CDN 内容将被替换"
-          description="空内容块会自动跳过，上传完成后旧 CDN 文件将被删除。"
+          :title="t('admin.pages.puzzles.replaceCdnWarning')"
+          :description="t('admin.pages.puzzles.batchCdnUploadHint')"
         />
       </template>
     </rb-confirm-modal>
     <rb-confirm-modal
       v-model:open="deletePuzzleConfirmOpen"
-      title="删除谜题"
-      :description="`确认删除谜题「${deletingPuzzleName}」？此操作不可恢复。`"
-      confirm-label="删除谜题"
+      :title="t('admin.common.deletePuzzle')"
+      :description="t('admin.common.confirmDeletePuzzle', { puzzle: deletingPuzzleName })"
+      :confirm-label="t('admin.common.deletePuzzle')"
       confirm-color="error"
       confirm-icon="material-symbols:delete-outline-rounded"
       :confirm-disabled="!deletePuzzleNameMatches"
@@ -1787,7 +1789,7 @@ onBeforeUnmount(cleanupSelectionGesture);
       @confirm="deleteContextPuzzle"
     >
       <template #body>
-        <rb-form-field label="输入谜题名称以确认">
+        <rb-form-field :label="t('admin.common.enterPuzzleNameConfirm')">
           <u-input v-model="deletePuzzleNameInput" :placeholder="deletingPuzzleName" autocomplete="off" class="w-full" :disabled="puzzleDeleting" />
         </rb-form-field>
       </template>

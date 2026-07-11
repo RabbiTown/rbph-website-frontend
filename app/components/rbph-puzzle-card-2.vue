@@ -1,4 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 interface AdminPuzzleCardData {
   id: number;
   slug?: string | null;
@@ -19,12 +21,12 @@ const props = defineProps<{
 
 const puzzleTypeMap: Record<number, { label: string; icon: string; color: 'primary' | 'neutral' | 'warning' }> = {
   0: {
-    label: '普通',
+    label: t('components.rbphPuzzleCard_2.puzzleType.normal'),
     icon: 'material-symbols:extension-outline-rounded',
     color: 'primary',
   },
   1: {
-    label: '剧情',
+    label: t('components.rbphPuzzleCard_2.puzzleType.story'),
     icon: 'material-symbols:article-outline-rounded',
     color: 'warning',
   },
@@ -33,18 +35,18 @@ const puzzleTypeMap: Record<number, { label: string; icon: string; color: 'prima
 const puzzleType = computed(() =>
   props.isRoundPuzzle
     ? {
-        label: '区域谜题',
+        label: t('admin.common.roundPuzzle'),
         icon: 'material-symbols:grid-view-outline-rounded',
         color: 'primary' as const,
       }
     : (puzzleTypeMap[props.puzzle.ptype] ?? {
-        label: `类型 ${props.puzzle.ptype}`,
+        label: t('components.rbphPuzzleCard_2.puzzleType.unknown', { type: props.puzzle.ptype }),
         icon: 'material-symbols:help-outline-rounded',
         color: 'neutral' as const,
       }),
 );
 
-const unlockConditionText = computed(() => translateUnlockCondition(props.puzzle.unlock_cond));
+const unlockConditionText = computed(() => translateUnlockCondition(props.puzzle.unlock_cond, t));
 const displayedTitle = computed(() => props.title ?? props.puzzle.title);
 const displayedSlug = computed(() => props.slug ?? props.puzzle.slug);
 </script>
@@ -77,17 +79,14 @@ const displayedSlug = computed(() => props.slug ?? props.puzzle.slug);
             {{ unlockConditionText }}
           </div>
           <div v-if="puzzle.immediate_release_at" class="truncate text-xs text-muted" :title="formatDate(puzzle.immediate_release_at)">
-            <u-icon name="material-symbols:rocket-launch-outline-rounded" class="align-middle mb-0.5 me-0.5" />
-            已立即发布 · {{ formatDate(puzzle.immediate_release_at) }}
+            <u-icon name="material-symbols:rocket-launch-outline-rounded" class="align-middle mb-0.5 me-0.5" /> {{ t('admin.common.releasedImmediatelyAt', { time: formatDate(puzzle.immediate_release_at) }) }}
           </div>
           <div v-else-if="releasePhase" class="truncate text-xs text-muted" :title="formatDate(releasePhase.release_at)">
             <u-icon name="material-symbols:event-available-outline-rounded" class="align-middle mb-0.5 me-0.5" />
-            {{ releasePhase.title }} · {{ formatDate(releasePhase.release_at) }}
+            {{ t('admin.common.releasePhaseAt', { phase: releasePhase.title, time: formatDate(releasePhase.release_at) }) }}
           </div>
           <div v-else class="truncate text-xs text-muted">
-            <u-icon name="material-symbols:event-busy-outline-rounded" class="align-middle mb-0.5 me-0.5" />
-            不发布
-          </div>
+            <u-icon name="material-symbols:event-busy-outline-rounded" class="align-middle mb-0.5 me-0.5" /> {{ t('admin.common.notPublished') }} </div>
         </div>
         <slot name="actions" />
       </div>

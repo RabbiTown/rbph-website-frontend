@@ -1,4 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 interface CurrencyDraft {
   amount: number;
   growth: number;
@@ -44,30 +46,30 @@ const draft = reactive({
 
 const featureMeta: Record<RbTeamFeature, { label: string; icon: string; enabled: string; disabled: string }> = {
   direct_message: {
-    label: '站内信',
+    label: t('admin.common.directMessage'),
     icon: 'material-symbols:mail-outline-rounded',
-    enabled: '遵循比赛的站内信开放状态。',
-    disabled: '队伍不能发送站内信。',
+    enabled: t('admin.pages.team.featureAccessDescription.directMessage.enabled'),
+    disabled: t('admin.pages.team.featureAccessDescription.directMessage.disabled'),
   },
   puzzle_ticket: {
-    label: '人工提示',
+    label: t('admin.common.ticket'),
     icon: 'material-symbols:near-me-outline-rounded',
-    enabled: '遵循比赛的人工提示开放状态。',
-    disabled: '队伍不能发起或回复人工提示。',
+    enabled: t('admin.pages.team.featureAccessDescription.puzzleTicket.enabled'),
+    disabled: t('admin.pages.team.featureAccessDescription.puzzleTicket.disabled'),
   },
   leaderboard: {
-    label: '排行榜',
+    label: t('admin.common.leaderboard'),
     icon: 'material-symbols:leaderboard-outline-rounded',
-    enabled: '队伍可以进入排行榜。',
-    disabled: '队伍在排行榜中被隐藏。',
+    enabled: t('admin.pages.team.featureAccessDescription.leaderboard.enabled'),
+    disabled: t('admin.pages.team.featureAccessDescription.leaderboard.disabled'),
   },
 };
 
 const errorHints = {
-  [-4]: '目标用户已经在本比赛的其他队伍中',
-  [-3]: '提交内容不合法',
-  [-2]: '不能移除最后一个成员',
-  [-1]: '目标不存在',
+  [-4]: t('admin.pages.team.targetUserGameTeam'),
+  [-3]: t('admin.pages.team.submissionContentInvalid'),
+  [-2]: t('admin.pages.team.cannotLastItemMember'),
+  [-1]: t('admin.common.targetNotFound'),
 };
 
 const teamFieldsDirty = computed(() => {
@@ -99,7 +101,7 @@ const accessChanges = computed<AccessChangePreview[]>(() => {
   if (draft.is_banned !== current.is_banned) {
     changes.push({
       key: 'team-banned',
-      label: draft.is_banned ? '封禁队伍' : '解封队伍',
+      label: draft.is_banned ? t('admin.pages.team.accessChange.ban') : t('admin.pages.team.accessChange.unban'),
       icon: draft.is_banned ? 'material-symbols:block-outline' : 'material-symbols:check-rounded',
       color: draft.is_banned ? 'error' : 'primary',
     });
@@ -107,7 +109,7 @@ const accessChanges = computed<AccessChangePreview[]>(() => {
   if (draft.is_locked !== current.is_locked) {
     changes.push({
       key: 'team-locked',
-      label: draft.is_locked ? '锁定队伍' : '解锁队伍',
+      label: draft.is_locked ? t('admin.pages.team.accessChange.lock') : t('admin.pages.team.accessChange.unlock'),
       icon: draft.is_locked ? 'material-symbols:lock-outline' : 'material-symbols:lock-open-outline-rounded',
       color: draft.is_locked ? 'warning' : 'primary',
     });
@@ -117,7 +119,7 @@ const accessChanges = computed<AccessChangePreview[]>(() => {
     if (enabled !== feature.enabled) {
       changes.push({
         key: feature.feature,
-        label: `${enabled ? '解封' : '封禁'}${featureMeta[feature.feature].label}`,
+        label: t('admin.pages.team.featureAction', { enabled, feature: featureMeta[feature.feature].label }),
         icon: enabled ? 'material-symbols:check-rounded' : 'material-symbols:block-outline',
         color: enabled ? 'primary' : 'error',
       });
@@ -158,7 +160,7 @@ async function loadTeam() {
     const { data } = await api.get<{ team: AdminTeamDetail }>(`/admin/games/${gameId.value}/teams/${teamId.value}`);
     applyTeam(data.team);
   } catch (error) {
-    handleError(error, '获取队伍详情失败');
+    handleError(error, t('admin.pages.team.loadTeamDetailsFailed'));
   } finally {
     loading.value = false;
   }
@@ -181,7 +183,7 @@ async function saveTeam(reasonConfirmed = false) {
   const current = team.value;
   if (!current || !dirty.value || saving.value) return;
   if (!draft.name.trim() || !draft.pass.trim()) {
-    toast.add({ title: '队伍名称和密码不能为空', icon: 'material-symbols:error-outline-rounded', color: 'error' });
+    toast.add({ title: t('admin.pages.team.teamNamePasswordCannotEmpty'), icon: 'material-symbols:error-outline-rounded', color: 'error' });
     return;
   }
   if (accessChanges.value.length > 0 && !reasonConfirmed) {
@@ -219,9 +221,9 @@ async function saveTeam(reasonConfirmed = false) {
     applyTeam(next);
     reasonOpen.value = false;
     dirtyToast.clear();
-    toast.add({ title: '队伍设置已保存', icon: 'material-symbols:check-circle-outline-rounded', color: 'success' });
+    toast.add({ title: t('admin.pages.team.teamSettingsSaved'), icon: 'material-symbols:check-circle-outline-rounded', color: 'success' });
   } catch (error) {
-    handleError(error, '保存队伍设置失败', true);
+    handleError(error, t('admin.pages.team.saveTeamSettingsFailed'), true);
   } finally {
     saving.value = false;
   }
@@ -240,9 +242,9 @@ async function addMember() {
     const { data } = await api.post<{ team: AdminTeamDetail }>(`/admin/games/${gameId.value}/teams/${teamId.value}/members`, { user_id: addUserId.value }, { errorHints });
     applyTeam(data.team, false);
     addMemberOpen.value = false;
-    toast.add({ title: '成员已添加', icon: 'material-symbols:person-add-outline-rounded', color: 'success' });
+    toast.add({ title: t('admin.pages.team.memberAdd'), icon: 'material-symbols:person-add-outline-rounded', color: 'success' });
   } catch (error) {
-    handleError(error, '添加成员失败', true);
+    handleError(error, t('admin.pages.team.addMemberFailed'), true);
   } finally {
     memberBusy.value = false;
   }
@@ -254,7 +256,7 @@ async function removeMember(member: RbTeamMember) {
     const { data } = await api.del<{ team: AdminTeamDetail }>(`/admin/games/${gameId.value}/teams/${teamId.value}/members/${member.id}`, { errorHints });
     applyTeam(data.team, false);
   } catch (error) {
-    handleError(error, '移除成员失败', true);
+    handleError(error, t('admin.pages.team.memberFailed'), true);
   } finally {
     memberBusy.value = false;
   }
@@ -266,7 +268,7 @@ async function promoteMember(member: RbTeamMember) {
     const { data } = await api.post<{ team: AdminTeamDetail }>(`/admin/games/${gameId.value}/teams/${teamId.value}/members/${member.id}/captain`, undefined, { errorHints });
     applyTeam(data.team, false);
   } catch (error) {
-    handleError(error, '转让队长失败', true);
+    handleError(error, t('admin.pages.team.transferCaptainFailed'), true);
   } finally {
     memberBusy.value = false;
   }
@@ -278,10 +280,10 @@ async function deleteTeam() {
   try {
     await api.del(`/admin/games/${gameId.value}/teams/${teamId.value}`, { errorHints });
     dirtyToast.clear();
-    toast.add({ title: '队伍已解散', icon: 'material-symbols:delete-outline-rounded', color: 'success' });
+    toast.add({ title: t('admin.pages.team.teamDisband'), icon: 'material-symbols:delete-outline-rounded', color: 'success' });
     await navigateTo(`/admin/games/${gameId.value}/teams`);
   } catch (error) {
-    handleError(error, '解散队伍失败', true);
+    handleError(error, t('admin.pages.team.disbandTeamFailed'), true);
   } finally {
     deleting.value = false;
   }
@@ -290,7 +292,7 @@ async function deleteTeam() {
 watch(dirty, value => {
   if (value) {
     dirtyToast.show({
-      description: '队伍设置修改尚未保存。',
+      description: t('admin.pages.team.teamSettingsUpdateNotYetSave'),
       guardOnLeave: true,
       apply: saveTeam,
       reset,
@@ -319,11 +321,11 @@ onBeforeUnmount(() => dirtyToast.clear());
         <div class="min-w-0">
           <div class="flex items-center gap-2">
             <u-button :to="`/admin/games/${gameId}/teams`" icon="material-symbols:arrow-back-rounded" variant="ghost" color="neutral" />
-            <h2 class="truncate text-xl font-semibold text-highlighted">{{ team?.name ?? '队伍设置' }}</h2>
+            <h2 class="truncate text-xl font-semibold text-highlighted">{{ team?.name ?? t('admin.pages.team.teamSettings') }}</h2>
           </div>
           <div v-if="team" class="mt-1 flex flex-wrap gap-1.5 pl-10">
-            <u-badge size="sm" color="neutral" variant="soft" icon="material-symbols:calendar-today-outline-rounded">创建于 {{ formatDate(team.ctime_at) }}</u-badge>
-            <u-badge v-if="team.finish_at" size="sm" color="success" variant="soft" icon="material-symbols:flag-outline-rounded">完赛于 {{ formatDate(team.finish_at) }}</u-badge>
+            <u-badge size="sm" color="neutral" variant="soft" icon="material-symbols:calendar-today-outline-rounded">{{ t('admin.pages.team.createdAt', { time: formatDate(team.ctime_at) }) }}</u-badge>
+            <u-badge v-if="team.finish_at" size="sm" color="success" variant="soft" icon="material-symbols:flag-outline-rounded">{{ t('admin.common.finishedAt', { time: formatDate(team.finish_at) }) }}</u-badge>
           </div>
         </div>
         <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" :loading="loading" :disabled="dirty || saving" @click="loadTeam" />
@@ -333,17 +335,17 @@ onBeforeUnmount(() => dirtyToast.clear());
 
       <u-form v-if="team" :state="draft" class="flex flex-col gap-8" @submit.prevent="saveTeam()">
         <section class="space-y-4">
-          <h3 class="text-lg font-semibold text-highlighted">基本信息</h3>
+          <h3 class="text-lg font-semibold text-highlighted">{{ t('admin.pages.team.info') }}</h3>
           <div class="space-y-3 rounded-md bg-elevated/60 p-4 ring ring-default">
-            <rb-form-field row narrow-label label="队伍名称" icon="material-symbols:groups-2-outline-rounded" :dirty="draft.name !== team.name" :reset="() => (draft.name = team!.name)">
+            <rb-form-field row narrow-label :label="t('admin.common.teamName')" icon="material-symbols:groups-2-outline-rounded" :dirty="draft.name !== team.name" :reset="() => (draft.name = team!.name)">
               <u-input v-model="draft.name" class="w-full" :disabled="saving" />
             </rb-form-field>
             <u-separator />
-            <rb-form-field row narrow-label label="队伍密码" icon="material-symbols:password-rounded" :dirty="draft.pass !== team.pass" :reset="() => (draft.pass = team!.pass)">
+            <rb-form-field row narrow-label :label="t('admin.common.teamPassword')" icon="material-symbols:password-rounded" :dirty="draft.pass !== team.pass" :reset="() => (draft.pass = team!.pass)">
               <u-input v-model="draft.pass" class="w-full" :disabled="saving" />
             </rb-form-field>
             <u-separator />
-            <rb-form-field row narrow-label label="队伍简介" icon="material-symbols:notes-rounded" :dirty="draft.bio !== team.bio" :reset="() => (draft.bio = team!.bio)">
+            <rb-form-field row narrow-label :label="t('admin.common.teamBio')" icon="material-symbols:notes-rounded" :dirty="draft.bio !== team.bio" :reset="() => (draft.bio = team!.bio)">
               <u-textarea v-model="draft.bio" class="w-full" :rows="3" :disabled="saving" />
             </rb-form-field>
           </div>
@@ -353,34 +355,34 @@ onBeforeUnmount(() => dirtyToast.clear());
 
         <section class="space-y-4">
           <div>
-            <h2 class="text-xl font-semibold text-highlighted">功能权限</h2>
+            <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.pages.team.featureAccess') }}</h2>
           </div>
           <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
             <rb-form-field
               row
-              label="队伍状态"
+              :label="t('admin.common.teamState')"
               icon="material-symbols:shield-outline-rounded"
-              :description="draft.is_banned ? '队伍不能访问谜题。' : '队伍可以正常参与比赛。'"
+              :description="draft.is_banned ? t('admin.pages.team.teamStateDescription.banned') : t('admin.pages.team.teamStateDescription.normal')"
               :dirty="draft.is_banned !== team.is_banned"
               :reset="() => (draft.is_banned = team!.is_banned)"
             >
               <u-field-group>
-                <u-button color="neutral" variant="soft" active-color="error" icon="material-symbols:block-outline" label="封禁" :active="draft.is_banned" :disabled="saving" @click="draft.is_banned = true" />
-                <u-button color="neutral" variant="soft" active-color="primary" icon="material-symbols:check-rounded" label="正常" :active="!draft.is_banned" :disabled="saving" @click="draft.is_banned = false" />
+                <u-button color="neutral" variant="soft" active-color="error" icon="material-symbols:block-outline" :label="t('admin.common.banned')" :active="draft.is_banned" :disabled="saving" @click="draft.is_banned = true" />
+                <u-button color="neutral" variant="soft" active-color="primary" icon="material-symbols:check-rounded" :label="t('admin.pages.team.normal')" :active="!draft.is_banned" :disabled="saving" @click="draft.is_banned = false" />
               </u-field-group>
             </rb-form-field>
             <u-separator />
             <rb-form-field
               row
-              label="锁定队伍"
+              :label="t('admin.pages.team.accessChange.lock')"
               icon="material-symbols:lock-outline"
-              :description="draft.is_locked ? '队伍不能解散，队伍成员不能离开队伍。' : '玩家可以正常管理队伍成员。'"
+              :description="draft.is_locked ? t('admin.pages.team.teamLockDescription.locked') : t('admin.pages.team.teamLockDescription.unlocked')"
               :dirty="draft.is_locked !== team.is_locked"
               :reset="() => (draft.is_locked = team!.is_locked)"
             >
               <u-field-group>
-                <u-button color="neutral" variant="soft" active-color="warning" icon="material-symbols:lock-outline" label="锁定" :active="draft.is_locked" :disabled="saving" @click="draft.is_locked = true" />
-                <u-button color="neutral" variant="soft" active-color="primary" icon="material-symbols:lock-open-outline-rounded" label="解锁" :active="!draft.is_locked" :disabled="saving" @click="draft.is_locked = false" />
+                <u-button color="neutral" variant="soft" active-color="warning" icon="material-symbols:lock-outline" :label="t('admin.common.locked')" :active="draft.is_locked" :disabled="saving" @click="draft.is_locked = true" />
+                <u-button color="neutral" variant="soft" active-color="primary" icon="material-symbols:lock-open-outline-rounded" :label="t('admin.pages.team.unlock')" :active="!draft.is_locked" :disabled="saving" @click="draft.is_locked = false" />
               </u-field-group>
             </rb-form-field>
             <template v-for="feature in team.features" :key="feature.feature">
@@ -394,8 +396,8 @@ onBeforeUnmount(() => dirtyToast.clear());
                 :reset="() => (draft.features[feature.feature] = feature.enabled)"
               >
                 <u-field-group>
-                  <u-button color="neutral" variant="soft" active-color="error" icon="material-symbols:block-outline" label="封禁" :active="!draft.features[feature.feature]" :disabled="saving" @click="draft.features[feature.feature] = false" />
-                  <u-button color="neutral" variant="soft" active-color="primary" icon="material-symbols:check-rounded" label="正常" :active="draft.features[feature.feature]" :disabled="saving" @click="draft.features[feature.feature] = true" />
+                  <u-button color="neutral" variant="soft" active-color="error" icon="material-symbols:block-outline" :label="t('admin.common.banned')" :active="!draft.features[feature.feature]" :disabled="saving" @click="draft.features[feature.feature] = false" />
+                  <u-button color="neutral" variant="soft" active-color="primary" icon="material-symbols:check-rounded" :label="t('admin.pages.team.normal')" :active="draft.features[feature.feature]" :disabled="saving" @click="draft.features[feature.feature] = true" />
                 </u-field-group>
               </rb-form-field>
             </template>
@@ -407,9 +409,9 @@ onBeforeUnmount(() => dirtyToast.clear());
         <section class="space-y-4">
           <div class="flex items-center justify-between gap-3">
             <div>
-              <h2 class="text-xl font-semibold text-highlighted">成员</h2>
+              <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.pages.team.member') }}</h2>
             </div>
-            <u-button size="sm" icon="material-symbols:person-add-outline-rounded" label="添加成员" :disabled="memberBusy" @click="openAddMember" />
+            <u-button size="sm" icon="material-symbols:person-add-outline-rounded" :label="t('admin.pages.team.addMember')" :disabled="memberBusy" @click="openAddMember" />
           </div>
           <rbph-team-member-list :members="team.members" can-manage allow-locked-management :busy="memberBusy" @promote="promoteMember" @remove="removeMember" />
         </section>
@@ -418,9 +420,9 @@ onBeforeUnmount(() => dirtyToast.clear());
 
         <section class="space-y-4">
           <div>
-            <h2 class="text-xl font-semibold text-highlighted">货币管理</h2>
+            <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.common.currencyManagement') }}</h2>
           </div>
-          <u-empty v-if="team.currency.length === 0" icon="material-symbols:money-bag-outline-rounded" title="该队伍没有货币" />
+          <u-empty v-if="team.currency.length === 0" icon="material-symbols:money-bag-outline-rounded" :title="t('admin.pages.team.teamCurrency')" />
           <div v-else class="space-y-3">
             <div v-for="currency in team.currency" :key="currency.id" class="relative rounded-lg bg-elevated/60 px-4 py-3 ring ring-default">
               <div class="mb-3 flex items-center justify-between gap-3">
@@ -430,13 +432,13 @@ onBeforeUnmount(() => dirtyToast.clear());
                     <u-badge class="font-mono ms-1 mb-0.5" size="md" variant="soft">{{ currency.slug }}</u-badge>
                   </div>
                 </div>
-                <u-button v-if="currencyDirty(currency)" size="xs" color="warning" variant="soft" icon="material-symbols:restart-alt-rounded" label="重置" :disabled="saving" @click="resetCurrency(currency)" />
+                <u-button v-if="currencyDirty(currency)" size="xs" color="warning" variant="soft" icon="material-symbols:restart-alt-rounded" :label="t('admin.common.reset')" :disabled="saving" @click="resetCurrency(currency)" />
               </div>
               <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_10rem]">
-                <rb-form-field label="当前余额" :dirty="currencyDrafts[currency.id]?.amount !== (currency.current_amount ?? currency.amount)" :reset="() => (currencyDrafts[currency.id].amount = currency.current_amount ?? currency.amount)">
+                <rb-form-field :label="t('admin.pages.team.currentBalance')" :dirty="currencyDrafts[currency.id]?.amount !== (currency.current_amount ?? currency.amount)" :reset="() => (currencyDrafts[currency.id].amount = currency.current_amount ?? currency.amount)">
                   <rb-input-number v-model="currencyDrafts[currency.id].amount" :prec="currency.prec" :min="0" :max="currency.max_amount" orientation="vertical" class="w-full" :disabled="saving" />
                 </rb-form-field>
-                <rb-form-field label="增长/分钟" :dirty="currencyDrafts[currency.id]?.growth !== currency.team_growth" :reset="() => (currencyDrafts[currency.id].growth = currency.team_growth)">
+                <rb-form-field :label="t('admin.common.growthPerMinute')" :dirty="currencyDrafts[currency.id]?.growth !== currency.team_growth" :reset="() => (currencyDrafts[currency.id].growth = currency.team_growth)">
                   <div class="flex min-w-0 items-center gap-2">
                     <rb-input-number v-model="currencyDrafts[currency.id].growth" :prec="currency.prec" orientation="vertical" class="min-w-0 flex-1" :disabled="saving" />
                     <span class="shrink-0 text-sm text-muted">+</span>
@@ -445,8 +447,8 @@ onBeforeUnmount(() => dirtyToast.clear());
                     </div>
                   </div>
                 </rb-form-field>
-                <rb-form-field label="隐藏货币" :dirty="currencyDrafts[currency.id]?.hidden !== Boolean(currency.hidden)" :reset="() => (currencyDrafts[currency.id].hidden = Boolean(currency.hidden))">
-                  <u-switch v-model="currencyDrafts[currency.id].hidden" :disabled="saving" :label="currencyDrafts[currency.id].hidden ? '已隐藏' : '正常显示'" class="mt-2" />
+                <rb-form-field :label="t('admin.pages.team.hideCurrency')" :dirty="currencyDrafts[currency.id]?.hidden !== Boolean(currency.hidden)" :reset="() => (currencyDrafts[currency.id].hidden = Boolean(currency.hidden))">
+                  <u-switch v-model="currencyDrafts[currency.id].hidden" :disabled="saving" :label="currencyDrafts[currency.id].hidden ? t('admin.pages.team.currencyVisibility.hidden') : t('admin.pages.team.currencyVisibility.visible')" class="mt-2" />
                 </rb-form-field>
               </div>
             </div>
@@ -457,13 +459,13 @@ onBeforeUnmount(() => dirtyToast.clear());
 
         <section class="space-y-4">
           <div>
-            <h2 class="text-xl font-semibold text-highlighted">危险区域</h2>
+            <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.common.dangerZone') }}</h2>
           </div>
 
           <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
-            <rb-form-field row narrow-label label="解散队伍">
-              <u-button color="error" variant="soft" icon="material-symbols:delete-outline-rounded" label="解散队伍" @click="deleteOpen = true" />
-              <div class="text-muted mt-1.5">删除队伍及其关联数据。</div>
+            <rb-form-field row narrow-label :label="t('admin.pages.team.disbandTeam')">
+              <u-button color="error" variant="soft" icon="material-symbols:delete-outline-rounded" :label="t('admin.pages.team.disbandTeam')" @click="deleteOpen = true" />
+              <div class="text-muted mt-1.5">{{ t('admin.pages.team.deleteTeamRelatedData') }}</div>
             </rb-form-field>
           </div>
         </section>
@@ -474,9 +476,9 @@ onBeforeUnmount(() => dirtyToast.clear());
 
     <rb-confirm-modal
       v-model:open="reasonOpen"
-      title="确认队伍权限变更"
-      description="这些变更将记录在队伍动态中，可为本次变更提供一条原因。"
-      confirm-label="保存变更"
+      :title="t('admin.pages.team.confirmTeamAccess')"
+      :description="t('admin.pages.team.accessReasonDescription')"
+      :confirm-label="t('admin.pages.team.save')"
       confirm-icon="material-symbols:save-outline-rounded"
       :busy="saving"
       @confirm="saveTeam(true)"
@@ -487,24 +489,24 @@ onBeforeUnmount(() => dirtyToast.clear());
             {{ change.label }}
           </u-badge>
         </div>
-        <rb-form-field label="原因" class="mt-4">
-          <u-textarea v-model="accessChangeReason" class="w-full" :rows="4" :maxlength="500" :disabled="saving" placeholder="选填，说明本次权限变更的原因" />
+        <rb-form-field :label="t('admin.pages.team.reason')" class="mt-4">
+          <u-textarea v-model="accessChangeReason" class="w-full" :rows="4" :maxlength="500" :disabled="saving" :placeholder="t('admin.pages.team.accessReasonPlaceholder')" />
         </rb-form-field>
       </template>
     </rb-confirm-modal>
 
     <rb-confirm-modal
       v-model:open="addMemberOpen"
-      title="添加成员"
-      description="输入邮箱或昵称搜索用户。"
-      confirm-label="添加成员"
+      :title="t('admin.pages.team.addMember')"
+      :description="t('admin.pages.team.searchPlaceholderUser')"
+      :confirm-label="t('admin.pages.team.addMember')"
       confirm-icon="material-symbols:person-add-outline-rounded"
       :confirm-disabled="addUserId == null"
       :busy="memberBusy"
       @confirm="addMember"
     >
       <template #body>
-        <rb-form-field label="用户" required>
+        <rb-form-field :label="t('admin.common.user')" required>
           <rbph-admin-user-select v-model="addUserId" v-model:user="selectedAddUser" :game-id="gameId" :disabled="memberBusy" />
         </rb-form-field>
       </template>
@@ -512,9 +514,9 @@ onBeforeUnmount(() => dirtyToast.clear());
 
     <rb-confirm-modal
       v-model:open="deleteOpen"
-      title="解散队伍"
-      description="请输入队伍名称以确认解散。"
-      confirm-label="解散"
+      :title="t('admin.pages.team.disbandTeam')"
+      :description="t('admin.pages.team.enterTeamNameConfirmDisband')"
+      :confirm-label="t('admin.pages.team.disband')"
       confirm-color="error"
       confirm-icon="material-symbols:delete-outline-rounded"
       :confirm-disabled="!deleteConfirmValid"
@@ -522,7 +524,7 @@ onBeforeUnmount(() => dirtyToast.clear());
       @confirm="deleteTeam"
     >
       <template #body>
-        <rb-form-field label="队伍名称">
+        <rb-form-field :label="t('admin.common.teamName')">
           <u-input v-model="deleteConfirmName" :placeholder="team?.name" class="w-full" :disabled="deleting" />
         </rb-form-field>
       </template>

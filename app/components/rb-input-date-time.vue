@@ -1,18 +1,14 @@
-<script setup lang="ts">
-import { CalendarDate, Time } from '@internationalized/date';
+<script setup lang="ts">import { CalendarDate, Time } from '@internationalized/date';
 
-withDefaults(
-  defineProps<{
-    icon?: string;
-    placeholder?: string;
-    optional?: boolean;
-  }>(),
-  {
-    icon: undefined,
-    placeholder: '未设置时间',
-    optional: false,
-  },
-);
+
+const { t } = useI18n();
+
+const props = defineProps<{
+  icon?: string;
+  placeholder?: string;
+  optional?: boolean;
+}>();
+const placeholderText = computed(() => props.placeholder ?? t('components.rbInputDateTime.unset'));
 
 const model = defineModel<Date>();
 
@@ -53,7 +49,7 @@ const utcOffset = computed(() => {
 
 <template>
   <u-popover>
-    <u-button variant="subtle" color="neutral" :icon="icon" class="cursor-pointer"> {{ model ? `${model.toLocaleString()} (${utcOffset})` : placeholder }} </u-button>
+    <u-button variant="subtle" color="neutral" :icon="icon" class="cursor-pointer"> {{ model ? `${model.toLocaleString()} (${utcOffset})` : placeholderText }} </u-button>
     <template #content>
       <div class="p-2">
         <u-calendar v-model="dateModel" />
@@ -64,7 +60,7 @@ const utcOffset = computed(() => {
             <u-badge size="sm" variant="soft" class="mx-1">{{ utcOffset }}</u-badge>
           </div>
           <div v-if="optional" class="ms-auto">
-            <u-button color="error" variant="soft" class="cursor-pointer" size="sm" @click="model = undefined">清除</u-button>
+            <u-button color="error" variant="soft" class="cursor-pointer" size="sm" @click="model = undefined">{{ t('components.rbInputDateTime.clear') }}</u-button>
           </div>
         </div>
       </div>

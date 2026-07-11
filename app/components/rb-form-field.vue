@@ -1,5 +1,7 @@
-<script setup lang="ts">
-import type { FormFieldProps } from '@nuxt/ui';
+<script setup lang="ts">import type { FormFieldProps } from '@nuxt/ui';
+
+
+const { t } = useI18n();
 
 const props = defineProps<
   FormFieldProps & {
@@ -74,7 +76,7 @@ function onReset() {
     </template>
 
     <template #default="{ error }">
-      <button v-if="dirty && reset" type="button" :class="['group', dirtyIndicatorClass]" title="撤销修改" aria-label="撤销修改" @click.stop.prevent="onReset">
+      <button v-if="dirty && reset" type="button" :class="['group', dirtyIndicatorClass]" :title="t('components.rbFormField.undoChanges')" :aria-label="t('components.rbFormField.undoChanges')" @click.stop.prevent="onReset">
         <span :class="dirtyLineClass" />
       </button>
       <span v-else-if="dirty" aria-hidden="true" :class="[dirtyIndicatorClass, 'pointer-events-none']">

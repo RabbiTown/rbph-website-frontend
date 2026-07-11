@@ -1,5 +1,7 @@
-<script setup lang="ts">
-import type { SelectItem } from '@nuxt/ui';
+<script setup lang="ts">import type { SelectItem } from '@nuxt/ui';
+
+
+const { t } = useI18n();
 
 const api = useApi();
 const toast = useToast();
@@ -43,18 +45,18 @@ const functionItems = computed<SelectItem[]>(() =>
 );
 const unlockCheckConfirmDescription = computed(() => {
   if (!puzzle.value) return '';
-  return `确认对所有未解锁队伍重新判定谜题「${puzzle.value.title}」的解锁条件？符合条件的队伍将会解锁该谜题。`;
+  return t('admin.pages.puzzle.settings.confirmCheckUnlocks', { value0: puzzle.value.title });
 });
 const clearStatesConfirmDescription = computed(() => {
   if (!puzzle.value) return '';
-  return `确认重置所有队伍对谜题「${puzzle.value.title}」的状态？这会重置解锁状态、提交记录、提示状态和该题人工提示记录，此操作不可恢复。`;
+  return t('admin.pages.puzzle.settings.confirmResetTeamStates', { value0: puzzle.value.title });
 });
 const deleteConfirmDescription = computed(() => {
   if (!puzzle.value) return '';
   if (isRoundPuzzle.value && round.value) {
-    return `确认删除区域谜题「${round.value.title}」？这将不会删除区域本身，此操作不可恢复。`;
+    return t('admin.pages.puzzle.settings.confirmDeleteRoundPuzzle', { puzzle: round.value.title });
   }
-  return `确认删除谜题「${puzzle.value.title}」？此操作不可恢复。`;
+  return t('admin.common.confirmDeletePuzzle', { puzzle: puzzle.value.title });
 });
 const deletePuzzleName = computed(() => {
   if (!puzzle.value) return '';
@@ -72,10 +74,10 @@ const originalReleaseSelection = computed<number | 'unpublished' | 'immediate'>(
 const releasePhaseDirty = computed(() => Boolean(puzzle.value && state.releasePhaseId !== originalReleaseSelection.value));
 const currentReleasePhase = computed(() => releasePhases.value.find(phase => phase.id === puzzle.value?.release_phase_id));
 const releasePhaseItems = computed(() => [
-  { label: '不发布', value: 'unpublished' as const, icon: 'material-symbols:event-busy-outline-rounded' },
-  { label: '立即发布', value: 'immediate' as const, icon: 'material-symbols:rocket-launch-outline-rounded' },
+  { label: t('admin.common.notPublished'), value: 'unpublished' as const, icon: 'material-symbols:event-busy-outline-rounded' },
+  { label: t('admin.common.immediateRelease'), value: 'immediate' as const, icon: 'material-symbols:rocket-launch-outline-rounded' },
   ...releasePhases.value.map(phase => ({
-    label: `${phase.title} · ${formatDate(phase.release_at)}`,
+    label: t('admin.common.releasePhaseAt', { phase: phase.title, time: formatDate(phase.release_at) }),
     value: phase.id,
     icon: 'material-symbols:event-available-outline-rounded',
     disabled: phase.released || new Date(phase.release_at).getTime() <= Date.now(),
@@ -87,7 +89,7 @@ const backendSourceDirty = computed(() => Boolean(puzzle.value && backendLoaded.
 const backendFunctionsDirty = computed(() => Boolean(puzzle.value && backendLoaded.value && JSON.stringify([...state.backend.functions].sort()) !== JSON.stringify([...(backend.value?.functions ?? [])].sort())));
 const backendDirty = computed(() => backendEnabledDirty.value || backendSourceDirty.value || backendFunctionsDirty.value);
 const dirty = computed(() => releasePhaseDirty.value || unlockCondDirty.value || backendDirty.value);
-const previewText = computed(() => translateUnlockCondition(unlockCondPatch.value || ''));
+const previewText = computed(() => translateUnlockCondition(unlockCondPatch.value || '', t));
 const invalid = computed(() => !unlockCondPatch.value);
 
 function syncFromPuzzle() {
@@ -154,7 +156,7 @@ async function fetchOptions() {
     puzzles.value = puzzleResp.data.puzzles;
     releasePhases.value = releaseResp.data.phases;
   } catch (error) {
-    handleError(error, '获取谜题和区域列表失败');
+    handleError(error, t('admin.pages.puzzle.settings.loadPuzzleRoundListFailed'));
   } finally {
     loadingOptions.value = false;
   }
@@ -167,8 +169,8 @@ async function applyReleasePhase() {
     type Response = { puzzle: AdminPuzzleData };
     const response = await api.patch<Response>(`/admin/puzzles/${puzzle.value.id}`, state.releasePhaseId === 'immediate' ? { release_immediately: true } : { release_phase_id: state.releasePhaseId === 'unpublished' ? null : state.releasePhaseId }, {
       errorHints: {
-        [-2]: '目标发布阶段不合法或已经发生。',
-        [-1]: '谜题不存在。',
+        [-2]: t('admin.pages.puzzle.settings.targetReleasePhaseInvalidOr'),
+        [-1]: t('admin.common.puzzleNotFound'),
       },
     });
 
@@ -176,13 +178,13 @@ async function applyReleasePhase() {
     syncFromPuzzle();
 
     toast.add({
-      title: state.releasePhaseId === 'immediate' ? '谜题已立即发布' : state.releasePhaseId === 'unpublished' ? '已撤销发布' : '发布阶段已保存',
+      title: state.releasePhaseId === 'immediate' ? t('admin.common.puzzleReleasedImmediately') : state.releasePhaseId === 'unpublished' ? t('admin.pages.puzzle.settings.undoRelease') : t('admin.pages.puzzle.settings.releasePhaseSaved'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
     return true;
   } catch (error) {
-    handleError(error, '保存发布阶段失败');
+    handleError(error, t('admin.pages.puzzle.settings.saveReleasePhaseFailed'));
     return false;
   }
 }
@@ -191,8 +193,8 @@ async function applyUnlockCond() {
   if (!puzzle.value || !unlockCondDirty.value) return true;
   if (invalid.value) {
     toast.add({
-      title: '解锁条件不完整',
-      description: '请补全积木块，或填写合法的源码表达式。',
+      title: t('admin.pages.puzzle.settings.unlockConditionComplete'),
+      description: t('admin.pages.puzzle.settings.orFillValidSourceExpression'),
       icon: 'material-symbols:error-med-outline-rounded',
       color: 'error',
     });
@@ -206,8 +208,8 @@ async function applyUnlockCond() {
       { unlock_cond: unlockCondPatch.value },
       {
         errorHints: {
-          [-2]: '解锁条件表达式不合法。',
-          [-1]: '谜题不存在。',
+          [-2]: t('admin.pages.puzzle.settings.unlockConditionExpressionInvalid'),
+          [-1]: t('admin.common.puzzleNotFound'),
         },
       },
     );
@@ -216,13 +218,13 @@ async function applyUnlockCond() {
     syncFromPuzzle();
 
     toast.add({
-      title: '解锁条件已保存',
+      title: t('admin.pages.puzzle.settings.unlockConditionSaved'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
     return true;
   } catch (error) {
-    handleError(error, '保存解锁条件失败');
+    handleError(error, t('admin.pages.puzzle.settings.saveUnlockConditionFailed'));
     return false;
   }
 }
@@ -241,8 +243,8 @@ async function applyBackend() {
       },
       {
         errorHints: {
-          [-2]: '后端脚本不合法。',
-          [-1]: '谜题不存在。',
+          [-2]: t('admin.pages.puzzle.settings.backendScriptInvalid'),
+          [-1]: t('admin.common.puzzleNotFound'),
         },
       },
     );
@@ -252,13 +254,13 @@ async function applyBackend() {
     syncFromBackend();
 
     toast.add({
-      title: '后端脚本已保存',
+      title: t('admin.pages.puzzle.settings.backendScriptSaved'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
     return true;
   } catch (error) {
-    handleError(error, '保存后端脚本失败');
+    handleError(error, t('admin.pages.puzzle.settings.saveBackendScriptFailed'));
     return false;
   }
 }
@@ -311,18 +313,18 @@ async function deletePuzzle() {
   try {
     await api.del(`/admin/puzzles/${puzzle.value.id}`, {
       errorHints: {
-        [-1]: '谜题不存在。',
+        [-1]: t('admin.common.puzzleNotFound'),
       },
     });
 
     toast.add({
-      title: '谜题已删除',
+      title: t('admin.common.puzzleDeleted'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
     await navigateTo(`/admin/games/${puzzle.value.game_id}/puzzles`);
   } catch (error) {
-    handleError(error, '删除谜题失败');
+    handleError(error, t('admin.common.deletePuzzleFailed'));
   } finally {
     deleting.value = false;
     deleteConfirmOpen.value = false;
@@ -341,19 +343,19 @@ async function runUnlockCheck() {
       {},
       {
         errorHints: {
-          [-1]: '谜题不存在。',
+          [-1]: t('admin.common.puzzleNotFound'),
         },
       },
     );
 
     toast.add({
-      title: '解锁判定已执行',
-      description: `本次解锁 ${data.unlocked} 个队伍。`,
+      title: t('admin.pages.puzzle.settings.unlockEvaluationExecute'),
+      description: t('admin.pages.puzzle.settings.unlockSummary', { value0: data.unlocked }),
       icon: 'material-symbols:lock-open-right-outline-rounded',
       color: 'success',
     });
   } catch (error) {
-    handleError(error, '执行解锁判定失败');
+    handleError(error, t('admin.pages.puzzle.settings.executeUnlockEvaluationFailed'));
   } finally {
     checkingUnlock.value = false;
     unlockCheckConfirmOpen.value = false;
@@ -382,19 +384,19 @@ async function clearPuzzleStates() {
       { check_unlock: clearStatesCheckUnlock.value },
       {
         errorHints: {
-          [-1]: '谜题不存在。',
+          [-1]: t('admin.common.puzzleNotFound'),
         },
       },
     );
 
     toast.add({
-      title: '队伍状态已重置',
-      description: `影响 ${data.result.team_count} 个队伍，删除 ${data.result.submissions} 条提交、${data.result.hints} 条提示状态、${data.result.tickets} 个人工提示、${data.result.triggers} 个触发器、${data.backend_kv} 条 KV、${data.backend_store} 条存储记录，解锁 ${data.unlocked} 个队伍。`,
+      title: t('admin.pages.puzzle.settings.teamStateReset'),
+      description: t('admin.pages.puzzle.settings.resetSummary', { value0: data.result.team_count, value1: data.result.submissions, value2: data.result.hints, value3: data.result.tickets, value4: data.result.triggers, value5: data.backend_kv, value6: data.backend_store, value7: data.unlocked }),
       icon: 'material-symbols:restart-alt-rounded',
       color: 'success',
     });
   } catch (error) {
-    handleError(error, '重置队伍状态失败');
+    handleError(error, t('admin.pages.puzzle.settings.resetTeamStateFailed'));
   } finally {
     clearingStates.value = false;
     clearStatesConfirmOpen.value = false;
@@ -423,7 +425,7 @@ watch(
 watch(dirty, value => {
   if (value) {
     dirtyToast.show({
-      description: '额外设置修改尚未保存。',
+      description: t('admin.pages.puzzle.settings.settingsUpdateNotYetSave'),
       guardOnLeave: true,
       apply,
       reset,
@@ -441,30 +443,30 @@ watch(dirty, value => {
     <u-form :state="state" class="flex min-w-0 flex-col gap-4" @submit.prevent="apply">
       <section class="relative space-y-4" :class="unlockCondDirty ? `before:content-[''] before:pointer-events-none before:absolute before:-start-4 before:top-0 before:bottom-0 before:w-0.5 before:rounded-full before:bg-warning` : ''">
         <div>
-          <h2 class="text-xl font-semibold text-highlighted">解锁条件</h2>
-          <p class="mt-1 text-sm text-muted">玩家满足下述条件时，谜题将会自动解锁。</p>
+          <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.pages.puzzle.settings.unlockCondition') }}</h2>
+          <p class="mt-1 text-sm text-muted">{{ t('admin.pages.puzzle.settings.unlockConditionDescription') }}</p>
         </div>
         <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
           <rbph-unlock-condition-editor v-model="state.unlock" :puzzles="puzzles" :rounds="rounds" :disabled="saving" :loading="loadingOptions" />
 
           <div class="space-y-2">
             <div class="flex flex-wrap items-center gap-2 text-sm">
-              <u-button v-if="unlockCondDirty" size="xs" variant="soft" color="warning" icon="material-symbols:restart-alt-rounded" label="重置" @click="resetUnlockCond" />
-              <u-badge v-else variant="soft" icon="material-symbols:visibility-outline-rounded">预览</u-badge>
+              <u-button v-if="unlockCondDirty" size="xs" variant="soft" color="warning" icon="material-symbols:restart-alt-rounded" :label="t('admin.common.reset')" @click="resetUnlockCond" />
+              <u-badge v-else variant="soft" icon="material-symbols:visibility-outline-rounded">{{ t('admin.common.preview') }}</u-badge>
               <span class="text-highlighted">{{ previewText }}</span>
             </div>
-            <code class="block overflow-x-auto rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted">{{ unlockCondPatch || '未生成表达式' }}</code>
+            <code class="block overflow-x-auto rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted">{{ unlockCondPatch || t('admin.pages.puzzle.settings.notGenerateExpression') }}</code>
           </div>
 
           <u-separator />
 
-          <rb-form-field name="release_phase_id" row narrow-label :dirty="releasePhaseDirty" :reset="resetReleasePhase" label="发布阶段" tooltip="题目可以立即发布，或在尚未开始的阶段发布。">
+          <rb-form-field name="release_phase_id" row narrow-label :dirty="releasePhaseDirty" :reset="resetReleasePhase" :label="t('admin.pages.puzzle.settings.releasePhase')" :tooltip="t('admin.pages.puzzle.settings.releasePhaseDescription')">
             <div class="flex w-full flex-wrap items-center gap-2">
               <u-select-menu
                 v-model="state.releasePhaseId"
                 :items="releasePhaseItems"
                 value-key="value"
-                placeholder="选择发布阶段"
+                :placeholder="t('admin.pages.puzzle.settings.selectReleasePhase')"
                 :icon="
                   state.releasePhaseId === 'unpublished' ? 'material-symbols:event-busy-outline-rounded' : state.releasePhaseId === 'immediate' ? 'material-symbols:rocket-launch-outline-rounded' : 'material-symbols:event-available-outline-rounded'
                 "
@@ -472,9 +474,9 @@ watch(dirty, value => {
                 :loading="loadingOptions"
                 :disabled="saving"
               />
-              <u-badge v-if="puzzle.immediate_release_at" color="success" variant="soft" icon="material-symbols:rocket-launch-outline-rounded">已立即发布 · {{ formatDate(puzzle.immediate_release_at) }}</u-badge>
-              <u-badge v-else-if="currentReleasePhase?.released" color="success" variant="soft" icon="material-symbols:check-circle-outline-rounded">已发布</u-badge>
-              <u-badge v-else-if="puzzle.release_phase_id === null" color="neutral" variant="soft" icon="material-symbols:event-busy-outline-rounded">不发布</u-badge>
+              <u-badge v-if="puzzle.immediate_release_at" color="success" variant="soft" icon="material-symbols:rocket-launch-outline-rounded">{{ t('admin.common.releasedImmediatelyAt', { time: formatDate(puzzle.immediate_release_at) }) }}</u-badge>
+              <u-badge v-else-if="currentReleasePhase?.released" color="success" variant="soft" icon="material-symbols:check-circle-outline-rounded">{{ t('admin.common.published') }}</u-badge>
+              <u-badge v-else-if="puzzle.release_phase_id === null" color="neutral" variant="soft" icon="material-symbols:event-busy-outline-rounded">{{ t('admin.common.notPublished') }}</u-badge>
             </div>
           </rb-form-field>
         </div>
@@ -485,18 +487,18 @@ watch(dirty, value => {
       <section class="space-y-4">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <h2 class="text-xl font-semibold text-highlighted">后端脚本</h2>
-            <p class="mt-1 text-sm text-muted">自定义题目后端，可以用于特殊题目逻辑和答案判定。</p>
+            <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.pages.puzzle.settings.backendScript') }}</h2>
+            <p class="mt-1 text-sm text-muted">{{ t('admin.pages.puzzle.settings.backendAnswerEvaluation') }}</p>
           </div>
           <u-badge variant="soft" color="neutral">JavaScript</u-badge>
         </div>
 
         <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
-          <rb-form-field name="backend_enabled" row narrow-label label="启用状态" :dirty="backendEnabledDirty" :reset="resetBackendEnabled">
-            <u-switch v-model="state.backend.enabled" class="mt-1.5" label="启用后端" :disabled="saving" />
+          <rb-form-field name="backend_enabled" row narrow-label :label="t('admin.common.enabledState')" :dirty="backendEnabledDirty" :reset="resetBackendEnabled">
+            <u-switch v-model="state.backend.enabled" class="mt-1.5" :label="t('admin.pages.puzzle.settings.enableBackend')" :disabled="saving" />
           </rb-form-field>
           <u-separator v-if="state.backend.enabled" />
-          <rb-form-field v-if="state.backend.enabled" name="backend_functions" row narrow-label label="导出函数" :dirty="backendFunctionsDirty" :reset="resetBackendFunctions">
+          <rb-form-field v-if="state.backend.enabled" name="backend_functions" row narrow-label :label="t('admin.pages.puzzle.settings.exportFunction')" :dirty="backendFunctionsDirty" :reset="resetBackendFunctions">
             <div class="w-full min-w-0">
               <u-select-menu
                 v-model="state.backend.functions"
@@ -504,7 +506,7 @@ watch(dirty, value => {
                 value-key="value"
                 multiple
                 search-input
-                placeholder="选择可对外调用的导出函数"
+                :placeholder="t('admin.pages.puzzle.settings.selectExportFunction')"
                 class="w-full sm:min-w-48 font-mono"
                 icon="material-symbols:function-rounded"
                 :disabled="saving"
@@ -512,13 +514,13 @@ watch(dirty, value => {
             </div>
           </rb-form-field>
           <u-separator v-if="state.backend.enabled" />
-          <rb-form-field v-if="state.backend.enabled" name="backend_source" narrow-label label="脚本源码" class="space-y-3" :dirty="backendSourceDirty" :reset="resetBackendSource">
+          <rb-form-field v-if="state.backend.enabled" name="backend_source" narrow-label :label="t('admin.pages.puzzle.settings.scriptSource')" class="space-y-3" :dirty="backendSourceDirty" :reset="resetBackendSource">
             <rb-code-editor
               ref="scriptEditor"
               v-model="state.backend.source"
               language="javascript"
               :indent="2"
-              aria-label="后端脚本源码"
+              :aria-label="t('admin.pages.puzzle.settings.backendScriptSource')"
               :disabled="saving"
               :min-height="scriptEditorHeight"
               :max-height="scriptEditorHeight"
@@ -532,43 +534,43 @@ watch(dirty, value => {
 
       <section class="space-y-4">
         <div>
-          <h2 class="text-xl font-semibold text-highlighted">危险区域</h2>
-          <p class="mt-1 text-sm text-muted">这里的选项将会对谜题造成不可逆的后果。</p>
+          <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.common.dangerZone') }}</h2>
+          <p class="mt-1 text-sm text-muted">{{ t('admin.pages.puzzle.settings.optionPuzzleIrreversibleConsequence') }}</p>
         </div>
 
         <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
-          <rb-form-field row narrow-label label="执行解锁判定">
+          <rb-form-field row narrow-label :label="t('admin.pages.puzzle.settings.executeUnlockEvaluation')">
             <u-button
               color="warning"
               variant="soft"
               icon="material-symbols:lock-open-right-outline-rounded"
-              label="执行解锁判定"
+              :label="t('admin.pages.puzzle.settings.executeUnlockEvaluation')"
               :disabled="saving || deleting || checkingUnlock || clearingStates || unlockCondDirty"
               :loading="checkingUnlock"
               @click="unlockCheckConfirmOpen = true"
             />
-            <div class="text-muted mt-1.5">重新判定所有未解锁队伍的解锁条件，为符合条件的队伍解锁该谜题。</div>
+            <div class="text-muted mt-1.5">{{ t('admin.pages.puzzle.settings.checkUnlocksDescription') }}</div>
           </rb-form-field>
 
           <u-separator />
 
-          <rb-form-field row narrow-label label="重置队伍状态">
-            <u-button color="error" variant="soft" icon="material-symbols:restart-alt-rounded" label="重置队伍状态" :disabled="saving || deleting || checkingUnlock || clearingStates" :loading="clearingStates" @click="openClearStatesConfirm" />
-            <div class="text-muted mt-1.5">清除所有队伍在此题上的解锁、提交、提示、人工提示、触发器和每队每题后端状态。</div>
+          <rb-form-field row narrow-label :label="t('admin.pages.puzzle.settings.resetTeamState')">
+            <u-button color="error" variant="soft" icon="material-symbols:restart-alt-rounded" :label="t('admin.pages.puzzle.settings.resetTeamState')" :disabled="saving || deleting || checkingUnlock || clearingStates" :loading="clearingStates" @click="openClearStatesConfirm" />
+            <div class="text-muted mt-1.5">{{ t('admin.pages.puzzle.settings.resetTeamStatesDescription') }}</div>
           </rb-form-field>
 
           <u-separator />
 
-          <rb-form-field row narrow-label label="删除谜题">
-            <u-button color="error" variant="soft" icon="material-symbols:delete-outline-rounded" label="删除谜题" :disabled="saving || deleting || checkingUnlock || clearingStates" @click="openDeleteConfirm" />
+          <rb-form-field row narrow-label :label="t('admin.common.deletePuzzle')">
+            <u-button color="error" variant="soft" icon="material-symbols:delete-outline-rounded" :label="t('admin.common.deletePuzzle')" :disabled="saving || deleting || checkingUnlock || clearingStates" @click="openDeleteConfirm" />
           </rb-form-field>
         </div>
 
         <rb-confirm-modal
           v-model:open="immediateReleaseConfirmOpen"
-          title="立即发布谜题"
-          description="谜题将立即对已经满足解锁条件的队伍开放，并推送一条发布提示。"
-          confirm-label="立即发布"
+          :title="t('admin.pages.puzzle.settings.immediateReleasePuzzle')"
+          :description="t('admin.pages.puzzle.settings.releaseImmediatelyDescription')"
+          :confirm-label="t('admin.common.immediateRelease')"
           confirm-color="warning"
           confirm-icon="material-symbols:rocket-launch-outline-rounded"
           :busy="saving"
@@ -577,9 +579,9 @@ watch(dirty, value => {
 
         <rb-confirm-modal
           v-model:open="unlockCheckConfirmOpen"
-          title="执行解锁判定"
+          :title="t('admin.pages.puzzle.settings.executeUnlockEvaluation')"
           :description="unlockCheckConfirmDescription"
-          confirm-label="执行判定"
+          :confirm-label="t('admin.pages.puzzle.settings.executeEvaluation')"
           confirm-color="warning"
           confirm-icon="material-symbols:lock-open-right-outline-rounded"
           :busy="checkingUnlock"
@@ -588,9 +590,9 @@ watch(dirty, value => {
 
         <rb-confirm-modal
           v-model:open="clearStatesConfirmOpen"
-          title="重置队伍状态"
+          :title="t('admin.pages.puzzle.settings.resetTeamState')"
           :description="clearStatesConfirmDescription"
-          confirm-label="重置状态"
+          :confirm-label="t('admin.pages.puzzle.settings.resetState')"
           confirm-color="error"
           confirm-icon="material-symbols:restart-alt-rounded"
           :busy="clearingStates"
@@ -599,8 +601,8 @@ watch(dirty, value => {
           <template #body>
             <u-checkbox
               v-model="clearStatesCheckUnlock"
-              label="重置后自动执行一次解锁判定"
-              description="重新判定所有未解锁队伍是否仍满足该谜题的解锁条件。"
+              :label="t('admin.pages.puzzle.settings.checkAfterReset')"
+              :description="t('admin.pages.puzzle.settings.checkAfterResetDescription')"
               :disabled="clearingStates"
             />
           </template>
@@ -608,9 +610,9 @@ watch(dirty, value => {
 
         <rb-confirm-modal
           v-model:open="deleteConfirmOpen"
-          title="删除谜题"
+          :title="t('admin.common.deletePuzzle')"
           :description="deleteConfirmDescription"
-          confirm-label="删除谜题"
+          :confirm-label="t('admin.common.deletePuzzle')"
           confirm-color="error"
           confirm-icon="material-symbols:delete-outline-rounded"
           :confirm-disabled="!deletePuzzleNameMatches"
@@ -618,7 +620,7 @@ watch(dirty, value => {
           @confirm="deletePuzzle"
         >
           <template #body>
-            <rb-form-field label="输入谜题名称以确认">
+            <rb-form-field :label="t('admin.common.enterPuzzleNameConfirm')">
               <u-input v-model="deletePuzzleNameInput" :placeholder="deletePuzzleName" autocomplete="off" class="w-full" :disabled="deleting" />
             </rb-form-field>
           </template>

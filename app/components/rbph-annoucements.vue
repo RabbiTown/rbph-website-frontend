@@ -48,7 +48,7 @@ function puzzleRoute(anmt: Partial<RbAnnouncementInfo>, puzzle: RbAnnouncementPu
             </div>
             <div v-if="anmt.utime_at" class="text-secondary text-xs flex items-center ms-1">
               <u-icon name="material-symbols:schedule-outline-rounded" class="align-middle me-0.5" />
-              更新于 {{ formatDate(anmt.utime_at) }}
+              {{ t('common.updatedAt', { time: formatDate(anmt.utime_at) }) }}
             </div>
           </div>
           <u-button

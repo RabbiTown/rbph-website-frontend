@@ -1,5 +1,7 @@
-<script setup lang="ts">
-import type { SelectItem } from '@nuxt/ui';
+<script setup lang="ts">import type { SelectItem } from '@nuxt/ui';
+
+
+const { t } = useI18n();
 
 const node = defineModel<UnlockSetNode>({ required: true });
 
@@ -18,8 +20,8 @@ const puzzleSearch = ref('');
 const roundSearch = ref('');
 
 const setTypeItems = [
-  { label: '指定谜题', value: 'puzzles', icon: 'material-symbols:extension-outline-rounded' },
-  { label: '区域所有谜题', value: 'round', icon: 'material-symbols:grid-view-outline-rounded' },
+  { label: t('components.rbphUnlockSetBlock.setType.puzzles'), value: 'puzzles', icon: 'material-symbols:extension-outline-rounded' },
+  { label: t('components.rbphUnlockSetBlock.setType.round'), value: 'round', icon: 'material-symbols:grid-view-outline-rounded' },
 ] satisfies SelectItem[];
 
 function setType(type: string) {
@@ -36,7 +38,7 @@ function setType(type: string) {
 
 <template>
   <div class="inline-flex min-w-0 flex-wrap items-center gap-2 rounded-md bg-elevated px-2 py-1 ring ring-default">
-    <u-select :model-value="node.type" :items="setTypeItems" :leading-icon="setTypeItems.find(item => item.value === node.type)?.icon" variant="subtle" class="w-40" :disabled="disabled" @update:model-value="value => setType(String(value))" />
+    <u-select :model-value="node.type" :items="setTypeItems" :leading-icon="setTypeItems.find(item => item.value === node.type)?.icon" variant="subtle" class="w-44" :disabled="disabled" @update:model-value="value => setType(String(value))" />
 
     <u-select-menu
       v-if="node.type === 'puzzles'"
@@ -47,7 +49,7 @@ function setType(type: string) {
       value-key="value"
       :filter-fields="['label']"
       leading-icon="material-symbols:extension-outline-rounded"
-      placeholder="选择或输入关键字过滤谜题"
+      :placeholder="t('admin.common.selectOrPuzzleFilterPlaceholder')"
       search-input
       variant="subtle"
       class="min-w-72"
@@ -58,7 +60,7 @@ function setType(type: string) {
 
     <template v-else-if="node.type === 'puzzle-range'">
       <u-input-number v-model="node.start" :min="1" :step="1" orientation="vertical" variant="subtle" class="w-28" :disabled="disabled" @update:model-value="emit('change')" />
-      <span class="text-sm text-muted">到</span>
+      <span class="text-sm text-muted">{{ t('components.rbphUnlockSetBlock.rangeSeparator') }}</span>
       <u-input-number v-model="node.end" :min="1" :step="1" orientation="vertical" variant="subtle" class="w-28" :disabled="disabled" @update:model-value="emit('change')" />
     </template>
 
@@ -70,7 +72,7 @@ function setType(type: string) {
       value-key="value"
       :filter-fields="['label']"
       leading-icon="material-symbols:grid-view-outline-rounded"
-      placeholder="选择或输入关键字过滤区域"
+      :placeholder="t('components.rbphUnlockSetBlock.roundFilterPlaceholder')"
       search-input
       variant="subtle"
       class="min-w-72"

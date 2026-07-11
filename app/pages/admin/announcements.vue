@@ -1,11 +1,13 @@
-<script setup lang="ts">
-useHead({ titleTemplate: '全局公告 - RBPH 管理后台' });
+<script setup lang="ts">const { t } = useI18n();
+
+
+useHead({ titleTemplate: t('admin.pages.announcements.pageTitle') });
 </script>
 
 <template>
   <u-dashboard-panel id="admin-announcements">
     <template #header>
-      <u-dashboard-navbar title="全局公告">
+      <u-dashboard-navbar :title="t('admin.common.globalAnnouncements')">
         <template #leading>
           <u-dashboard-sidebar-collapse />
         </template>

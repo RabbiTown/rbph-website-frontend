@@ -1,4 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 const props = withDefaults(
   defineProps<{
     html?: string;
@@ -56,7 +58,7 @@ async function resolveHtml() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return await response.text();
   } catch {
-    error.value = 'Raw HTML 文件加载失败。';
+    error.value = t('components.rbphRawHtmlRenderer.loadFailed');
     return '';
   } finally {
     loading.value = false;

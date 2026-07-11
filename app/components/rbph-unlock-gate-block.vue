@@ -1,5 +1,7 @@
-<script setup lang="ts">
-import type { SelectItem } from '@nuxt/ui';
+<script setup lang="ts">import type { SelectItem } from '@nuxt/ui';
+
+
+const { t } = useI18n();
 
 const node = defineModel<UnlockGateNode>({ required: true });
 
@@ -17,29 +19,29 @@ const emit = defineEmits<{ change: [] }>();
 
 const gateTypeItems = [
   [
-    { label: '默认解锁', value: 'default', icon: 'material-symbols:lock-open-right-outline-rounded' },
-    { label: '队伍开始比赛', value: 'game-started', icon: 'material-symbols:flag-outline-rounded' },
-    { label: '解出谜题', value: 'solved', icon: 'material-symbols:extension-outline-rounded' },
-    { label: '触发器', value: 'triggered', icon: 'material-symbols:bolt-outline-rounded' },
-    { label: '全部解出', value: 'all-solved', icon: 'material-symbols:done-all-rounded' },
-    { label: '任一解出', value: 'any-solved', icon: 'material-symbols:rule-rounded' },
+    { label: t('components.rbphUnlockGateBlock.gateType.default'), value: 'default', icon: 'material-symbols:lock-open-right-outline-rounded' },
+    { label: t('components.rbphUnlockGateBlock.gateType.gameStarted'), value: 'game-started', icon: 'material-symbols:flag-outline-rounded' },
+    { label: t('components.rbphUnlockGateBlock.gateType.puzzleSolved'), value: 'solved', icon: 'material-symbols:extension-outline-rounded' },
+    { label: t('admin.common.trigger'), value: 'triggered', icon: 'material-symbols:bolt-outline-rounded' },
+    { label: t('components.rbphUnlockGateBlock.gateType.allSolved'), value: 'all-solved', icon: 'material-symbols:done-all-rounded' },
+    { label: t('components.rbphUnlockGateBlock.gateType.anySolved'), value: 'any-solved', icon: 'material-symbols:rule-rounded' },
   ],
   [
-    { label: '比较', value: 'cmp', icon: 'material-symbols:function-rounded' },
-    { label: '并且', value: 'and', icon: 'material-symbols:join-inner-rounded' },
-    { label: '或者', value: 'or', icon: 'material-symbols:join-full-rounded' },
-    { label: '非', value: 'not', icon: 'material-symbols:close-rounded' },
+    { label: t('components.rbphUnlockGateBlock.gateType.compare'), value: 'cmp', icon: 'material-symbols:function-rounded' },
+    { label: t('components.rbphUnlockGateBlock.gateType.and'), value: 'and', icon: 'material-symbols:join-inner-rounded' },
+    { label: t('components.rbphUnlockGateBlock.gateType.or'), value: 'or', icon: 'material-symbols:join-full-rounded' },
+    { label: t('components.rbphUnlockGateBlock.gateType.not'), value: 'not', icon: 'material-symbols:close-rounded' },
   ],
-  [{ label: '源码', value: 'source', icon: 'material-symbols:code-rounded' }],
+  [{ label: t('components.rbphUnlockGateBlock.gateType.source'), value: 'source', icon: 'material-symbols:code-rounded' }],
 ] satisfies SelectItem[][];
 
 const compareOpItems = [
-  { label: '大于或等于', value: 'ge', icon: 'tabler:math-equal-greater' },
-  { label: '大于', value: 'gt', icon: 'tabler:math-greater' },
-  { label: '小于或等于', value: 'le', icon: 'tabler:math-equal-lower' },
-  { label: '小于', value: 'lt', icon: 'tabler:math-lower' },
-  { label: '等于', value: 'eq', icon: 'tabler:equal' },
-  { label: '不等于', value: 'ne', icon: 'tabler:equal-not' },
+  { label: t('components.rbphUnlockGateBlock.comparison.greaterThanOrEqual'), value: 'ge', icon: 'tabler:math-equal-greater' },
+  { label: t('components.rbphUnlockGateBlock.comparison.greaterThan'), value: 'gt', icon: 'tabler:math-greater' },
+  { label: t('components.rbphUnlockGateBlock.comparison.lessThanOrEqual'), value: 'le', icon: 'tabler:math-equal-lower' },
+  { label: t('components.rbphUnlockGateBlock.comparison.lessThan'), value: 'lt', icon: 'tabler:math-lower' },
+  { label: t('components.rbphUnlockGateBlock.comparison.equal'), value: 'eq', icon: 'tabler:equal' },
+  { label: t('components.rbphUnlockGateBlock.comparison.notEqual'), value: 'ne', icon: 'tabler:equal-not' },
 ] satisfies SelectItem[];
 
 const puzzleSearch = ref('');
@@ -74,7 +76,7 @@ function removeChild(index: number) {
 <template>
   <div class="rounded-md bg-default/60 p-3 ring ring-default" :class="(depth ?? 0) > 0 ? 'ms-4' : ''">
     <div class="flex flex-wrap items-center gap-2">
-      <u-select :model-value="node.type" :items="gateTypeItems" :leading-icon="selectedIcon(gateTypeItems.flat(), node.type)" variant="subtle" class="w-44" :disabled="disabled" @update:model-value="value => setType(String(value))" />
+      <u-select :model-value="node.type" :items="gateTypeItems" :leading-icon="selectedIcon(gateTypeItems.flat(), node.type)" variant="subtle" class="w-48" :disabled="disabled" @update:model-value="value => setType(String(value))" />
 
       <template v-if="node.type === 'solved'">
         <u-select-menu
@@ -84,7 +86,7 @@ function removeChild(index: number) {
           value-key="value"
           :filter-fields="['label']"
           :leading-icon="selectedIcon(puzzleItems, node.ref)"
-          placeholder="输入关键字过滤谜题"
+          :placeholder="t('components.rbphUnlockGateBlock.puzzleFilterPlaceholder')"
           search-input
           variant="subtle"
           class="min-w-72 flex-1"
@@ -101,7 +103,7 @@ function removeChild(index: number) {
           :items="puzzleItems"
           value-key="value"
           :filter-fields="['label']"
-          placeholder="选择触发器所属谜题"
+          :placeholder="t('components.rbphUnlockGateBlock.selectTriggerPuzzle')"
           search-input
           variant="subtle"
           class="min-w-64 flex-1"
@@ -118,7 +120,7 @@ function removeChild(index: number) {
 
       <template v-else-if="node.type === 'cmp'">
         <rbph-unlock-value-block v-model="node.lhs" :puzzles="puzzles" :rounds="rounds" :puzzle-items="puzzleItems" :round-items="roundItems" :disabled="disabled" :loading="loading" @change="emit('change')" />
-        <u-select v-model="node.op" :items="compareOpItems" :leading-icon="selectedIcon(compareOpItems, node.op)" variant="subtle" class="w-36" :disabled="disabled" @update:model-value="emit('change')" />
+        <u-select v-model="node.op" :items="compareOpItems" :leading-icon="selectedIcon(compareOpItems, node.op)" variant="subtle" class="w-40" :disabled="disabled" @update:model-value="emit('change')" />
         <rbph-unlock-value-block v-model="node.rhs" :puzzles="puzzles" :rounds="rounds" :puzzle-items="puzzleItems" :round-items="roundItems" :disabled="disabled" :loading="loading" @change="emit('change')" />
       </template>
 
@@ -144,7 +146,7 @@ function removeChild(index: number) {
         <u-button v-if="node.children.length > 1" icon="material-symbols:delete-outline-rounded" color="error" variant="ghost" size="sm" :disabled="disabled" @click="removeChild(index)" />
       </div>
       <div class="flex justify-end">
-        <u-button size="xs" variant="soft" icon="material-symbols:add-rounded" label="添加条件" :disabled="disabled" @click="addChild" />
+        <u-button size="xs" variant="soft" icon="material-symbols:add-rounded" :label="t('components.rbphUnlockGateBlock.addCondition')" :disabled="disabled" @click="addChild" />
       </div>
     </div>
 

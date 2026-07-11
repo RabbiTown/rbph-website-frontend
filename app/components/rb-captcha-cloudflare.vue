@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { t } = useI18n();
+
 interface TurnstileRenderOptions {
   sitekey: string;
   action: string;
@@ -102,6 +104,13 @@ defineExpose({ reset });
 <template>
   <div class="w-full">
     <div ref="container" class="w-full" />
-    <u-alert v-if="loadFailed" color="error" variant="subtle" icon="material-symbols:error-outline-rounded" title="验证码加载失败" description="请刷新页面后重试。" />
+    <u-alert
+      v-if="loadFailed"
+      color="error"
+      variant="subtle"
+      icon="material-symbols:error-outline-rounded"
+      :title="t('components.captchaCloudflare.loadFailed')"
+      :description="t('components.captchaCloudflare.retryAfterRefresh')"
+    />
   </div>
 </template>

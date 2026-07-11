@@ -1,4 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 interface UserSelectItem extends AdminUserOption {
   label: string;
   disabled: boolean;
@@ -45,7 +47,7 @@ async function loadUsers() {
     if (currentRequest !== requestId) return;
     users.value = selectedUser.value && !data.users.some(user => user.id === selectedUser.value?.id) ? [selectedUser.value, ...data.users] : data.users;
   } catch (error) {
-    if (currentRequest === requestId) handleError(error, '用户列表获取失败');
+    if (currentRequest === requestId) handleError(error, t('components.rbphAdminUserSelect.userListLoadFailed'));
   } finally {
     if (currentRequest === requestId) loading.value = false;
   }
@@ -71,7 +73,7 @@ watch(model, id => {
     :items="items"
     value-key="id"
     label-key="label"
-    :placeholder="placeholder || '输入邮箱或昵称搜索'"
+    :placeholder="placeholder || t('components.rbphAdminUserSelect.searchPlaceholder')"
     search-input
     :loading="loading"
     :disabled="disabled"

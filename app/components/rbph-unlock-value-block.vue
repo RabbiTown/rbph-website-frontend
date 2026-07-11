@@ -1,5 +1,7 @@
-<script setup lang="ts">
-import type { SelectItem } from '@nuxt/ui';
+<script setup lang="ts">import type { SelectItem } from '@nuxt/ui';
+
+
+const { t } = useI18n();
 
 const node = defineModel<UnlockValueNode>({ required: true });
 
@@ -15,8 +17,8 @@ defineProps<{
 const emit = defineEmits<{ change: [] }>();
 
 const valueTypeItems = [
-  { label: '常数', value: 'number', icon: 'material-symbols:pin-outline-rounded' },
-  { label: '解出数量', value: 'solved-count', icon: 'material-symbols:checklist-rounded' },
+  { label: t('components.rbphUnlockValueBlock.valueType.number'), value: 'number', icon: 'material-symbols:pin-outline-rounded' },
+  { label: t('components.rbphUnlockValueBlock.valueType.solvedCount'), value: 'solved-count', icon: 'material-symbols:checklist-rounded' },
 ] satisfies SelectItem[];
 
 function setType(type: string) {

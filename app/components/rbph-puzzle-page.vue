@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { t } = useI18n();
+
 const props = defineProps<{
   page?: string;
 }>();
@@ -21,7 +23,11 @@ const page = computed(() => {
       }
     },
     loadingComponent: h(USkeleton, { class: 'w-full min-h-24' }),
-    errorComponent: h(UEmpty, { icon: 'material-symbols:extension-off-outline-rounded', title: '页面缺失', description: '没有对应页面' }),
+    errorComponent: h(UEmpty, {
+      icon: 'material-symbols:extension-off-outline-rounded',
+      title: t('components.puzzlePage.missingTitle'),
+      description: t('components.puzzlePage.missingDescription'),
+    }),
   });
 });
 </script>

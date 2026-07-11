@@ -1,4 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 const props = defineProps<{
   blocks: RbContentBlock[];
 }>();
@@ -61,9 +63,9 @@ watch(
         color="error"
         variant="soft"
         icon="material-symbols:error-outline-rounded"
-        title="内容加载失败"
-        description="无法加载此内容块。"
-        :actions="[{ label: '重试', icon: 'material-symbols:refresh-rounded', color: 'error', variant: 'soft', onClick: () => loadBlock(block, true) }]"
+        :title="t('components.rbphContentBlocks.loadFailedTitle')"
+        :description="t('components.rbphContentBlocks.loadFailedDescription')"
+        :actions="[{ label: t('components.rbphContentBlocks.retry'), icon: 'material-symbols:refresh-rounded', color: 'error', variant: 'soft', onClick: () => loadBlock(block, true) }]"
       />
       <u-skeleton v-else-if="block.content_url && loaded[cacheKey(block)] === undefined" class="h-24 w-full" />
       <rbph-content v-else :content="blockContent(block)" />

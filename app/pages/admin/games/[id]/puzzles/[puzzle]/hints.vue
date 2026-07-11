@@ -1,4 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 interface HintState {
   id: number | null;
   sort: number;
@@ -68,7 +70,7 @@ const currentGameId = computed(() => puzzle.value?.game_id ?? routeGameId.value)
 const currentPuzzleId = computed(() => puzzle.value?.id ?? routePuzzleId.value);
 
 const currencyItems = computed(() => [
-  { label: '免费', value: null, icon: 'material-symbols:money-off-outline-rounded' },
+  { label: t('admin.pages.puzzle.hints.free'), value: null, icon: 'material-symbols:money-off-outline-rounded' },
   ...currencies.value.map(currency => ({
     label: currency.name,
     value: currency.id,
@@ -471,7 +473,7 @@ async function fetchData(openIds = expandedHintIds()) {
     currencies.value = currencyResp.data.currencies;
     reset(openIds);
   } catch (error) {
-    handleError(error, '获取提示信息失败', true);
+    handleError(error, t('admin.pages.puzzle.hints.loadHintInfoFailed'), true);
   } finally {
     loading.value = false;
   }
@@ -481,8 +483,8 @@ async function apply() {
   if (!Number.isFinite(currentPuzzleId.value) || !dirty.value || saving.value) return;
   if (!validate()) {
     toast.add({
-      title: '提示配置不合法',
-      description: '请检查标题、冷却时间、货币消耗和后端函数名。',
+      title: t('admin.pages.puzzle.hints.hintConfigurationInvalid'),
+      description: t('admin.pages.puzzle.hints.invalidHintDescription'),
       icon: 'material-symbols:error-med-outline-rounded',
       color: 'error',
     });
@@ -502,7 +504,7 @@ async function apply() {
       if (ticketCooldownDirty.value) body.ticket_cooldown = ticketCooldownPatch.value;
 
       const response = await api.patch<PuzzleResponse>(`/admin/puzzles/${puzzle.value.id}`, body, {
-        errorHints: { [-2]: '人工提示配置不合法。', [-1]: '谜题不存在。' },
+        errorHints: { [-2]: t('admin.pages.puzzle.hints.ticketConfigurationInvalid'), [-1]: t('admin.common.puzzleNotFound') },
       });
       puzzle.value = response.data.puzzle;
       syncTicketCooldownFromPuzzle();
@@ -513,7 +515,7 @@ async function apply() {
       for (const hint of state.value) {
         if (hint.deleting && hint.id && hint.id > 0) {
           await api.del(`/admin/hints/${hint.id}`, {
-            errorHints: { [-1]: '提示不存在。' },
+            errorHints: { [-1]: t('admin.pages.puzzle.hints.hintNotFound') },
           });
         }
       }
@@ -522,11 +524,11 @@ async function apply() {
         const body = stateToPatch(hint);
         if (hint.id && hint.id > 0) {
           await api.patch(`/admin/hints/${hint.id}`, body, {
-            errorHints: { [-2]: '提示配置不合法。', [-1]: '提示不存在。' },
+            errorHints: { [-2]: t('admin.pages.puzzle.hints.hintConfigurationInvalidDescription'), [-1]: t('admin.pages.puzzle.hints.hintNotFound') },
           });
         } else {
           const { data } = await api.post<{ hint: AdminHintData }>('/admin/hints', body, {
-            errorHints: { [-2]: '提示配置不合法。', [-1]: '谜题不存在。' },
+            errorHints: { [-2]: t('admin.pages.puzzle.hints.hintConfigurationInvalidDescription'), [-1]: t('admin.common.puzzleNotFound') },
           });
           if (hint.open) openIds.add(data.hint.id);
         }
@@ -536,12 +538,12 @@ async function apply() {
     }
     dirtyToast.clear();
     toast.add({
-      title: '提示配置已保存',
+      title: t('admin.pages.puzzle.hints.hintConfigurationSaved'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
   } catch (error) {
-    handleError(error, '保存提示配置失败');
+    handleError(error, t('admin.pages.puzzle.hints.saveHintConfigurationFailed'));
   } finally {
     saving.value = false;
   }
@@ -566,7 +568,7 @@ watch(
 watch(dirty, value => {
   if (value) {
     dirtyToast.show({
-      description: '提示配置修改尚未保存。',
+      description: t('admin.pages.puzzle.hints.hintConfigurationUpdateNotYetSave'),
       guardOnLeave: true,
       apply,
       reset,
@@ -589,13 +591,13 @@ onBeforeUnmount(() => {
       <u-form :state="{ hints: state, ticketCooldown }" class="flex flex-col gap-4" @submit.prevent="apply" @dragover="onHintListDragOver" @drop="onHintDrop">
         <section class="flex flex-col gap-4">
           <div>
-            <h2 class="text-xl font-semibold text-highlighted">预设提示</h2>
-            <p class="mt-1 text-sm text-muted">所有玩家都能解锁并查看预设提示。</p>
+            <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.pages.puzzle.hints.hint') }}</h2>
+            <p class="mt-1 text-sm text-muted">{{ t('admin.pages.puzzle.hints.allPlayerUnlockViewHint') }}</p>
           </div>
 
-          <u-empty v-if="!loading && state.length === 0" icon="material-symbols:lightbulb-outline-rounded" title="暂无预设提示" description="添加一个提示后，玩家可在提示页解锁。">
+          <u-empty v-if="!loading && state.length === 0" icon="material-symbols:lightbulb-outline-rounded" :title="t('admin.pages.puzzle.hints.emptyHint')" :description="t('admin.pages.puzzle.hints.addItemHintPlayerHintUnlock')">
             <template #actions>
-              <u-button icon="material-symbols:add-rounded" label="新建提示" :disabled="loading || saving" @click="addHint" />
+              <u-button icon="material-symbols:add-rounded" :label="t('admin.pages.puzzle.hints.createHint')" :disabled="loading || saving" @click="addHint" />
             </template>
           </u-empty>
 
@@ -616,9 +618,9 @@ onBeforeUnmount(() => {
                 <div class="flex items-center gap-3 rounded-lg bg-elevated/60 px-4 py-2 group cursor-pointer ring ring-default">
                   <div class="flex min-w-0 flex-1 items-center gap-2">
                     <u-icon name="material-symbols:lightbulb-outline-rounded" class="text-warning" />
-                    <u-input v-if="hint.open" v-model="hint.title" class="w-full -mx-2.5 -my-1.5 font-medium" placeholder="提示标题" variant="ghost" :disabled="saving || hint.deleting" @click.stop />
+                    <u-input v-if="hint.open" v-model="hint.title" class="w-full -mx-2.5 -my-1.5 font-medium" :placeholder="t('admin.pages.puzzle.hints.hintTitle')" variant="ghost" :disabled="saving || hint.deleting" @click.stop />
                     <div v-else class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">
-                      {{ hint.title || '未命名提示' }}
+                      {{ hint.title || t('admin.pages.puzzle.hints.notMemberHint') }}
                     </div>
                   </div>
                   <div class="flex min-w-0 flex-none flex-wrap justify-end gap-1" @click.stop>
@@ -637,7 +639,7 @@ onBeforeUnmount(() => {
                       color="neutral"
                       variant="ghost"
                       size="sm"
-                      aria-label="拖动排序"
+                      :aria-label="t('admin.common.dragToReorder')"
                       class="cursor-grab active:cursor-grabbing"
                       draggable="true"
                       :disabled="saving || hint.deleting"
@@ -654,9 +656,9 @@ onBeforeUnmount(() => {
                   <div class="border-t border-default bg-elevated/40 px-4 pt-4 pb-4">
                     <div class="flex flex-col gap-4">
                       <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-                        <rb-form-field row narrow-label class="flex-1" label="开放时间">
+                        <rb-form-field row narrow-label class="flex-1" :label="t('admin.pages.puzzle.hints.openTime')">
                           <div class="flex flex-wrap items-center gap-2">
-                            <span class="text-sm text-muted">谜题解锁后</span>
+                            <span class="text-sm text-muted">{{ t('admin.pages.puzzle.hints.puzzleUnlock') }}</span>
                             <u-input-number
                               v-model="hint.cooldown"
                               :min="0"
@@ -671,15 +673,15 @@ onBeforeUnmount(() => {
                           </div>
                         </rb-form-field>
 
-                        <rb-form-field row narrow-label class="flex-1" label="未开放时">
+                        <rb-form-field row narrow-label class="flex-1" :label="t('admin.pages.puzzle.hints.notOpen')">
                           <div class="flex flex-wrap items-center gap-2">
-                            <u-switch v-model="hint.title_hidden" class="mt-1.5" label="隐藏标题" :disabled="saving || hint.deleting" />
+                            <u-switch v-model="hint.title_hidden" class="mt-1.5" :label="t('admin.pages.puzzle.hints.hideTitle')" :disabled="saving || hint.deleting" />
                           </div>
                         </rb-form-field>
                       </div>
 
                       <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-                        <rb-form-field row narrow-label class="flex-1" label="解锁消耗">
+                        <rb-form-field row narrow-label class="flex-1" :label="t('admin.pages.puzzle.hints.unlockCost')">
                           <div class="flex flex-wrap items-center gap-2">
                             <u-select v-model="hint.cost_id" :items="currencyItems" :leading-icon="selectedCurrencyIcon(hint.cost_id)" variant="subtle" class="w-40" :disabled="saving || hint.deleting" />
                             <rb-input-number v-if="hint.cost_id !== null" v-model="hint.cost_amount" :prec="currencyPrec(hint.cost_id)" :min="0" :step="1" orientation="vertical" variant="subtle" class="w-36" :disabled="saving || hint.deleting" />
@@ -687,20 +689,18 @@ onBeforeUnmount(() => {
                         </rb-form-field>
 
                         <rb-form-field v-if="showBackendFunction(hint)" row narrow-label class="flex-1" :error="hintBackendWarning(hint) ? true : undefined">
-                          <template #label>
-                            解锁调用函数
-                            <rb-tooltip text="若非空，购买提示时将调用对应的后端函数，函数失败会导致购买失败。">
+                          <template #label> {{ t('admin.pages.puzzle.hints.unlockFunction') }} <rb-tooltip :text="t('admin.pages.puzzle.hints.backendFunctionDescription')">
                               <u-icon name="material-symbols:help-outline-rounded" class="size-4 align-middle mb-0.5 ms-1 cursor-help" :class="hintBackendWarning(hint) ? 'text-error' : 'text-secondary'" />
                             </rb-tooltip>
                           </template>
                           <div class="flex flex-col gap-1">
                             <u-input v-model="hint.backend_function" placeholder="(optional)" icon="material-symbols:function-rounded" variant="subtle" class="w-full max-w-md font-mono" :color="hintBackendWarning(hint) ? 'error' : 'neutral'" :disabled="saving || hint.deleting" />
-                            <div v-if="hintBackendWarning(hint)" class="text-xs text-error">题目后端已关闭，该解锁调用函数不会生效；重新启用后端后会恢复。</div>
+                            <div v-if="hintBackendWarning(hint)" class="text-xs text-error">{{ t('admin.pages.puzzle.hints.backendDisabledWarning') }}</div>
                           </div>
                         </rb-form-field>
                       </div>
 
-                      <rbph-content-editor v-model="hint.content" framed placeholder="提示内容" :disabled="saving || hint.deleting" @save="apply" />
+                      <rbph-content-editor v-model="hint.content" framed :placeholder="t('admin.pages.puzzle.hints.hintContent')" :disabled="saving || hint.deleting" @save="apply" />
                     </div>
                   </div>
                 </template>
@@ -708,7 +708,7 @@ onBeforeUnmount(() => {
             </div>
 
             <div class="sticky bottom-4 z-20 flex justify-end">
-              <u-button icon="material-symbols:add-rounded" label="新建提示" size="lg" class="shadow-lg shadow-primary/20" :disabled="loading || saving" @click="addHint" />
+              <u-button icon="material-symbols:add-rounded" :label="t('admin.pages.puzzle.hints.createHint')" size="lg" class="shadow-lg shadow-primary/20" :disabled="loading || saving" @click="addHint" />
             </div>
           </template>
         </section>
@@ -717,20 +717,20 @@ onBeforeUnmount(() => {
 
         <section class="space-y-4">
           <div>
-            <h2 class="text-xl font-semibold text-highlighted">人工提示</h2>
-            <p class="mt-1 text-sm text-muted">玩家在特定情况下可以请求人工提示。</p>
+            <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.common.ticket') }}</h2>
+            <p class="mt-1 text-sm text-muted">{{ t('admin.pages.puzzle.hints.playerRequestTicket') }}</p>
           </div>
 
           <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
-            <rb-form-field row narrow-label label="启用状态" :dirty="ticketEnabledDirty" :reset="resetTicketEnabled">
-              <u-switch v-model="ticketEnabled" class="mt-1.5" label="启用人工提示" :disabled="saving" />
+            <rb-form-field row narrow-label :label="t('admin.common.enabledState')" :dirty="ticketEnabledDirty" :reset="resetTicketEnabled">
+              <u-switch v-model="ticketEnabled" class="mt-1.5" :label="t('admin.pages.puzzle.hints.enableTicket')" :disabled="saving" />
             </rb-form-field>
 
             <u-separator v-if="ticketEnabled" />
 
-            <rb-form-field v-if="ticketEnabled" row narrow-label label="开放时间" :dirty="ticketCooldownDirty" :reset="resetTicketCooldown">
+            <rb-form-field v-if="ticketEnabled" row narrow-label :label="t('admin.pages.puzzle.hints.openTime')" :dirty="ticketCooldownDirty" :reset="resetTicketCooldown">
               <div class="flex flex-wrap items-center gap-2">
-                <span class="text-sm text-muted">谜题解锁后</span>
+                <span class="text-sm text-muted">{{ t('admin.pages.puzzle.hints.puzzleUnlock') }}</span>
                 <u-input-number v-model="ticketCooldown" :min="0" :step="10" :step-snapping="false" orientation="vertical" :format-options="{ style: 'unit', unit: 'second' }" variant="subtle" class="w-40" :disabled="saving" />
               </div>
             </rb-form-field>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { t } = useI18n();
+
 const props = defineProps<{
   gameId: number;
   placeholder?: string;
@@ -24,7 +26,7 @@ async function loadTeams() {
     if (currentRequest !== requestId) return;
     teams.value = selectedTeam.value && !data.teams.some(team => team.id === selectedTeam.value?.id) ? [selectedTeam.value, ...data.teams] : data.teams;
   } catch (error) {
-    if (currentRequest === requestId) handleError(error, '队伍列表获取失败');
+    if (currentRequest === requestId) handleError(error, t('components.staffTeamSelect.loadFailed'));
   } finally {
     if (currentRequest === requestId) loading.value = false;
   }
@@ -51,7 +53,7 @@ watch(model, id => {
     :items="teams"
     value-key="id"
     label-key="name"
-    :placeholder="placeholder || '输入队伍名称搜索'"
+    :placeholder="placeholder || t('components.staffTeamSelect.searchPlaceholder')"
     search-input
     :loading="loading"
     :disabled="disabled"

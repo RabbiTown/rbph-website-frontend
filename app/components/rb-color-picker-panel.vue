@@ -1,4 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 const props = defineProps<{
   modelValue?: RbTextColor;
 }>();
@@ -40,7 +42,7 @@ function isSelected(value: RbTextColor) {
 <template>
   <div class="w-64 space-y-2 p-2">
     <div class="flex items-center justify-between gap-2">
-      <u-button color="neutral" variant="ghost" size="xs" icon="material-symbols:format-color-reset-rounded" label="默认" :active="!modelValue" @click="selectColor(null)" />
+      <u-button color="neutral" variant="ghost" size="xs" icon="material-symbols:format-color-reset-rounded" :label="t('components.rbColorPickerPanel.default')" :active="!modelValue" @click="selectColor(null)" />
 
       <label class="flex h-7 w-32 items-center gap-1.5 rounded-md bg-elevated px-1.5 ring ring-inset ring-default">
         <span class="size-4 shrink-0 rounded ring ring-inset ring-default" :style="{ backgroundColor: customColorPreview ?? 'transparent' }" />

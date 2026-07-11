@@ -98,18 +98,6 @@ export function activityUserLabel(value: ActivityLogUserRef | null | undefined, 
   return '';
 }
 
-export function activityActorName(entry: ActivityLogEntry, teamMemberFallback = false, t?: ActivityLogTranslateFn) {
-  const name = activityUserLabel(entry.data.user, entry.user_id);
-  if (name) return name;
-  if (teamMemberFallback && entry.type.startsWith('team.member.')) return t ? t('activity.teamManagement') : 'Team management';
-  return '';
-}
-
-export function activityActorTitle(entry: ActivityLogEntry, action: string, teamMemberFallback = false, t?: ActivityLogTranslateFn) {
-  const actor = activityActorName(entry, teamMemberFallback, t);
-  return actor ? `${actor} ${action}` : action;
-}
-
 export function isStaffActivityLog(entry: ActivityLogEntry) {
   return Boolean(entry.data.staff);
 }

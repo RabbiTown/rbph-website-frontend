@@ -1,23 +1,20 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 interface PuzzleSelectItem extends UnlockPuzzleOptionData {
   label: string;
   icon: string;
 }
 
-const props = withDefaults(
-  defineProps<{
-    puzzles: UnlockPuzzleOptionData[];
-    placeholder?: string;
-    emptyLabel?: string;
-    multiple?: boolean;
-    disabled?: boolean;
-    loading?: boolean;
-  }>(),
-  {
-    placeholder: '选择或输入关键字过滤谜题',
-    emptyLabel: undefined,
-  },
-);
+const props = defineProps<{
+  puzzles: UnlockPuzzleOptionData[];
+  placeholder?: string;
+  emptyLabel?: string;
+  multiple?: boolean;
+  disabled?: boolean;
+  loading?: boolean;
+}>();
+const placeholderText = computed(() => props.placeholder ?? t('admin.common.selectOrPuzzleFilterPlaceholder'));
 
 const model = defineModel<number | number[] | null>({ required: true });
 const emptyValue = 'none';
@@ -60,7 +57,7 @@ const selectedIcon = computed(() => {
     label-key="label"
     :filter-fields="['label']"
     :multiple="multiple"
-    :placeholder="placeholder"
+    :placeholder="placeholderText"
     search-input
     :loading="loading"
     :disabled="disabled"

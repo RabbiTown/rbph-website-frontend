@@ -31,49 +31,49 @@ let nextDraftId = -1;
 const featureOptions: { feature: RbGameFeature; label: string; icon: string; states: { label: string; value: RbGameFeatureState; icon: string }[] }[] = [
   {
     feature: 'team_formation',
-    label: '组队',
+    label: t('admin.common.teamFormation'),
     icon: 'material-symbols:group-add-outline-rounded',
     states: [
-      { label: '关闭', value: 'closed', icon: 'material-symbols:block-outline' },
-      { label: '开放', value: 'open', icon: 'material-symbols:check-rounded' },
+      { label: t('admin.common.featureState.disabled'), value: 'closed', icon: 'material-symbols:block-outline' },
+      { label: t('admin.common.featureState.enabled'), value: 'open', icon: 'material-symbols:check-rounded' },
     ],
   },
   {
     feature: 'direct_message',
-    label: '站内信',
+    label: t('admin.common.directMessage'),
     icon: 'material-symbols:mail-outline-rounded',
     states: [
-      { label: '关闭', value: 'closed', icon: 'material-symbols:block-outline' },
-      { label: '仅已有会话', value: 'existing_only', icon: 'material-symbols:history-rounded' },
-      { label: '开放', value: 'open', icon: 'material-symbols:check-rounded' },
+      { label: t('admin.common.featureState.disabled'), value: 'closed', icon: 'material-symbols:block-outline' },
+      { label: t('admin.common.featureState.existingOnly'), value: 'existing_only', icon: 'material-symbols:history-rounded' },
+      { label: t('admin.common.featureState.enabled'), value: 'open', icon: 'material-symbols:check-rounded' },
     ],
   },
   {
     feature: 'puzzle_ticket',
-    label: '人工提示',
+    label: t('admin.common.ticket'),
     icon: 'material-symbols:near-me-outline-rounded',
     states: [
-      { label: '关闭', value: 'closed', icon: 'material-symbols:block-outline' },
-      { label: '仅已有工单', value: 'existing_only', icon: 'material-symbols:history-rounded' },
-      { label: '开放', value: 'open', icon: 'material-symbols:check-rounded' },
+      { label: t('admin.common.featureState.disabled'), value: 'closed', icon: 'material-symbols:block-outline' },
+      { label: t('admin.common.featureState.existingOnly'), value: 'existing_only', icon: 'material-symbols:history-rounded' },
+      { label: t('admin.common.featureState.enabled'), value: 'open', icon: 'material-symbols:check-rounded' },
     ],
   },
   {
     feature: 'leaderboard',
-    label: '排行榜',
+    label: t('admin.common.leaderboard'),
     icon: 'material-symbols:leaderboard-outline-rounded',
     states: [
-      { label: '实时', value: 'live', icon: 'material-symbols:podcasts-rounded' },
-      { label: '锁定', value: 'locked', icon: 'material-symbols:lock-clock-outline-rounded' },
+      { label: t('admin.common.realtime'), value: 'live', icon: 'material-symbols:podcasts-rounded' },
+      { label: t('admin.common.locked'), value: 'locked', icon: 'material-symbols:lock-clock-outline-rounded' },
     ],
   },
   {
     feature: 'currency',
-    label: '货币',
+    label: t('admin.common.currency'),
     icon: 'material-symbols:payments-outline-rounded',
     states: [
-      { label: '关闭', value: 'closed', icon: 'material-symbols:block-outline' },
-      { label: '开放', value: 'open', icon: 'material-symbols:check-rounded' },
+      { label: t('admin.common.featureState.disabled'), value: 'closed', icon: 'material-symbols:block-outline' },
+      { label: t('admin.common.featureState.enabled'), value: 'open', icon: 'material-symbols:check-rounded' },
     ],
   },
 ];
@@ -253,7 +253,7 @@ async function fetchPhases(openIds = expandedPhaseIds()) {
     phases.value = data.phases;
     reset(openIds);
   } catch (error) {
-    handleError(error, '获取阶段失败');
+    handleError(error, t('components.rbphReleasePhaseManager.loadFailed'));
   } finally {
     loading.value = false;
   }
@@ -262,7 +262,7 @@ async function fetchPhases(openIds = expandedPhaseIds()) {
 async function apply(): Promise<boolean> {
   if (!props.gameId || !dirty.value || saving.value) return true;
   if (!validate()) {
-    toast.add({ title: '阶段信息不合法', description: '请检查阶段名称和发生时间。', icon: 'material-symbols:error-outline-rounded', color: 'error' });
+    toast.add({ title: t('components.rbphReleasePhaseManager.invalidPhase'), description: t('components.rbphReleasePhaseManager.invalidPhaseHint'), icon: 'material-symbols:error-outline-rounded', color: 'error' });
     return false;
   }
 
@@ -271,24 +271,24 @@ async function apply(): Promise<boolean> {
   try {
     for (const phase of state.value.filter(item => item.deleting && item.id > 0)) {
       await api.del(`/admin/games/${props.gameId}/release-phases/${phase.id}`, {
-        errorHints: { [-2]: '关联谜题的阶段不能删除。', [-1]: '阶段不存在。' },
+        errorHints: { [-2]: t('components.rbphReleasePhaseManager.phaseInUse'), [-1]: t('components.rbphReleasePhaseManager.phaseNotFound') },
       });
     }
     for (const phase of state.value.filter(item => !item.deleting && item.id > 0 && isPhaseDirty(item))) {
       await api.patch(`/admin/games/${props.gameId}/release-phases/${phase.id}`, phase.released ? occurredRequestBody(phase) : requestBody(phase), {
-        errorHints: { [-3]: '阶段时间发生冲突。', [-2]: '阶段不可修改或信息不合法。', [-1]: '阶段不存在。' },
+        errorHints: { [-3]: t('components.rbphReleasePhaseManager.timeConflict'), [-2]: t('components.rbphReleasePhaseManager.updateRejected'), [-1]: t('components.rbphReleasePhaseManager.phaseNotFound') },
       });
     }
     for (const phase of state.value.filter(item => !item.deleting && item.id < 0)) {
       const { data } = await api.post<{ phase: AdminReleasePhaseData }>(`/admin/games/${props.gameId}/release-phases`, requestBody(phase), {
-        errorHints: { [-3]: '阶段时间发生冲突。', [-2]: '阶段信息不合法。', [-1]: '比赛不存在。' },
+        errorHints: { [-3]: t('components.rbphReleasePhaseManager.timeConflict'), [-2]: t('components.rbphReleasePhaseManager.invalidPhaseDescription'), [-1]: t('admin.common.gameNotFound') },
       });
       if (phase.open) openIds.add(data.phase.id);
     }
     await fetchPhases(openIds);
     return true;
   } catch (error) {
-    handleError(error, '保存阶段失败');
+    handleError(error, t('components.rbphReleasePhaseManager.saveFailed'));
     return false;
   } finally {
     saving.value = false;
@@ -308,16 +308,16 @@ defineExpose({ apply, reset });
 <template>
   <section class="space-y-4 mb-4">
     <div>
-      <h2 class="text-xl font-semibold text-highlighted">阶段管理</h2>
-      <p class="mt-1 text-sm text-muted">阶段用于安排赛程，将显示在前台公告中。可以为各个阶段设置相应的行为，以定时控制比赛功能。</p>
+      <h2 class="text-xl font-semibold text-highlighted">{{ t('components.rbphReleasePhaseManager.phaseManager') }}</h2>
+      <p class="mt-1 text-sm text-muted">{{ t('components.rbphReleasePhaseManager.description') }}</p>
     </div>
 
     <div v-if="loading" class="space-y-2">
       <u-skeleton v-for="i in 2" :key="i" class="h-14 w-full" />
     </div>
 
-    <u-empty v-else-if="state.length === 0" icon="material-symbols:event-busy-outline-rounded" title="暂无阶段">
-      <template #actions><u-button icon="material-symbols:add-rounded" label="新建阶段" :disabled="saving" @click="addPhase" /></template>
+    <u-empty v-else-if="state.length === 0" icon="material-symbols:event-busy-outline-rounded" :title="t('components.rbphReleasePhaseManager.empty')">
+      <template #actions><u-button icon="material-symbols:add-rounded" :label="t('components.rbphReleasePhaseManager.create')" :disabled="saving" @click="addPhase" /></template>
     </u-empty>
 
     <template v-else>
@@ -326,16 +326,16 @@ defineExpose({ apply, reset });
           <div class="group flex cursor-pointer items-center gap-3 rounded-lg bg-elevated/60 px-4 py-2 ring ring-default">
             <div class="flex min-w-0 flex-1 items-center gap-2">
               <u-icon name="material-symbols:event-outline-rounded" class="shrink-0 text-primary" />
-              <u-input v-if="phase.open" v-model="phase.title" class="-mx-2.5 -my-1.5 w-full font-medium" placeholder="阶段名称" variant="ghost" :disabled="saving || phase.deleting" @click.stop />
-              <div v-else class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">{{ phase.title || '未命名阶段' }}</div>
+              <u-input v-if="phase.open" v-model="phase.title" class="-mx-2.5 -my-1.5 w-full font-medium" :placeholder="t('components.rbphReleasePhaseManager.name')" variant="ghost" :disabled="saving || phase.deleting" @click.stop />
+              <div v-else class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">{{ phase.title || t('components.rbphReleasePhaseManager.untitledPhase') }}</div>
             </div>
 
             <div class="flex min-w-0 flex-none flex-wrap justify-end gap-1" @click.stop>
-              <u-badge v-if="!phase.isPublic" color="neutral" variant="soft">隐藏</u-badge>
-              <u-badge v-if="changesFromStates(phase.states).length" color="warning" variant="soft">{{ changesFromStates(phase.states).length }} 项修改</u-badge>
-              <u-badge v-if="phase.puzzleCount" color="info" variant="soft" icon="material-symbols:extension-outline-rounded">{{ phase.puzzleCount }} 道谜题</u-badge>
+              <u-badge v-if="!phase.isPublic" color="neutral" variant="soft">{{ t('components.rbphReleasePhaseManager.hide') }}</u-badge>
+              <u-badge v-if="changesFromStates(phase.states).length" color="warning" variant="soft">{{ t('components.rbphReleasePhaseManager.changeCount', { count: changesFromStates(phase.states).length }) }}</u-badge>
+              <u-badge v-if="phase.puzzleCount" color="info" variant="soft" icon="material-symbols:extension-outline-rounded">{{ t('admin.common.puzzleCount', { count: phase.puzzleCount }) }}</u-badge>
               <u-badge variant="soft" color="neutral" icon="material-symbols:schedule-outline-rounded">{{ formatDate(phase.releaseAt) }}</u-badge>
-              <u-badge v-if="phase.released" color="success" variant="soft">已发生</u-badge>
+              <u-badge v-if="phase.released" color="success" variant="soft">{{ t('components.rbphReleasePhaseManager.released') }}</u-badge>
             </div>
 
             <div v-if="phase.deleting || phase.puzzleCount === 0" class="flex items-center" @pointerdown.stop @click.stop>
@@ -349,17 +349,17 @@ defineExpose({ apply, reset });
             <div class="border-t border-default bg-elevated/40 px-4 pb-4 pt-4">
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-                  <rb-form-field row narrow-label class="flex-1" label="发生时间">
+                  <rb-form-field row narrow-label class="flex-1" :label="t('components.rbphReleasePhaseManager.releaseTime')">
                     <rb-input-date-time v-model="phase.releaseAt" class="w-full" :disabled="saving || phase.deleting || phase.released" />
                   </rb-form-field>
-                  <rb-form-field row narrow-label class="flex-1" label="提前公开">
-                    <u-switch v-model="phase.isPublic" class="mt-1.5" label="允许玩家提前查看" :disabled="saving || phase.deleting || phase.released" />
+                  <rb-form-field row narrow-label class="flex-1" :label="t('components.rbphReleasePhaseManager.publicEarly')">
+                    <u-switch v-model="phase.isPublic" class="mt-1.5" :label="t('components.rbphReleasePhaseManager.publicEarlyDescription')" :disabled="saving || phase.deleting || phase.released" />
                   </rb-form-field>
                 </div>
 
-                <rbph-content-editor v-model="phase.description" framed content-class="min-h-28" placeholder="向玩家展示的阶段说明" :disabled="saving || phase.deleting" @save="apply" />
+                <rbph-content-editor v-model="phase.description" framed content-class="min-h-28" :placeholder="t('components.rbphReleasePhaseManager.descriptionPlaceholder')" :disabled="saving || phase.deleting" @save="apply" />
 
-                <rb-form-field row narrow-label label="修改功能">
+                <rb-form-field row narrow-label :label="t('components.rbphReleasePhaseManager.changeFeature')">
                   <div class="flex w-full min-w-0 flex-wrap gap-2">
                     <u-popover v-for="change in changesFromStates(phase.states)" :key="change.feature" arrow :content="{ side: 'top', align: 'center', sideOffset: 8 }">
                       <u-button
@@ -377,26 +377,26 @@ defineExpose({ apply, reset });
                           <div class="flex items-start gap-2">
                             <u-icon name="material-symbols:warning-outline-rounded" class="mt-0.5 size-4 shrink-0 text-error" />
                             <div class="min-w-0">
-                              <div class="font-medium text-highlighted">删除功能修改？</div>
-                              <div class="mt-1 text-xs text-muted">确认从该阶段移除「{{ featureChangeLabel(change) }}」？</div>
+                              <div class="font-medium text-highlighted">{{ t('components.rbphReleasePhaseManager.deleteFeatureChangeTitle') }}</div>
+                              <div class="mt-1 text-xs text-muted">{{ t('components.rbphReleasePhaseManager.confirmRemoveFeature', { feature: featureChangeLabel(change) }) }}</div>
                             </div>
                           </div>
                           <div class="mt-3 flex justify-end">
-                            <u-button size="xs" color="error" variant="soft" icon="material-symbols:delete-outline-rounded" label="删除" @click="(removeFeatureChange(phase, change.feature), close())" />
+                            <u-button size="xs" color="error" variant="soft" icon="material-symbols:delete-outline-rounded" :label="t('admin.common.delete')" @click="(removeFeatureChange(phase, change.feature), close())" />
                           </div>
                         </div>
                       </template>
                     </u-popover>
 
                     <u-popover :open="phase.featurePopoverOpen" arrow :content="{ side: 'top', align: 'start', sideOffset: 8 }" @update:open="open => setFeaturePopoverOpen(phase, open)">
-                      <u-button type="button" size="sm" color="neutral" variant="soft" icon="material-symbols:add-rounded" label="修改功能" :disabled="saving || phase.deleting || phase.released || availableFeatureItems(phase).length === 0" />
+                      <u-button type="button" size="sm" color="neutral" variant="soft" icon="material-symbols:add-rounded" :label="t('components.rbphReleasePhaseManager.changeFeature')" :disabled="saving || phase.deleting || phase.released || availableFeatureItems(phase).length === 0" />
                       <template #content>
                         <div class="w-72 space-y-3 p-3">
                           <u-select
                             :model-value="phase.pendingFeature"
                             :items="availableFeatureItems(phase)"
                             :leading-icon="featureOption(phase.pendingFeature)?.icon"
-                            placeholder="选择功能"
+                            :placeholder="t('components.rbphReleasePhaseManager.selectFeature')"
                             variant="subtle"
                             class="w-full"
                             @update:model-value="value => setPendingFeature(phase, value)"
@@ -405,13 +405,13 @@ defineExpose({ apply, reset });
                             v-model="phase.pendingState"
                             :items="pendingStateItems(phase)"
                             :leading-icon="pendingStateItems(phase).find(item => item.value === phase.pendingState)?.icon"
-                            placeholder="选择状态"
+                            :placeholder="t('components.rbphReleasePhaseManager.selectState')"
                             variant="subtle"
                             class="w-full"
                             :disabled="!phase.pendingFeature"
                           />
                           <div class="flex justify-end">
-                            <u-button type="button" size="sm" icon="material-symbols:add-rounded" label="添加" variant="soft" :disabled="!phase.pendingFeature || !phase.pendingState" @click="addFeatureChange(phase)" />
+                            <u-button type="button" size="sm" icon="material-symbols:add-rounded" :label="t('components.rbphReleasePhaseManager.add')" variant="soft" :disabled="!phase.pendingFeature || !phase.pendingState" @click="addFeatureChange(phase)" />
                           </div>
                         </div>
                       </template>
@@ -425,7 +425,7 @@ defineExpose({ apply, reset });
       </div>
 
       <div class="sticky bottom-4 z-20 flex justify-end">
-        <u-button icon="material-symbols:add-rounded" label="新建阶段" size="lg" class="shadow-lg shadow-primary/20" :disabled="loading || saving" @click="addPhase" />
+        <u-button icon="material-symbols:add-rounded" :label="t('components.rbphReleasePhaseManager.create')" size="lg" class="shadow-lg shadow-primary/20" :disabled="loading || saving" @click="addPhase" />
       </div>
     </template>
   </section>

@@ -10,7 +10,7 @@ export default defineI18nLocale(() => ({
     consequenceGroup: '（{text}）',
     submissionPenalty: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor} が誤答ペナルティを受けました` : '誤答ペナルティ';
+      return actor ? `${actor}が誤答ペナルティを受けました` : '誤答ペナルティ';
     },
     currencyDetail: (ctx: { named: (key: string) => unknown }) => {
       const change = String(ctx.named('change') ?? '');
@@ -21,41 +21,41 @@ export default defineI18nLocale(() => ({
       const actor = String(ctx.named('actor') ?? '').trim();
       const team = String(ctx.named('team') ?? '');
       const target = team ? `「${team}」` : 'チーム';
-      return actor ? `${actor} が${target}を作成しました` : `${target}を作成しました`;
+      return actor ? `${actor}が${target}を作成しました` : `${target}を作成しました`;
     },
     teamUpdated: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor} がチーム情報を更新しました` : 'チーム情報を更新しました';
+      return actor ? `${actor}がチーム情報を更新しました` : 'チーム情報を更新しました';
     },
     teamDisbanded: (ctx: { named: (key: string) => unknown }) => {
       const team = String(ctx.named('team') ?? '');
       const teamId = String(ctx.named('teamId') ?? '');
-      return team ? `チーム「${team}」を解散しました` : teamId ? `チーム #${teamId} を解散しました` : 'チームを解散しました';
+      return team ? `チーム「${team}」を解散しました` : teamId ? `チーム#${teamId}を解散しました` : 'チームを解散しました';
     },
     teamAccessChanged: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
       const value = ctx.named('changes');
       const changes = Array.isArray(value) && value.length ? value.map(String).join('、') : '';
       const action = changes ? `権限を変更しました：${changes}` : 'チーム権限を変更しました';
-      return actor ? `${actor} が${action}` : action;
+      return actor ? `${actor}が${action}` : action;
     },
     memberJoined: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor} がチームに参加しました` : 'チームに参加しました';
+      return actor ? `${actor}がチームに参加しました` : 'チームに参加しました';
     },
     memberLeft: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor} がチームを脱退しました` : 'チームを脱退しました';
+      return actor ? `${actor}がチームを脱退しました` : 'チームを脱退しました';
     },
     memberKicked: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
       const target = String(ctx.named('target') ?? '');
-      return actor ? (target ? `${actor} が ${target} をチームから外しました` : `${actor} がメンバーを外しました`) : target ? `${target} をチームから外しました` : 'メンバーを外しました';
+      return actor ? (target ? `${actor}が${target}をチームから外しました` : `${actor}がメンバーを外しました`) : target ? `${target}をチームから外しました` : 'メンバーを外しました';
     },
     memberPromoted: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
       const target = String(ctx.named('target') ?? '');
-      return actor ? (target ? `${actor} が ${target} をリーダーに任命しました` : `${actor} がリーダーを変更しました`) : target ? `${target} をリーダーに任命しました` : 'リーダーを変更しました';
+      return actor ? (target ? `${actor}が${target}をリーダーに任命しました` : `${actor}がリーダーを変更しました`) : target ? `${target}をリーダーに任命しました` : 'リーダーを変更しました';
     },
     submittedAnswer: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
@@ -63,13 +63,13 @@ export default defineI18nLocale(() => ({
       const answer = String(ctx.named('answer') ?? '');
       const suffix = answer ? ` [${answer}]` : '';
       const target = puzzle ? `「${puzzle}」` : '問題';
-      return actor ? `${actor} が${target}に解答を送信しました${suffix}` : `${target}に解答を送信しました${suffix}`;
+      return actor ? `${actor}が${target}に解答を送信しました${suffix}` : `${target}に解答を送信しました${suffix}`;
     },
     solvedPuzzle: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
       const puzzle = String(ctx.named('puzzle') ?? '');
       const target = puzzle ? `「${puzzle}」` : '問題';
-      return actor ? `${actor} が${target}をクリアしました` : `${target}をクリアしました`;
+      return actor ? `${actor}が${target}をクリアしました` : `${target}をクリアしました`;
     },
     openedPuzzle: (ctx: { named: (key: string) => unknown }) => {
       const puzzle = String(ctx.named('puzzle') ?? '');
@@ -77,7 +77,7 @@ export default defineI18nLocale(() => ({
     },
     startedGame: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor} がゲームを開始しました` : 'ゲームを開始しました';
+      return actor ? `${actor}がゲームを開始しました` : 'ゲームを開始しました';
     },
     unlockedHint: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
@@ -85,39 +85,94 @@ export default defineI18nLocale(() => ({
       const puzzle = String(ctx.named('puzzle') ?? '');
       const hintTarget = hint ? `ヒント「${hint}」` : 'ヒント';
       const puzzleTarget = puzzle ? `問題「${puzzle}」の` : '';
-      return actor ? `${actor} が${puzzleTarget}${hintTarget}をアンロックしました` : `${puzzleTarget}${hintTarget}をアンロックしました`;
+      return actor ? `${actor}が${puzzleTarget}${hintTarget}をアンロックしました` : `${puzzleTarget}${hintTarget}をアンロックしました`;
     },
     spentHint: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('amount') ?? '')}を消費してヒントをアンロックしました`,
     wrongSubmissionPenalty: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
       const puzzle = String(ctx.named('puzzle') ?? '');
       const target = puzzle ? `「${puzzle}」で` : '';
-      return actor ? `${actor} が${target}誤答ペナルティを受けました` : `${target}誤答ペナルティ`;
+      return actor ? `${actor}が${target}誤答ペナルティを受けました` : `${target}誤答ペナルティ`;
     },
     currencyChange: (ctx: { named: (key: string) => unknown }) => `変動：${String(ctx.named('change') ?? '')}`,
     openedTicket: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
       const puzzle = String(ctx.named('puzzle') ?? '');
       const ticketId = String(ctx.named('ticketId') ?? '');
-      const ticket = ticketId ? ` #${ticketId}` : '';
+      const ticket = ticketId ? `#${ticketId}` : '';
       const target = puzzle ? `「${puzzle}」のスタッフヒント${ticket}` : `スタッフヒント${ticket}`;
-      return actor ? `${actor} が${target}を開始しました` : `${target}を開始しました`;
+      return actor ? `${actor}が${target}を開始しました` : `${target}を開始しました`;
     },
     closedTicket: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
       const puzzle = String(ctx.named('puzzle') ?? '');
       const ticketId = String(ctx.named('ticketId') ?? '');
-      const ticket = ticketId ? ` #${ticketId}` : '';
+      const ticket = ticketId ? `#${ticketId}` : '';
       const target = puzzle ? `「${puzzle}」のスタッフヒント${ticket}` : `スタッフヒント${ticket}`;
-      return actor ? `${actor} が${target}を終了しました` : `${target}を終了しました`;
+      return actor ? `${actor}が${target}を終了しました` : `${target}を終了しました`;
     },
     purchasedTicketMessage: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
       const puzzle = String(ctx.named('puzzle') ?? '');
       const ticketId = String(ctx.named('ticketId') ?? '');
-      const ticket = ticketId ? ` #${ticketId}` : '';
+      const ticket = ticketId ? `#${ticketId}` : '';
       const target = puzzle ? `「${puzzle}」のスタッフヒント${ticket}` : `スタッフヒント${ticket}`;
-      return actor ? `${actor} が${target}の有料メッセージを購入しました` : `${target}の有料メッセージを購入しました`;
+      return actor ? `${actor}が${target}の有料メッセージを購入しました` : `${target}の有料メッセージを購入しました`;
+    },
+    currencyChanged: (ctx: { named: (key: string) => unknown }) => {
+      const actor = String(ctx.named('actor') ?? '').trim();
+      const reason = String(ctx.named('reason') ?? '').trim() || '通貨を変更しました';
+      return actor ? `${actor}：${reason}` : reason;
+    },
+    events: {
+      loggedIn: (ctx: { named: (key: string) => unknown }) => {
+        const actor = String(ctx.named('actor') ?? '').trim();
+        return actor ? `${actor}がログインしました` : 'ログインしました';
+      },
+      loggedOut: (ctx: { named: (key: string) => unknown }) => {
+        const actor = String(ctx.named('actor') ?? '').trim();
+        return actor ? `${actor}がログアウトしました` : 'ログアウトしました';
+      },
+      registrationRequested: (ctx: { named: (key: string) => unknown }) => {
+        const actor = String(ctx.named('actor') ?? '').trim();
+        return actor ? `${actor}がアカウント登録を申請しました` : 'アカウント登録を申請しました';
+      },
+      registered: (ctx: { named: (key: string) => unknown }) => {
+        const actor = String(ctx.named('actor') ?? '').trim();
+        return actor ? `${actor}がアカウントを登録しました` : 'アカウントを登録しました';
+      },
+      accountVerified: (ctx: { named: (key: string) => unknown }) => {
+        const actor = String(ctx.named('actor') ?? '').trim();
+        return actor ? `${actor}がアカウント認証を完了しました` : 'アカウント認証を完了しました';
+      },
+      systemSettingsUpdated: (ctx: { named: (key: string) => unknown }) => {
+        const actor = String(ctx.named('actor') ?? '').trim();
+        return actor ? `${actor}がシステム設定を更新しました` : 'システム設定を更新しました';
+      },
+      profileUpdated: (ctx: { named: (key: string) => unknown }) => {
+        const actor = String(ctx.named('actor') ?? '').trim();
+        return actor ? `${actor}がプロフィールを更新しました` : 'プロフィールを更新しました';
+      },
+      unknown: (ctx: { named: (key: string) => unknown }) => {
+        const actor = String(ctx.named('actor') ?? '').trim();
+        return `${actor ? `${actor}が` : ''}イベント${String(ctx.named('event') ?? '')}を実行しました`;
+      },
+    },
+    details: {
+      answerSubmissionResult: '解答「{answer}」の判定結果：{result}',
+      submissionResult: '判定結果：{result}',
+      response: '応答：{message}',
+      email: 'メールアドレス：{email}',
+      updatedFields: (ctx: { named: (key: string) => unknown }) => {
+        const value = ctx.named('fields');
+        return `更新した項目：${Array.isArray(value) ? value.map(String).join('、') : String(value ?? '')}`;
+      },
+    },
+    fields: {
+      emailVerification: 'メール認証',
+      loginCaptcha: 'ログインCAPTCHA',
+      registrationCaptcha: '登録CAPTCHA',
+      nickname: 'ユーザー名',
     },
     access: {
       teamBanned: 'チームを利用停止にしました',
@@ -157,7 +212,7 @@ export default defineI18nLocale(() => ({
   currency: {
     fallbackName: '通貨',
     currentBalance: '{currency}：{amount}',
-    growthPerMinute: '（毎分 {growth}）',
+    growthPerMinute: '（毎分{growth}）',
   },
   globalSync: {
     notification: {
@@ -391,7 +446,7 @@ export default defineI18nLocale(() => ({
     opened: 'スタッフヒントを開始しました',
     closedAction: 'スタッフヒントを終了しました',
     autoClosedSolved: '問題をクリアしたため、スタッフヒントを自動終了しました',
-    currencyFallback: '通貨 #{id}',
+    currencyFallback: '通貨#{id}',
     noAccess: 'このスタッフヒントには返信できません。',
     closed: 'このスタッフヒントは終了しているため、新しい返信はできません。',
     closedMessage: 'このスタッフヒントは終了しています。',
@@ -493,7 +548,7 @@ export default defineI18nLocale(() => ({
     purchased: 'ヒントを購入しました',
     unlock: 'アンロック',
     waitOver: 'クールダウン終了後に購入できます',
-    needMore: 'あと {amount} 必要です',
+    needMore: 'あと{amount}必要です',
     insufficientBalance: '残高が不足しています。',
     unavailableOrPurchased: 'このヒントはまだ公開されていないか、購入済みです。',
     purchaseSuccessDesc: '{amount} {currency}を消費してヒント「{title}」を購入しました',
@@ -530,6 +585,8 @@ export default defineI18nLocale(() => ({
       puzzle: '問題', hints: 'ヒント', submissions: '送信履歴', tickets: 'スタッフヒント', unlockedAt: 'アンロック：{time}', recentSuccessfulSubmissions: '最近の正解', viewAllSubmissions: 'すべての送信履歴を表示',
     },
     staffInbox: {
+      messageIdentifier: 'メッセージ#{id}',
+      puzzleTicketIdentifier: '{puzzle}#{id}',
       title: 'メッセージ管理', sendDm: 'チームへメッセージ', sessionSelect: '会話一覧', allTypes: 'すべての種類', allStates: 'すべての状態', allMessages: 'すべて', allAssignees: 'すべての担当者', waitingStaff: 'スタッフの返信待ち', waitingTeam: 'チームの返信待ち', handledByMe: '自分が担当', unassigned: '未担当', noMessages: 'メッセージはありません', noMatch: '条件に一致する会話はありません', selectSession: '会話を選択', selectSessionDesc: '一覧からスタッフヒントまたはメッセージを選択してください', openInInbox: '管理画面で開く', replyCurrent: '返信を入力', sendTeamDmTitle: 'チームへメッセージを送信', sendTeamDmDesc: 'チームを選択してメッセージを送信します', searchTeam: 'チーム名を検索', sendConflict: '別のスタッフが担当中です', continueAnyway: 'このまま続行', pendingReply: '返信待ち', dmPlaceholder: 'メッセージを入力', loadListFailed: 'メッセージ一覧を取得できませんでした', loadThreadFailed: '会話を取得できませんでした', loadEarlierFailed: '以前のメッセージを取得できませんでした', updateFailed: '会話を更新できませんでした', replyFailed: '返信できませんでした', sendDmFailed: 'メッセージを送信できませんでした', dmExistingOnly: '新しい会話は開始できません。このチームとの既存の会話にのみ返信できます。', conflictDescription: 'この会話は{name}が担当しています。このまま{action}しますか？', continueReply: '返信を続行', replyAndClose: '返信して終了',
     },
     profile: {
@@ -625,7 +682,668 @@ export default defineI18nLocale(() => ({
       restrictionDetails: '詳しくは{activity}を確認してください。',
     },
   },
+  admin: {
+    common: {
+      puzzleCount: '謎題{count}問',
+      releasedImmediatelyAt: '即時公開・{time}',
+      releasePhaseAt: '{phase}・{time}',
+      selectOrPuzzleFilterPlaceholder: '謎題を選択または検索',
+      globalAnnouncements: 'サイトからのお知らせ',
+      gameAnnouncements: 'お知らせ',
+      published: '公開済み',
+      dragToReorder: 'ドラッグして並べ替え',
+      delete: '削除',
+      name: '名前',
+      confirmUpload: 'アップロード',
+      dangerZone: '危険な操作',
+      cancel: 'キャンセル',
+      save: '保存',
+      preview: 'プレビュー',
+      roundPuzzle: 'ラウンド謎題',
+      notPublished: '非公開',
+      teamFormation: 'チーム編成',
+      directMessage: 'メッセージ',
+      ticket: 'ヒント依頼',
+      featureState: {
+        disabled: '無効',
+        existingOnly: '既存のみ',
+        enabled: '有効',
+      },
+      leaderboard: 'ランキング',
+      realtime: 'リアルタイム',
+      locked: 'ロック',
+      currency: '通貨',
+      gameNotFound: 'ゲームが見つかりません。',
+      trigger: 'トリガー',
+      createGame: 'ゲームを作成',
+      logout: 'ログアウト',
+      basicSettings: '設定',
+      gameFeatures: '機能',
+      puzzleManagement: '謎題',
+      teamManagement: 'チーム',
+      userManagement: 'ユーザー',
+      systemLogs: 'ログ',
+      systemSettings: 'システム',
+      adminPanelTitle: 'RBPH管理画面',
+      loadCurrencyListFailed: '通貨一覧を読み込めませんでした',
+      gameInfo: '基本情報',
+      gameName: 'ゲーム名',
+      enterGameName: 'ゲーム名を入力',
+      currencyManagement: '通貨',
+      reset: 'リセット',
+      growthPerMinute: '1分あたりの増加量',
+      puzzleNotFound: '謎題が見つかりません。',
+      roundNotFound: 'ラウンドが見つかりません。',
+      roundContent: 'ラウンド内容',
+      roundSlug: 'ラウンドID',
+      enabledState: '状態',
+      createFailed: 'コンテンツブロックを作成できませんでした',
+      contentBlockDeleted: 'コンテンツブロックを削除しました',
+      deleteContentBlockFailed: 'コンテンツブロックを削除できませんでした',
+      contentBlockFailed: 'コンテンツブロックの並び順を保存できませんでした',
+      contentBlockUnlockRecordClear: 'コンテンツブロックの解放履歴を削除しました',
+      clearContentBlockUnlockRecordFailed: 'コンテンツブロックの解放履歴を削除できませんでした',
+      enterContent: '内容を入力',
+      createStartEdit: 'コンテンツブロックを作成して編集を始めましょう',
+      confirmDeletePuzzle: '謎題「{puzzle}」を削除しますか？この操作は取り消せません。',
+      immediateRelease: '今すぐ公開',
+      puzzleReleasedImmediately: '謎題を公開しました',
+      puzzleDeleted: '謎題を削除しました',
+      deletePuzzleFailed: '謎題を削除できませんでした',
+      deletePuzzle: '謎題を削除',
+      enterPuzzleNameConfirm: '確認のため謎題名を入力',
+      roundInfoInvalid: 'ラウンド情報が無効です。',
+      puzzleInfoInvalid: '謎題情報が無効です。',
+      targetNotFound: '対象が見つかりません',
+      finishedAt: '{time}に完走',
+      teamName: 'チーム名',
+      teamPassword: 'チームパスワード',
+      teamBio: 'チーム紹介',
+      teamState: 'チームの状態',
+      banned: '利用停止',
+      user: 'ユーザー',
+      bannedLabel: '利用停止中',
+      captain: 'リーダー',
+      registrationOpen: '登録を許可',
+      maxConcurrentSessions: '同時セッション数の上限',
+      maxConcurrentConnections: '同時接続数の上限',
+      maintenanceMode: 'メンテナンスモード',
+      maintenanceMessage: 'メンテナンスメッセージ',
+      userBio: '自己紹介',
+      staff: 'スタッフ',
+      userManagementTitle: 'ユーザー - RBPH管理画面',
+      regularUser: '一般ユーザー',
+      admin: '管理者',
+      temporaryPasswordCopied: '一時パスワードをコピーしました',
+      passwordChangeRequired: 'パスワード変更待ち',
+      email: 'メールアドレス',
+      nickname: '表示名',
+      userRole: '権限',
+      superAdmin: '特権管理者',
+      oneTimeTemporaryPassword: '一回限りの一時パスワード',
+      mustChangePasswordAfterLogin: '次回ログイン時にパスワード変更を必須にする',
+      temporaryPassword: '一時パスワード',
+      acknowledge: '閉じる',
+    },
+    pages: {
+      shell: {
+        loadGameListFailed: 'ゲーム一覧を読み込めませんでした',
+        managementGame: 'ゲーム管理',
+        lightMode: 'ライトモード',
+        darkMode: 'ダークモード',
+        backToPlatform: 'プラットフォームに戻る',
+        notSelectGame: 'ゲームが選択されていません',
+      },
+      announcements: {
+        pageTitle: 'サイトからのお知らせ - RBPH管理画面',
+      },
+      game: {
+        features: {
+          scheduledChange: '「{phase}」の{time}に「{state}」へ変更予定',
+          teamFormation: {
+            closed: 'プレイヤーはチームの作成や参加ができません。既存のチームには影響しません。',
+            open: 'プレイヤーはチームを作成したり、チームに参加したりできます。',
+          },
+          directMessage: {
+            closed: 'プレイヤーはメッセージを送信できません。',
+            existingOnly: '既存のスレッドにのみ返信できます。',
+            open: 'プレイヤーはメッセージを送信できます。',
+          },
+          puzzleTicket: {
+            closed: 'プレイヤーはヒント依頼の作成や返信ができません。',
+            existingOnly: '新しいヒント依頼は作成できませんが、既存の依頼には返信できます。',
+            open: 'プレイヤーはヒント依頼の作成と返信ができます。',
+          },
+          leaderboard: {
+            live: '謎題のクリア状況や解答に合わせてランキングをリアルタイムに更新します。',
+            locked: 'ロック時点の順位を表示し続けます。その後の解答も有効ですが、表示順位には反映されません。',
+          },
+          currency: {
+            closed: 'プレイヤーに通貨を表示せず、時間経過による残高の増加も停止します。',
+            open: 'プレイヤーに通貨を表示し、設定に従って残高を増加します。',
+          },
+          loadGameFeaturesFailed: 'ゲーム機能を読み込めませんでした',
+          featureStateInvalid: '機能の状態が無効です。',
+          gameFeaturesSaved: 'ゲーム機能を保存しました',
+          saveGameFeaturesFailed: 'ゲーム機能を保存できませんでした',
+          gameFeaturesUpdateNotYetSave: 'ゲーム機能の変更が保存されていません。',
+        },
+        settings: {
+          confirmDeleteCurrency: '「{currency}」を削除予定にしますか？保存すると、関連するチーム残高、ヒント料金、ペナルティ設定が消去または解除されます。',
+          gameSettingsUpdateNotYetSave: 'ゲーム設定の変更が保存されていません。',
+          currencySlugExists: 'この通貨IDはすでに使用されています。',
+          currencyInfoInvalid: '通貨設定が無効です。',
+          gameOrCurrencyNotFound: 'ゲームまたは通貨が見つかりません。',
+          saveUpdate: '保存する変更はありません',
+          teamMemberLimitInvalid: 'チーム人数の上限が無効です',
+          enterGreaterThanOrEmptyUnlimited: '1以上の整数を入力するか、上限なしの場合は空欄にしてください。',
+          currencyInfoInvalidLabel: '通貨設定が無効です',
+          currencyValidationHint: '名前、ID、小数桁数、初期値、上限を確認してください。',
+          gameInfoInvalid: 'ゲーム設定が無効です。',
+          successSaveGameSettings: 'ゲーム設定を保存しました',
+          saveGameSettingsFailed: 'ゲーム設定を保存できませんでした',
+          platformShowName: 'プラットフォーム上の表示名',
+          public: '公開一覧に表示',
+          publicListingDescription: '開催中のゲームを公開イベント一覧に表示するかを設定します。',
+          gameOpen: 'ゲームを開放',
+          controlNormalPlayerGameFeatures: '一般プレイヤーがゲームに入り、各機能を利用できるかを設定します。',
+          teamMemberLimit: 'チーム人数の上限',
+          perTeamTeamJoinMemberCount: '1チームに参加できるプレイヤー数の上限です。',
+          unlimited: '上限なし',
+          currencySectionDescription: 'このゲームで使用する通貨を設定します。',
+          emptyCurrency: '通貨はまだありません',
+          currencyDescription: 'ヒント料金、誤答ペナルティ、カスタムバックエンド処理に使用できます。',
+          currencyStatus: {
+            pendingCreate: '新規',
+            pendingDeletion: '削除予定',
+            updated: '編集済み',
+          },
+          deleteCurrency: '通貨を削除しますか？',
+          markDelete: '削除予定にする',
+          exampleHint: '例：ヒントポイント',
+          internalId: '内部ID',
+          exampleHintLabel: '例：hint',
+          precision: '小数桁数',
+          initialValue: '初期値',
+          limit: '残高の上限',
+          hide: '初期状態で非表示',
+          createCurrency: '通貨を追加',
+        },
+      },
+      puzzle: {
+        puzzleTitleOrSlugInvalid: '謎題名または謎題IDが無効です。',
+        puzzleSlugInvalidOr: '謎題IDが無効か、すでに使用されています。',
+        puzzleInfoSaved: '謎題情報を保存しました',
+        savePuzzleInfoFailed: '謎題情報を保存できませんでした',
+        puzzleNotFound: '謎題が見つかりません',
+        backendScriptNotFound: 'バックエンドスクリプトが見つかりません。',
+        loadPuzzleInfoFailed: '謎題情報を読み込めませんでした',
+        puzzleContent: '内容',
+        answerSubmission: '解答',
+        hintEdit: 'ヒント',
+        settingsTab: '設定',
+        puzzleTitle: '謎題名',
+        puzzleSlug: '謎題ID',
+        hints: {
+          free: '無料',
+          loadHintInfoFailed: 'ヒント設定を読み込めませんでした',
+          hintConfigurationInvalid: 'ヒント設定が無効です',
+          invalidHintDescription: 'タイトル、待ち時間、通貨コスト、バックエンド関数名を確認してください。',
+          ticketConfigurationInvalid: 'ヒント依頼の設定が無効です。',
+          hintNotFound: 'ヒントが見つかりません。',
+          hintConfigurationInvalidDescription: 'ヒント設定が無効です。',
+          hintConfigurationSaved: 'ヒント設定を保存しました',
+          saveHintConfigurationFailed: 'ヒント設定を保存できませんでした',
+          hintConfigurationUpdateNotYetSave: 'ヒント設定の変更が保存されていません。',
+          hint: 'プリセットヒント',
+          allPlayerUnlockViewHint: 'すべてのプレイヤーが解放して閲覧できます。',
+          emptyHint: 'プリセットヒントはまだありません',
+          addItemHintPlayerHintUnlock: 'ヒントを追加すると、プレイヤーがヒントページから解放できるようになります。',
+          createHint: 'ヒントを追加',
+          hintTitle: 'ヒントのタイトル',
+          notMemberHint: '無題のヒント',
+          openTime: '公開までの待ち時間',
+          puzzleUnlock: '謎題の解放後',
+          notOpen: '公開前',
+          hideTitle: 'タイトルを隠す',
+          unlockCost: '解放コスト',
+          unlockFunction: '解放時の関数',
+          backendFunctionDescription: '指定すると、ヒント購入時にこのバックエンド関数を実行します。関数が失敗すると購入も失敗します。',
+          backendDisabledWarning: '謎題バックエンドが無効のため、この関数は実行されません。',
+          hintContent: 'ヒントの内容',
+          playerRequestTicket: '設定した待ち時間の後、プレイヤーがスタッフにヒントを依頼できます。',
+          enableTicket: 'ヒント依頼を有効化',
+        },
+        index: {
+          puzzleContentSaved: '謎題の内容を保存しました',
+          savePuzzleContentFailed: '謎題の内容を保存できませんでした',
+          puzzleContentUpdateNotYetSave: '謎題の内容が保存されていません。',
+          puzzleContent: '謎題本文',
+        },
+        judge: {
+          ruleType: {
+            exactMatch: '完全一致',
+            fallback: '既定',
+            customFunction: '関数',
+          },
+          cooldown: {
+            none: 'なし',
+            fixed: '固定',
+            linear: '線形',
+          },
+          submissionLimit: {
+            unlimited: '無制限',
+            wrongCount: '誤答のみ',
+          },
+          incorrectSubmissionLimitDescription: 'チームの誤答回数がこの上限に達すると、以後は解答できません。',
+          deduct: 'なし',
+          answerEvaluationRuleComplete: '答えの判定ルールが不完全です',
+          invalidRulesDescription: '完全一致には正解、カスタム関数には関数名が必要です。',
+          wrongPenaltySettingsComplete: '誤答ペナルティの設定が不完全です',
+          invalidPenaltiesDescription: '待ち時間、通貨の差し引き、解答回数の上限を確認してください。',
+          answerSubmissionRequirementComplete: '解答条件が不完全です',
+          requirementsValidationHint: '同じ通貨を重複して選ばず、最低額に1以上を入力してください。',
+          answerEvaluationRuleInvalid: '答えの判定ルールが無効です。',
+          answerEvaluationSettingsSaved: '答えの判定設定を保存しました',
+          saveAnswerEvaluationSettingsFailed: '答えの判定設定を保存できませんでした',
+          unsavedChanges: '答えの判定設定が保存されていません。',
+          judgeRule: '判定ルール',
+          rulesDescription: 'ルールを上から順に照合します。入力された答えは自動的に正規化されます。',
+          matchMethod: '照合方法',
+          backendFunctionDescription: '判定時にこのバックエンド関数を実行します。関数が失敗すると判定も失敗します。',
+          backendDisabledWarning: '謎題バックエンドが無効のため、この判定関数は実行されません。',
+          anyAnswer: 'すべての答え',
+          actualAnswer: '表示する正解',
+          actualAnswerDescription: 'プレイヤーに正解として表示します。空欄の場合は照合パターンを表示します。',
+          match: '一致時の結果',
+          instructionEmptyDefaultHint: '追加メッセージ（空欄の場合は既定値）',
+          triggerDescription: '照合に成功したときにこれらの値を記録し、条件判定で利用できます。',
+          addRule: 'ルールを追加',
+          evaluationRule: '判定ルールはまだありません',
+          ruleDisableAnswerSubmission: 'ルールが1つもない間は、この謎題に解答できません。',
+          addExactMatch: '完全一致を追加',
+          addFallbackRule: '既定ルールを追加',
+          submissionAnswerRequirement: '解答条件',
+          requirementsDescription: '解答するには、チームがすべての条件を満たす必要があります。条件の確認でデータは変更されません。',
+          minimumCurrency: '最低残高',
+          selectCurrency: '通貨を選択',
+          minimumCount: '最低額',
+          deleteRequirement: '条件を削除',
+          addCurrencyRequirement: '通貨条件を追加',
+          wrongPenalty: '誤答ペナルティ',
+          judgeResultWrongPenaltyPenalty: '答えが不正解と判定されたときに適用します。複数のペナルティを同時に適用できます。',
+          cooldownPenalty: '待ち時間',
+          multiplyAccumulatedWrongCount: '累計誤答回数を乗じる',
+          deductCurrency: '通貨を差し引く',
+          deductCount: '差し引く量',
+          submissionCount: '解答回数の上限',
+          times: '回',
+        },
+        settings: {
+          confirmCheckUnlocks: '謎題「{puzzle}」をまだ解放していないすべてのチームに対し、解放条件を再評価しますか？条件を満たすチームに謎題が解放されます。',
+          confirmResetTeamStates: 'すべてのチームについて、謎題「{puzzle}」の状態をリセットしますか？解放状態、解答履歴、ヒント状態、ヒント依頼が消去されます。この操作は取り消せません。',
+          confirmDeleteRoundPuzzle: 'ラウンド謎題「{puzzle}」を削除しますか？ラウンド自体は削除されません。この操作は取り消せません。',
+          loadPuzzleRoundListFailed: '謎題とラウンドの一覧を読み込めませんでした',
+          targetReleasePhaseInvalidOr: '選択した公開フェーズが無効か、すでに開始しています。',
+          undoRelease: '謎題を非公開にしました',
+          releasePhaseSaved: '公開フェーズを保存しました',
+          saveReleasePhaseFailed: '公開フェーズを保存できませんでした',
+          unlockConditionComplete: '解放条件が不完全です',
+          orFillValidSourceExpression: '条件ブロックを完成させるか、有効な式を直接入力してください。',
+          unlockConditionExpressionInvalid: '解放条件の式が無効です。',
+          unlockConditionSaved: '解放条件を保存しました',
+          saveUnlockConditionFailed: '解放条件を保存できませんでした',
+          backendScriptInvalid: 'バックエンドスクリプトが無効です。',
+          backendScriptSaved: 'バックエンドスクリプトを保存しました',
+          saveBackendScriptFailed: 'バックエンドスクリプトを保存できませんでした',
+          unlockEvaluationExecute: '解放条件を再評価しました',
+          unlockSummary: '{teams}チームに謎題を解放しました。',
+          executeUnlockEvaluationFailed: '解放条件を評価できませんでした',
+          teamStateReset: 'チーム状態をリセットしました',
+          resetSummary: '{teams}チームの謎題データをリセットしました。解答{submissions}件、ヒント状態{hints}件、ヒント依頼{tickets}件、トリガー{triggers}件、KV{kv}件、ストレージ{storage}件を削除し、{unlockedTeams}チームを再解放しました。',
+          resetTeamStateFailed: 'チーム状態をリセットできませんでした',
+          settingsUpdateNotYetSave: '追加設定の変更が保存されていません。',
+          unlockCondition: '解放条件',
+          unlockConditionDescription: 'プレイヤーが以下の条件を満たすと、謎題が自動的に解放されます。',
+          notGenerateExpression: '式はまだ生成されていません',
+          releasePhase: '公開フェーズ',
+          releasePhaseDescription: '謎題をすぐに公開するか、今後開始するフェーズで公開します。',
+          selectReleasePhase: '公開フェーズを選択',
+          backendScript: 'バックエンドスクリプト',
+          backendAnswerEvaluation: '特殊な謎題ロジックや答えの判定にカスタムバックエンドを使用します。',
+          enableBackend: 'バックエンドを有効化',
+          exportFunction: 'エクスポート関数',
+          selectExportFunction: '外部から呼び出せる関数を選択',
+          scriptSource: 'ソースコード',
+          backendScriptSource: 'バックエンドスクリプト',
+          optionPuzzleIrreversibleConsequence: 'このセクションの操作は、謎題データを永久に変更または削除する場合があります。',
+          executeUnlockEvaluation: '解放条件を再評価',
+          checkUnlocksDescription: '謎題をまだ解放していないすべてのチームを再評価し、条件を満たすチームに解放します。',
+          resetTeamState: 'チーム状態をリセット',
+          resetTeamStatesDescription: 'すべてのチームについて、この謎題の解放状態、解答、ヒント、ヒント依頼、トリガー、バックエンドデータを消去します。',
+          immediateReleasePuzzle: '謎題を今すぐ公開',
+          releaseImmediatelyDescription: '解放条件を満たすチームに謎題をすぐ公開し、通知を送信します。',
+          executeEvaluation: '再評価',
+          resetState: 'リセット',
+          checkAfterReset: 'リセット後に解放条件を再評価',
+          checkAfterResetDescription: 'リセット後、すべてのチームの解放条件を再評価します。',
+        },
+      },
+      puzzles: {
+        selectedCount: '{count}件選択中',
+        puzzleCannotBatchUpdate: 'この謎題は一括変更できません',
+        cancelBelongingRoundDelete: '先に所属ラウンドの削除を取り消してください。',
+        releaseMethod: '公開方法を変更',
+        uploadAllContentBlock: 'コンテンツブロックを一括アップロード',
+        selectedPuzzleCountToast: '{count}問の謎題を選択しました',
+        emptyContentBlockCannotUpload: '空のコンテンツブロックはアップロードできません。',
+        cdnUnavailable: 'コンテンツCDNが設定されていないか、選択した謎題が無効です。',
+        contentBlockUpload: 'コンテンツブロックをアップロードしました',
+        uploadSummaryWithSkipped: '{uploaded}件をアップロードし、空のブロック{skipped}件をスキップしました。',
+        uploadSummary: '{uploaded}件のコンテンツブロックをアップロードしました。',
+        batchCdnUploadFailed: 'コンテンツブロックを一括アップロードできませんでした',
+        updateSaved: '変更を保存しました',
+        orderSaved: '並び順を保存しました',
+        saveOrderFailed: '並び順を保存できませんでした',
+        roundLabel: 'ラウンド{round}',
+        roundCreated: 'ラウンドを作成しました',
+        createRoundFailed: 'ラウンドを作成できませんでした',
+        saveUpdate: '先に変更を保存してください',
+        currentNotSaveCannotCreatePuzzle: '未保存の変更があるため、謎題を作成できません。',
+        createPuzzle: '謎題を作成',
+        puzzleCreated: '謎題を作成しました',
+        createPuzzleFailed: '謎題を作成できませんでした',
+        currentNotSaveOrderOrDelete: '並び替えまたは削除の変更が保存されていません。',
+        batchUpdateUnavailable: '一部の謎題が公開済みか、選択したフェーズが開始済みのため、一括変更できません。',
+        puzzleOrPhaseNotFound: '謎題または公開フェーズが見つかりません。',
+        openTimeBatchUpdate: '公開方法を更新しました',
+        updatedPuzzleCount: '{count}問の謎題を更新しました。',
+        batchUpdateOpenTimeFailed: '公開方法を一括変更できませんでした',
+        loadPuzzleListFailed: '謎題一覧を読み込めませんでした',
+        emptyPuzzle: '謎題はまだありません',
+        createRoundStartAddPuzzle: 'ラウンドを作成して謎題を追加しましょう',
+        dragRound: 'ドラッグしてラウンドを並べ替え',
+        editRound: 'ラウンドを編集',
+        restoreRound: 'ラウンドを元に戻す',
+        deleteRound: 'ラウンドを削除',
+        itemPuzzle: '謎題{count}問',
+        dragPuzzleLocation: 'ドラッグして謎題を移動',
+        delete: '削除予定',
+        selectAll: 'すべて選択',
+        invertSelection: '選択を反転',
+        empty: '選択を解除',
+        createRound: 'ラウンドを作成',
+        batchReleaseDescription: '{count}問の謎題に新しい公開方法を設定します。',
+        releaseMethodLabel: '公開方法',
+        selectReleaseMethod: '公開方法を選択',
+        unpublishDescription: '非公開にするとプレイヤーは謎題にアクセスできなくなりますが、既存のチームデータは保持されます。',
+        releaseImmediatelyDescription: '解放済みのチームに謎題をすぐ公開し、通知を送信します。',
+        confirmUpdate: '適用',
+        batchCdnUploadDescription: '{count}問の謎題にある空でないコンテンツブロックをCDNへアップロードします。',
+        replaceCdnWarning: '既存のCDNコンテンツは上書きされます',
+        batchCdnUploadHint: '空のブロックは自動的にスキップされ、アップロード完了後に古いCDNファイルが削除されます。',
+      },
+      round: {
+        roundPuzzleCreated: 'ラウンド謎題を作成しました',
+        createRoundPuzzleFailed: 'ラウンド謎題を作成できませんでした',
+        roundTitleOrSlugInvalid: 'ラウンド名またはラウンドIDが無効です。',
+        roundSlugInvalidOr: 'ラウンドIDが無効か、すでに使用されています。',
+        roundInfoSaved: 'ラウンド情報を保存しました',
+        saveRoundInfoFailed: 'ラウンド情報を保存できませんでした',
+        roundNotFound: 'ラウンドが見つかりません',
+        loadRoundInfoFailed: 'ラウンド情報を読み込めませんでした',
+        roundTitle: 'ラウンド名',
+        createRoundPuzzle: 'ラウンド謎題を作成',
+        currentRoundRoundPuzzleCreate: 'このラウンドにはラウンド謎題がありません。今すぐ作成しますか？',
+        create: '作成',
+        index: {
+          roundContentSaved: 'ラウンドの内容を保存しました',
+          saveRoundContentFailed: 'ラウンドの内容を保存できませんでした',
+          roundContentUpdateNotYetSave: 'ラウンドの内容が保存されていません。',
+          roundContent: 'ラウンド本文',
+        },
+      },
+      team: {
+        featureAccessDescription: {
+          directMessage: {
+            enabled: 'ゲーム全体のメッセージ設定に従います。',
+            disabled: 'このチームはメッセージを送信できません。',
+          },
+          puzzleTicket: {
+            enabled: 'ゲーム全体のヒント依頼設定に従います。',
+            disabled: 'このチームはヒント依頼の作成や返信ができません。',
+          },
+          leaderboard: {
+            enabled: 'このチームをランキングに表示します。',
+            disabled: 'このチームをランキングから非表示にします。',
+          },
+        },
+        targetUserGameTeam: '選択したユーザーはこのゲームの別チームに所属しています',
+        submissionContentInvalid: '解答内容が無効です',
+        cannotLastItemMember: 'チームには1人以上のメンバーが必要です',
+        accessChange: {
+          ban: 'チームを利用停止',
+          unban: 'チームを再開',
+          lock: 'チームをロック',
+          unlock: 'チームのロックを解除',
+        },
+        featureAction: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('feature') ?? '')}を${ctx.named('enabled') ? '有効化' : '無効化'}`,
+        loadTeamDetailsFailed: 'チーム情報を読み込めませんでした',
+        teamNamePasswordCannotEmpty: 'チーム名とパスワードを入力してください',
+        teamSettingsSaved: 'チーム設定を保存しました',
+        saveTeamSettingsFailed: 'チーム設定を保存できませんでした',
+        memberAdd: 'メンバーを追加しました',
+        addMemberFailed: 'メンバーを追加できませんでした',
+        memberFailed: 'メンバーを除外できませんでした',
+        transferCaptainFailed: 'リーダーを変更できませんでした',
+        teamDisband: 'チームを解散しました',
+        disbandTeamFailed: 'チームを解散できませんでした',
+        teamSettingsUpdateNotYetSave: 'チーム設定の変更が保存されていません。',
+        teamSettings: 'チーム設定',
+        createdAt: '{time}に作成',
+        info: '基本情報',
+        featureAccess: '機能アクセス',
+        teamStateDescription: {
+          banned: 'このチームは謎題にアクセスできません。',
+          normal: 'このチームはゲームに参加できます。',
+        },
+        normal: '正常',
+        teamLockDescription: {
+          locked: 'チームの解散やメンバーの脱退はできません。',
+          unlocked: 'プレイヤーはチームメンバーを管理できます。',
+        },
+        unlock: 'ロック解除',
+        member: 'メンバー',
+        addMember: 'メンバーを追加',
+        teamCurrency: '通貨残高はありません',
+        currentBalance: '現在の残高',
+        hideCurrency: '通貨を非表示',
+        currencyVisibility: {
+          hidden: '非表示',
+          visible: '表示',
+        },
+        disbandTeam: 'チームを解散',
+        deleteTeamRelatedData: 'チームと関連データをすべて削除します。',
+        confirmTeamAccess: 'アクセス変更の確認',
+        accessReasonDescription: '変更はチームアクティビティに記録されます。理由は任意で入力できます。',
+        save: '変更を保存',
+        reason: '原因',
+        accessReasonPlaceholder: '変更理由（任意）',
+        searchPlaceholderUser: 'メールアドレスまたは表示名で検索',
+        enterTeamNameConfirmDisband: '確認のためチーム名を入力してください。',
+        disband: '解散',
+      },
+      teams: {
+        matchingCount: '{count}チーム',
+        memberCount: 'メンバー{count}人',
+        userGameTeam: 'このユーザーは別のチームに所属しています',
+        teamInfoInvalid: 'チーム情報が無効です',
+        allTeam: 'すべてのチーム',
+        locked: 'ロック中',
+        finished: '完走',
+        loadTeamListFailed: 'チーム一覧を読み込めませんでした',
+        teamCreated: 'チームを作成しました',
+        createTeamFailed: 'チームを作成できませんでした',
+        finishedLabel: '完走',
+        searchTeam: 'チームを検索',
+        nameOrCaptain: 'チーム名またはリーダー',
+        createTeam: '新規チーム',
+        teamList: 'チーム一覧',
+        emptyTeam: 'チームが見つかりません',
+        filterConditionOrCreateTeamTeam: '検索条件を変更するか、チームを作成してください。',
+        captain: 'リーダー未設定',
+        createTeamSpecifiedCaptain: 'チームを作成し、初期リーダーを指定します。',
+        createTeamLabel: 'チームを作成',
+        enterTeamName: 'チーム名を入力',
+        enterTeamPassword: 'チームパスワードを入力',
+        empty: '任意',
+      },
+      createGame: {
+        pageTitle: 'ゲームを作成 - RBPH管理画面',
+        enterGameName: 'ゲーム名を入力してください',
+        gameNameCannotExceedItemCharacters: 'ゲーム名は60文字以内で入力してください',
+        gameNameInvalid: 'ゲーム名が無効です。',
+        gameCreated: 'ゲームを作成しました',
+        createGameFailed: 'ゲームを作成できませんでした',
+      },
+      logs: {
+        scopeOption: {
+          all: 'すべての範囲',
+          teamActivity: 'チームアクティビティ',
+          system: 'システム',
+          management: '管理',
+          security: 'セキュリティ',
+        },
+        severityOption: {
+          all: 'すべてのレベル',
+          info: '情報',
+          warning: '警告',
+          error: 'エラー',
+        },
+        scope: '範囲：{scope}',
+        level: 'レベル：{level}',
+        event: 'イベント：{event}',
+        systemLogsLoadFailed: 'システムログを読み込めませんでした',
+        updatedAt: '{time}に更新',
+        notYetUpdate: 'まだ更新されていません',
+        scopeLabel: '範囲',
+        levelLabel: 'レベル',
+        eventType: 'イベント種別',
+        gameID: 'ゲームID',
+        teamID: 'チームID',
+        userID: 'ユーザーID',
+        filter: '絞り込み',
+        currentFilter: '適用中の条件',
+        loading: '読み込み中',
+        emptyLog: 'ログはありません',
+      },
+      settings: {
+        pageTitle: 'システム設定 - RBPH管理画面',
+        loadSystemSettingsFailed: 'システム設定を読み込めませんでした',
+        invalidSettings: '設定が無効です。メールサービスの設定と入力値を確認してください。',
+        systemSettingsSaved: 'システム設定を保存しました',
+        saveSystemSettingsFailed: 'システム設定を保存できませんでした',
+        systemSettingsUpdateNotYetSave: 'システム設定の変更が保存されていません。',
+        globalPolicyUpdateImmediate: 'これらのプラットフォーム全体の設定は、保存後すぐに反映されます。',
+        accessRegistration: 'アクセスとユーザー登録',
+        closeNewUserRegistration: '無効にすると、新規ユーザー登録を受け付けません。',
+        requirementEmailVerification: 'メールアドレスの確認を必須にする',
+        emailVerificationDescription: '登録を完了するにはメールアドレスの確認が必要です。',
+        emailServiceDisabled: 'デプロイ設定でメールサービスが無効です。',
+        captcha: 'CAPTCHA',
+        loginVerification: 'ログイン認証',
+        passVerificationLogin: 'ログイン時に{method}認証を必須にします。',
+        captchaServiceDisabled: 'デプロイ設定でCAPTCHAサービスが無効です。',
+        registrationVerification: '登録時の認証',
+        passVerificationRegistration: 'ユーザー登録時に{method}認証を必須にします。',
+        sessionPolicy: 'セッションポリシー',
+        itemUserLoginSessionCount: '1ユーザーが同時に保持できるログインセッション数の上限です。',
+        connectionLimitDescription: '1ユーザーが同時に保持できる同期接続数の上限です。上限を超えると、最も古い接続が新しい接続に置き換えられます。',
+        enableMaintenanceMode: 'メンテナンスモードを有効化',
+        maintenanceDescription: 'ユーザーとスタッフはプラットフォームを利用できなくなります。管理者は引き続きアクセスできます。',
+      },
+      user: {
+        loadUserDetailsFailed: 'ユーザー情報を読み込めませんでした',
+        emailPermissionDenied: '同等以上の権限を持つアカウントのメールアドレスは変更できません。',
+        superAdminUpdateAdminRole: '管理者権限を変更できるのは特権管理者のみです。',
+        cannotUpdateSelfRole: '自分自身の権限は変更できません。',
+        emailExists: 'このメールアドレスはすでに使用されています。',
+        userInfoInvalid: 'ユーザー情報が無効です。',
+        userNotFound: 'ユーザーが見つかりません。',
+        userInfoSaved: 'ユーザー情報を保存しました',
+        saveUserInfoFailed: 'ユーザー情報を保存できませんでした',
+        passwordResetPermissionDenied: '同等以上の権限を持つアカウントのパスワードはリセットできません',
+        resetPasswordFailed: 'パスワードをリセットできませんでした',
+        userInfoUpdateNotYetSave: 'ユーザー情報の変更が保存されていません。',
+        userSettings: 'ユーザー設定',
+        userIdentifier: 'ユーザー#{id}',
+        registeredAt: '{time}に登録',
+        accountInfo: 'アカウント情報',
+        belongingTeam: '所属チーム',
+        notJoinTeam: 'チームに所属していません',
+        resetPassword: 'パスワードをリセット',
+        passwordResetDescription: '一回限りのランダムなパスワードを生成し、このユーザーのすべてのセッションを無効にします。次回ログイン時にパスワード変更が必要です。',
+        passwordResetUnavailable: '同等以上の権限を持つアカウントのパスワードはリセットできません。',
+        generateTemporaryPassword: '一時パスワードを生成',
+        resetUserPassword: 'ユーザーのパスワードをリセット',
+        passwordResetWarning: 'このユーザーのすべてのログインセッションがすぐに無効になります。',
+        confirmReset: 'リセット',
+        closeShowAgainReset: 'このダイアログを閉じると、このパスワードは二度と表示されません。必要に応じて再度リセットできます。',
+      },
+      users: {
+        matchingCount: '{count}人のユーザー',
+        teamCount: '{count}チーム',
+        allUser: 'すべてのユーザー',
+        loadUserListFailed: 'ユーザー一覧を読み込めませんでした',
+        superAdminGrantAdminAccess: '管理者権限を付与できるのは特権管理者のみです',
+        emailExists: 'このメールアドレスはすでに使用されています',
+        userInfoInvalid: 'ユーザー情報が無効です',
+        createUserFailed: 'ユーザーを作成できませんでした',
+        searchUser: 'ユーザーを検索',
+        searchPlaceholder: 'メールアドレス、表示名、ユーザーID',
+        createUser: '新規ユーザー',
+        userList: 'ユーザー一覧',
+        emptyUser: 'ユーザーが見つかりません',
+        filterConditionOrCreateItemUser: '検索条件を変更するか、ユーザーを作成してください。',
+        accountOneTimeRandomPassword: 'このアカウントに一回限りのランダムなパスワードを生成します。',
+        createUserLabel: 'ユーザーを作成',
+        role: '権限',
+        closeShowUserDetailsReGenerate: '閉じるとこのパスワードは二度と表示されません。ユーザー詳細ページから再生成できます。',
+      },
+    },
+  },
   components: {
+    unlockConditionPreview: {
+      numericReference: '#{value}',
+      namedReference: '「{value}」',
+      puzzleSet: (ctx: { named: (key: string) => unknown }) => {
+        const items = ctx.named('items');
+        return `謎題 ${Array.isArray(items) ? items.map(String).join('、') : String(items ?? '')}`;
+      },
+      puzzleRange: '謎題{start}から{end}',
+      round: 'ラウンド{round}',
+      default: '初期状態で解放',
+      gameStarted: 'チームがゲームを開始済み',
+      solvedPuzzle: '謎題{puzzle}をクリア',
+      allSolved: '{scope}：すべてクリア',
+      anySolved: '{scope}：1問以上クリア',
+      comparison: {
+        gt: '{scope}：{count}問より多くクリア',
+        ge: '{scope}：{count}問以上クリア',
+        lt: '{scope}：{count}問未満をクリア',
+        le: '{scope}：{count}問以下をクリア',
+        eq: '{scope}：{count}問クリア',
+        ne: '{scope}：クリア数が{count}問以外',
+      },
+      and: (ctx: { named: (key: string) => unknown }) => {
+        const parts = ctx.named('parts');
+        return Array.isArray(parts) ? parts.map(String).join('、かつ ') : String(parts ?? '');
+      },
+      or: (ctx: { named: (key: string) => unknown }) => {
+        const parts = ctx.named('parts');
+        return Array.isArray(parts) ? parts.map(String).join('、または ') : String(parts ?? '');
+      },
+    },
     syncStatus: {
       connecting: {
         label: '接続中',
@@ -682,6 +1400,18 @@ export default defineI18nLocale(() => ({
       noAnnouncements: 'お知らせはありません',
       waitForPublish: '主催者からのお知らせはまだありません',
     },
+    captchaCloudflare: {
+      loadFailed: 'CAPTCHAを読み込めませんでした',
+      retryAfterRefresh: 'ページを再読み込みして、もう一度お試しください。',
+    },
+    puzzlePage: {
+      missingTitle: 'ページを表示できません',
+      missingDescription: 'この問題には該当するページがありません。',
+    },
+    staffTeamSelect: {
+      loadFailed: 'チーム一覧を取得できませんでした',
+      searchPlaceholder: 'チーム名で検索',
+    },
     teamMemberList: {
       captain: 'リーダー',
       you: 'あなた',
@@ -705,5 +1435,272 @@ export default defineI18nLocale(() => ({
     puzzleContent: {
       invalidType: '対応していないコンテンツ形式です',
     },
+    rbColorPickerPanel: {
+      default: '既定',
+    },
+    rbFormField: {
+      undoChanges: '変更を元に戻す',
+    },
+    rbInputDateTime: {
+      unset: '未設定',
+      clear: 'クリア',
+    },
+    rbLinkEditorPanel: {
+      removeLink: 'リンクを解除',
+    },
+    rbphAdminUserSelect: {
+      userListLoadFailed: 'ユーザー一覧を読み込めませんでした',
+      searchPlaceholder: 'メールアドレスまたは表示名で検索',
+    },
+    rbphAnnouncementManager: {
+      loadFailed: 'お知らせ設定を読み込めませんでした',
+      puzzleCount: '謎題{count}問',
+      puzzleId: '謎題#{id}',
+      titleRequired: 'タイトルを入力してください',
+      announcementNotFound: 'お知らせが見つかりません。',
+      invalidConfiguration: 'お知らせの設定が無効です。',
+      saved: 'お知らせ設定を保存しました',
+      saveFailed: 'お知らせ設定を保存できませんでした',
+      unsavedChanges: 'お知らせの変更が保存されていません。',
+      globalDescription: '公開したお知らせはすべてのゲームに表示されます。',
+      gameDescription: 'ゲーム全体または特定の謎題に対するお知らせを管理します。',
+      emptyTitle: 'お知らせはまだありません',
+      emptyDescription: 'お知らせを作成して編集・公開しましょう。',
+      createAnnouncement: 'お知らせを追加',
+      title: 'タイトル',
+      untitledAnnouncement: '無題のお知らせ',
+      draft: '下書き',
+      pinned: '固定',
+      relatedPuzzle: '対象の謎題',
+      noRelatedPuzzle: '謎題を指定しない（ゲーム全体）',
+      publishedState: '公開状態',
+      publish: '公開',
+      pinnedDisplay: '固定表示',
+      pinAnnouncement: '固定する',
+      content: '内容',
+    },
+    rbphContentBlockBrowser: {
+      unsafeMarkdown: '危険なMarkdown',
+      saved: 'コンテンツブロックの情報を保存しました',
+      saveFailed: 'コンテンツブロックの情報を保存できませんでした',
+      cdnUploaded: 'コンテンツブロックをCDNへアップロードしました',
+      cdnUploadFailed: 'コンテンツブロックをアップロードできませんでした',
+      cdnUploadRemoved: 'CDNからコンテンツブロックを削除しました',
+      cdnRemoveFailed: 'CDNからコンテンツブロックを削除できませんでした',
+      contentBlockManager: 'コンテンツブロック',
+      description: 'コンテンツブロックの作成、選択、設定を行います。',
+      create: 'ブロックを作成',
+      alwaysVisible: '常に表示',
+      conditionallyVisible: '条件付き表示',
+      uploaded: 'アップロード済み',
+      infoTitle: 'ブロック情報',
+      deleteContentBlock: 'ブロックを削除',
+      confirmDeleteContentBlock: 'このブロックを削除しますか？',
+      irreversibleWarning: 'すぐに反映され、取り消せません。',
+      empty: 'コンテンツブロックはまだありません',
+      contentBlockPlayerPublic: '管理画面で識別するための名前です。プレイヤーには表示されません。',
+      name: 'ブロック名',
+      format: 'コンテンツ形式',
+      distribution: '配信方法',
+      notUploaded: '未アップロード',
+      reupload: '再アップロード',
+      uploadToCdn: 'CDNへアップロード',
+      replaceCdnDescription: '現在保存されている内容で既存のCDNコンテンツを置き換えます。',
+      uploadCdnDescription: '現在保存されている内容をCDNへアップロードします。',
+      confirmReupload: '再アップロード',
+      removeUpload: 'CDNから削除',
+      removeCdnDescription: '削除後、プレイヤーはバックエンドAPIからこのブロックを取得します。',
+      confirmRemoveUpload: '削除',
+      saveContentFirst: '先に内容の変更を保存してください',
+      emptyContentNoUpload: '空のブロックはアップロードできません',
+      visibilityCondition: '表示条件',
+      permanentUnlockDescription: '一度条件を満たすと、そのチームに永続的に表示されます。',
+      clearPermanentUnlocks: '解放履歴をリセット',
+      clearPermanentUnlocksDescription: 'リセット後、現在の条件で各チームを再評価します。',
+      confirmClear: '履歴を削除',
+    },
+    rbphContentBlocks: {
+      loadFailedTitle: 'コンテンツを読み込めませんでした',
+      loadFailedDescription: 'このコンテンツブロックは表示できません。',
+      retry: '再試行',
+    },
+    rbphContentEditor: {
+      paragraph: '段落',
+      heading1: '見出し1',
+      heading2: '見出し2',
+      heading3: '見出し3',
+      bulletList: '箇条書き',
+      orderedList: '番号付きリスト',
+      blockquote: '引用',
+      codeBlock: 'コードブロック',
+      bold: '太字',
+      italic: '斜体',
+      underline: '下線',
+      strikethrough: '取り消し線',
+      inlineCode: 'インラインコード',
+      link: 'リンク',
+      textColor: '文字色',
+      alignLeft: '左揃え',
+      alignCenter: '中央揃え',
+      alignRight: '右揃え',
+      clearFormatting: '書式をクリア',
+      basicBlocks: '基本ブロック',
+      content: 'コンテンツ',
+      horizontalRule: '水平線',
+      image: '画像',
+      table: '表',
+      inlineMath: 'インライン数式',
+      blockMath: 'ブロック数式',
+      advanced: '詳細',
+      editor: 'エディター',
+      sourceCode: 'ソースコード',
+      addRowBelow: '下に行を追加',
+      deleteRow: '行を削除',
+      addColumnRight: '右に列を追加',
+      deleteColumn: '列を削除',
+      deleteTable: '表を削除',
+    },
+    rbphPuzzleAssetManager: {
+      fileCount: '{count}ファイル',
+      confirmDelete: '「{name}」を削除しますか？この操作は取り消せません。',
+      storage: {
+        local: {
+          label: 'ローカルストレージ',
+          description: '謎題バックエンドから参照するアセットに適しています。',
+        },
+        cos: {
+          label: 'COSオブジェクトストレージ',
+          description: '画像、メディア、添付ファイルなどの公開アセットに適しています。',
+        },
+      },
+      invalidScope: 'アセットの範囲が無効です。',
+      scopeNotFound: 'アセットの範囲が見つかりません。',
+      loadFailed: 'アセット一覧を読み込めませんでした',
+      loadStorageBackendsFailed: '利用可能な保存先を読み込めませんでした',
+      linkCopied: 'アセットのリンクをコピーしました',
+      copyFailed: 'コピーできませんでした',
+      copyManually: 'リンクを手動でコピーしてください。',
+      invalidGroupName: 'アセットグループ名が無効です。',
+      assetNotFound: 'アセットが見つかりません。',
+      saved: 'アセットグループの情報を保存しました',
+      saveFailed: 'アセットグループの情報を保存できませんでした',
+      invalidOrDuplicateFileName: 'ファイル名が無効か、すでに使用されています。',
+      fileNotFound: 'アセットファイルが見つかりません。',
+      fileRenamed: 'ファイル名を変更しました',
+      renameFileFailed: 'ファイル名を変更できませんでした',
+      invalidOrDuplicateFolderName: 'フォルダー名が無効か、すでに使用されています。',
+      folderNotFound: 'フォルダーが見つかりません。',
+      folderRenamed: 'フォルダー名を変更しました',
+      renameFolderFailed: 'フォルダー名を変更できませんでした',
+      assetDeleted: 'アセットを削除しました',
+      fileDeleted: 'ファイルを削除しました',
+      deleteFileFailed: 'アセットファイルを削除できませんでした',
+      groupDeleted: 'アセットグループを削除しました',
+      deleteGroupFailed: 'アセットグループを削除できませんでした',
+      invalidUpload: 'アップロードするファイルが無効です。',
+      groupUploaded: 'アセットグループをアップロードしました',
+      uploadGroupFailed: 'アセットグループをアップロードできませんでした',
+      assetManager: 'アセット',
+      description: 'このページで使用する静的アセットをアップロード・管理します。',
+      uploadFile: 'ファイルをアップロード',
+      dropzone: 'ファイルをドロップ、またはクリックして選択',
+      deleteAssetGroup: 'アセットグループを削除しますか？',
+      infoTitle: 'アセットグループ情報',
+      groupName: 'アセットグループ名',
+      storageBackend: '保存先',
+      size: 'サイズ',
+      file: 'ファイル',
+      deleteFile: 'ファイルを削除しますか？',
+      lastFileWarning: 'グループ内の最後のファイルです。削除するとグループも削除されます。',
+      uploadAsset: 'アセットをアップロード',
+      uploadDescription: '「{name}」のアップロード方法と保存先を設定します。',
+      uploadMethod: 'アップロード方法',
+      assetGroup: 'アセットグループ',
+      regularFile: '単一ファイル',
+      upload: 'アップロード',
+    },
+    rbphPuzzleCard_2: {
+      puzzleType: {
+        normal: '通常',
+        story: 'ストーリー',
+        unknown: '種別{type}',
+      },
+    },
+    rbphRawHtmlRenderer: {
+      loadFailed: 'Raw HTMLファイルを読み込めませんでした。',
+    },
+    rbphReleasePhaseManager: {
+      changeCount: '{count}件の変更',
+      confirmRemoveFeature: 'このフェーズから「{feature}」を削除しますか？',
+      loadFailed: 'フェーズを読み込めませんでした',
+      invalidPhase: 'フェーズ情報が無効です',
+      invalidPhaseHint: 'フェーズ名と開始時刻を確認してください。',
+      phaseInUse: '謎題に使用されているフェーズは削除できません。',
+      phaseNotFound: 'フェーズが見つかりません。',
+      timeConflict: '別のフェーズと開始時刻が重複しています。',
+      updateRejected: 'このフェーズは変更できないか、入力内容が無効です。',
+      invalidPhaseDescription: 'フェーズ情報が無効です。',
+      saveFailed: 'フェーズを保存できませんでした',
+      phaseManager: 'フェーズ',
+      description: 'フェーズでゲーム中のイベントを予定します。プレイヤー向けのお知らせに表示し、開始時刻にゲーム機能を自動変更できます。',
+      empty: 'フェーズはまだありません',
+      create: 'フェーズを作成',
+      name: 'フェーズ名',
+      untitledPhase: '無題のフェーズ',
+      hide: '非表示',
+      released: '開始済み',
+      releaseTime: '開始時刻',
+      publicEarly: '事前公開',
+      publicEarlyDescription: '開始前でもプレイヤーがこのフェーズを閲覧できます',
+      descriptionPlaceholder: 'プレイヤーに表示するフェーズの説明',
+      changeFeature: '機能を変更',
+      deleteFeatureChangeTitle: 'この機能変更を削除しますか？',
+      selectFeature: '機能を選択',
+      selectState: '状態を選択',
+      add: '追加',
+    },
+    rbphUnlockGateBlock: {
+      gateType: {
+        default: '初期解放',
+        gameStarted: 'ゲーム開始',
+        puzzleSolved: '謎題クリア',
+        allSolved: 'すべてクリア',
+        anySolved: 'いずれかクリア',
+        compare: '比較',
+        and: 'AND',
+        or: 'OR',
+        not: 'NOT',
+        source: 'ソース',
+      },
+      comparison: {
+        greaterThanOrEqual: '以上',
+        greaterThan: 'より大きい',
+        lessThanOrEqual: '以下',
+        lessThan: '未満',
+        equal: '等しい',
+        notEqual: '等しくない',
+      },
+      puzzleFilterPlaceholder: '謎題を選択または検索',
+      selectTriggerPuzzle: 'トリガーの謎題を選択',
+      addCondition: '条件を追加',
+    },
+    rbphUnlockSetBlock: {
+      setType: {
+        puzzles: '選択した謎題',
+        round: 'ラウンドの謎題',
+      },
+      rangeSeparator: 'から',
+      roundFilterPlaceholder: 'ラウンドを選択または検索',
+    },
+    rbphUnlockValueBlock: {
+      valueType: {
+        number: '数値',
+        solvedCount: 'クリア数',
+      },
+    },
+    rbphVueAppRenderer: {
+      loadFailed: 'Vue SFCコンポーネントを読み込めませんでした。',
+      loadFailedError: 'Vue SFCコンポーネントの読み込みに失敗しました',
+    }
   },
 }));

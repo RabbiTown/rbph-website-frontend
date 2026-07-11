@@ -1,5 +1,7 @@
-<script setup lang="ts">
-import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui';
+<script setup lang="ts">import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui';
+
+
+const { t } = useI18n();
 
 definePageMeta({ middleware: ['admin'] });
 
@@ -20,7 +22,7 @@ game
     }
   })
   .catch(err => {
-    handleError(err, '获取比赛列表失败');
+    handleError(err, t('admin.pages.shell.loadGameListFailed'));
   })
   .finally(() => {
     if (route.name === 'admin') {
@@ -45,12 +47,12 @@ const gameNav = computed(() => {
 
   result.push([
     {
-      label: '创建比赛',
+      label: t('admin.common.createGame'),
       icon: 'material-symbols:add-circle-outline-rounded',
       to: '/admin/games/create',
     },
     {
-      label: '管理比赛',
+      label: t('admin.pages.shell.managementGame'),
       icon: 'material-symbols:settings-outline-rounded',
       to: '/admin/games',
       exact: true,
@@ -63,7 +65,7 @@ const gameNav = computed(() => {
 const userNav = computed(() => {
   return [
     { label: user.value?.nickname, type: 'label' },
-    { label: '退出登录', icon: 'material-symbols:logout-rounded', color: 'error', to: '/logout' },
+    { label: t('admin.common.logout'), icon: 'material-symbols:logout-rounded', color: 'error', to: '/logout' },
   ] satisfies DropdownMenuItem[];
 });
 
@@ -74,11 +76,11 @@ function toggleColorMode() {
 const navBottom = computed(() => {
   return [
     {
-      label: isDarkMode.value ? '浅色模式' : '深色模式',
+      label: isDarkMode.value ? t('admin.pages.shell.lightMode') : t('admin.pages.shell.darkMode'),
       icon: isDarkMode.value ? 'material-symbols:light-mode-outline-rounded' : 'material-symbols:dark-mode-outline-rounded',
       onSelect: toggleColorMode,
     },
-    { label: '返回平台', icon: 'material-symbols:home-outline-rounded', to: '/' },
+    { label: t('admin.pages.shell.backToPlatform'), icon: 'material-symbols:home-outline-rounded', to: '/' },
   ] satisfies NavigationMenuItem[];
 });
 
@@ -89,33 +91,33 @@ const nav = computed(() => {
     result.push([
       {
         value: 'admin-game-dashboard',
-        label: '基本设置',
+        label: t('admin.common.basicSettings'),
         icon: 'material-symbols:space-dashboard-outline-rounded',
         to: `/admin/games/${game.ref.value.id}`,
         exact: true,
       },
       {
-        label: '比赛功能',
+        label: t('admin.common.gameFeatures'),
         icon: 'material-symbols:tune-rounded',
         to: `/admin/games/${game.ref.value.id}/features`,
       },
       {
         value: 'admin-game-puzzles',
-        label: '谜题管理',
+        label: t('admin.common.puzzleManagement'),
         icon: 'material-symbols:extension-outline-rounded',
         to: `/admin/games/${game.ref.value.id}/puzzles`,
         active: route.path.startsWith(`/admin/games/${game.ref.value.id}/puzzles`) || route.path.startsWith(`/admin/games/${game.ref.value.id}/rounds`),
       },
       {
         value: 'admin-game-teams',
-        label: '队伍管理',
+        label: t('admin.common.teamManagement'),
         icon: 'material-symbols:groups-2-outline-rounded',
         to: `/admin/games/${game.ref.value.id}/teams`,
         active: route.path.startsWith(`/admin/games/${game.ref.value.id}/teams`),
       },
       {
         value: 'admin-game-announcements',
-        label: '比赛公告',
+        label: t('admin.common.gameAnnouncements'),
         icon: 'material-symbols:campaign-outline-rounded',
         to: `/admin/games/${game.ref.value.id}/announcements`,
       },
@@ -125,26 +127,26 @@ const nav = computed(() => {
   const systemNav = [
     {
       value: 'admin-users',
-      label: '用户管理',
+      label: t('admin.common.userManagement'),
       icon: 'material-symbols:deployed-code-account-outline-rounded',
       to: '/admin/users',
       active: route.path.startsWith('/admin/users'),
     },
     {
       value: 'admin-announcements',
-      label: '全局公告',
+      label: t('admin.common.globalAnnouncements'),
       icon: 'material-symbols:campaign-outline-rounded',
       to: '/admin/announcements',
     },
     {
       value: 'admin-logs',
-      label: '系统日志',
+      label: t('admin.common.systemLogs'),
       icon: 'material-symbols:receipt-long-outline-rounded',
       to: '/admin/logs',
     },
     {
       value: 'admin-settings',
-      label: '系统设置',
+      label: t('admin.common.systemSettings'),
       icon: 'material-symbols:settings-outline-rounded',
       to: '/admin/settings',
     },
@@ -163,7 +165,7 @@ const nav = computed(() => {
         <u-dropdown-menu :ui="{ content: collapsed ? 'w-48' : 'w-(--reka-dropdown-menu-trigger-width)' }" :items="gameNav">
           <u-button
             :key="`admin-game-switch-${selectedGame?.id ?? 'none'}-${collapsed ? 'collapsed' : 'expanded'}`"
-            :label="collapsed ? undefined : (selectedGame?.title ?? '未选择比赛')"
+            :label="collapsed ? undefined : (selectedGame?.title ?? t('admin.pages.shell.notSelectGame'))"
             :trailing-icon="collapsed ? undefined : 'material-symbols:expand-all-rounded'"
             :icon="gameSwitchIcon"
             color="neutral"

@@ -1,4 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 const props = defineProps<{
   href?: string | null;
 }>();
@@ -33,7 +35,7 @@ function apply() {
         variant="ghost"
         square
         icon="material-symbols:link-off-rounded"
-        aria-label="移除链接"
+        :aria-label="t('components.rbLinkEditorPanel.removeLink')"
         :disabled="!href"
         @click="emit('remove')"
       />

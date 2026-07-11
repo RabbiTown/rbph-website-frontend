@@ -1,4 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 interface AdminAssetGroupData {
   id: number;
   game_id: number;
@@ -66,7 +68,7 @@ const infoOpen = ref(false);
 const uploadChoice = ref<'group' | 'file'>('group');
 const uploadBackend = ref('local');
 const storageBackends = ref<AssetStorageBackendData[]>([
-  { backend: 'local', kind: 'local', label: '本地存储', recommended: true },
+  { backend: 'local', kind: 'local', label: t('components.rbphPuzzleAssetManager.storage.local.label'), recommended: true },
 ]);
 const infoTarget = ref<AdminAssetGroupItem | null>(null);
 const groups = ref<AdminAssetGroupItem[]>([]);
@@ -94,14 +96,14 @@ const uploadIsZip = computed(() => Boolean(files.value && shouldUploadAsGroup(fi
 
 const storageKindMeta = {
   local: {
-    label: '本地存储',
+    label: t('components.rbphPuzzleAssetManager.storage.local.label'),
     icon: 'material-symbols:hard-drive-outline',
-    description: '适合谜题后端需要读取的资源。',
+    description: t('components.rbphPuzzleAssetManager.storage.local.description'),
   },
   cos: {
-    label: 'COS 对象存储',
+    label: t('components.rbphPuzzleAssetManager.storage.cos.label'),
     icon: 'material-symbols:cloud-outline',
-    description: '适合图片、音视频和附件等公开静态资源。',
+    description: t('components.rbphPuzzleAssetManager.storage.cos.description'),
   },
 } as const;
 
@@ -282,15 +284,15 @@ function refreshAssets() {
     .get<{ groups: AdminAssetGroupItem[] }>('/admin/assets', {
       query,
       errorHints: {
-        [-2]: '资产作用域不合法。',
-        [-1]: '资产作用域不存在。',
+        [-2]: t('components.rbphPuzzleAssetManager.invalidScope'),
+        [-1]: t('components.rbphPuzzleAssetManager.scopeNotFound'),
       },
     })
     .then(({ data }) => {
       groups.value = data.groups;
     })
     .catch(error => {
-      handleError(error, '获取资产列表失败');
+      handleError(error, t('components.rbphPuzzleAssetManager.loadFailed'));
     })
     .finally(() => {
       loading.value = false;
@@ -304,7 +306,7 @@ async function fetchStorageBackends() {
     storageBackends.value = data.backends;
     uploadBackend.value = data.backends.find(item => item.recommended)?.backend ?? data.backends[0]!.backend;
   } catch (error) {
-    handleError(error, '获取可用存储位置失败');
+    handleError(error, t('components.rbphPuzzleAssetManager.loadStorageBackendsFailed'));
   }
 }
 
@@ -312,14 +314,14 @@ async function copyUrl(url: string) {
   try {
     await navigator.clipboard.writeText(url);
     toast.add({
-      title: '已复制资产链接',
+      title: t('components.rbphPuzzleAssetManager.linkCopied'),
       icon: 'material-symbols:content-copy-outline-rounded',
       color: 'success',
     });
   } catch {
     toast.add({
-      title: '复制失败',
-      description: '请手动复制链接。',
+      title: t('components.rbphPuzzleAssetManager.copyFailed'),
+      description: t('components.rbphPuzzleAssetManager.copyManually'),
       icon: 'material-symbols:error-outline-rounded',
       color: 'error',
     });
@@ -352,8 +354,8 @@ async function saveAssetInfo() {
       { original_name: originalName },
       {
         errorHints: {
-          [-2]: '资产组名称不合法。',
-          [-1]: '资产不存在。',
+          [-2]: t('components.rbphPuzzleAssetManager.invalidGroupName'),
+          [-1]: t('components.rbphPuzzleAssetManager.assetNotFound'),
         },
       },
     );
@@ -361,12 +363,12 @@ async function saveAssetInfo() {
     updateAssetInfoTarget(data.group, data.files);
 
     toast.add({
-      title: '资产组信息已保存',
+      title: t('components.rbphPuzzleAssetManager.saved'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
   } catch (error) {
-    handleError(error, '保存资产组信息失败');
+    handleError(error, t('components.rbphPuzzleAssetManager.saveFailed'));
   } finally {
     savingInfo.value = false;
   }
@@ -418,8 +420,8 @@ async function saveFileRename(file: AdminAssetFileData) {
       { file_name: fileName },
       {
         errorHints: {
-          [-2]: '文件名不合法或已存在。',
-          [-1]: '资产文件不存在。',
+          [-2]: t('components.rbphPuzzleAssetManager.invalidOrDuplicateFileName'),
+          [-1]: t('components.rbphPuzzleAssetManager.fileNotFound'),
         },
       },
     );
@@ -427,12 +429,12 @@ async function saveFileRename(file: AdminAssetFileData) {
     updateAssetInfoTarget(data.group, data.files);
     cancelFileRename();
     toast.add({
-      title: '文件已重命名',
+      title: t('components.rbphPuzzleAssetManager.fileRenamed'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
   } catch (error) {
-    handleError(error, '重命名资产文件失败');
+    handleError(error, t('components.rbphPuzzleAssetManager.renameFileFailed'));
   } finally {
     if (renamingFileId.value === file.id) renamingFileId.value = null;
   }
@@ -453,8 +455,8 @@ async function saveFolderRename(folder: AssetTreeItem) {
       { path: folder.path, name },
       {
         errorHints: {
-          [-2]: '文件夹名称不合法或已存在。',
-          [-1]: '文件夹不存在。',
+          [-2]: t('components.rbphPuzzleAssetManager.invalidOrDuplicateFolderName'),
+          [-1]: t('components.rbphPuzzleAssetManager.folderNotFound'),
         },
       },
     );
@@ -462,12 +464,12 @@ async function saveFolderRename(folder: AssetTreeItem) {
     updateAssetInfoTarget(data.group, data.files);
     cancelFolderRename();
     toast.add({
-      title: '文件夹已重命名',
+      title: t('components.rbphPuzzleAssetManager.folderRenamed'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
   } catch (error) {
-    handleError(error, '重命名资产文件夹失败');
+    handleError(error, t('components.rbphPuzzleAssetManager.renameFolderFailed'));
   } finally {
     if (renamingFolderPath.value === folder.path) renamingFolderPath.value = null;
   }
@@ -486,7 +488,7 @@ async function deleteAssetFile(file: AdminAssetFileData) {
     };
     const { data } = await api.del<Response>(`/admin/assets/${item.group.id}/files/${file.id}`, {
       errorHints: {
-        [-1]: '资产文件不存在。',
+        [-1]: t('components.rbphPuzzleAssetManager.fileNotFound'),
       },
     });
 
@@ -499,12 +501,12 @@ async function deleteAssetFile(file: AdminAssetFileData) {
     }
 
     toast.add({
-      title: data.deleted_group ? '资产已删除' : '文件已删除',
+      title: data.deleted_group ? t('components.rbphPuzzleAssetManager.assetDeleted') : t('components.rbphPuzzleAssetManager.fileDeleted'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
   } catch (error) {
-    handleError(error, '删除资产文件失败');
+    handleError(error, t('components.rbphPuzzleAssetManager.deleteFileFailed'));
   } finally {
     deletingFileId.value = null;
   }
@@ -517,17 +519,17 @@ async function deleteAsset(item: AdminAssetGroupItem) {
   try {
     await api.del(`/admin/assets/${item.group.id}`, {
       errorHints: {
-        [-1]: '资产不存在。',
+        [-1]: t('components.rbphPuzzleAssetManager.assetNotFound'),
       },
     });
     await refreshAssets();
     toast.add({
-      title: '资产组已删除',
+      title: t('components.rbphPuzzleAssetManager.groupDeleted'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
   } catch (error) {
-    handleError(error, '删除资产组失败');
+    handleError(error, t('components.rbphPuzzleAssetManager.deleteGroupFailed'));
   } finally {
     deletingId.value = null;
   }
@@ -550,8 +552,8 @@ async function uploadFiles() {
 
     await api.post('/admin/assets', form, {
       errorHints: {
-        [-2]: '上传文件不合法。',
-        [-1]: '资产作用域不存在。',
+        [-2]: t('components.rbphPuzzleAssetManager.invalidUpload'),
+        [-1]: t('components.rbphPuzzleAssetManager.scopeNotFound'),
       },
     });
 
@@ -559,14 +561,14 @@ async function uploadFiles() {
     uploadConfirmOpen.value = false;
     await refreshAssets();
     toast.add({
-      title: '资产组已上传',
+      title: t('components.rbphPuzzleAssetManager.groupUploaded'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
   } catch (error) {
     files.value = null;
     uploadConfirmOpen.value = false;
-    handleError(error, '上传资产组失败');
+    handleError(error, t('components.rbphPuzzleAssetManager.uploadGroupFailed'));
   } finally {
     uploading.value = false;
   }
@@ -607,8 +609,8 @@ onMounted(fetchStorageBackends);
   <div class="flex h-full min-h-0 min-w-0 flex-col gap-4 overflow-y-auto overscroll-contain pb-6 pr-1 scroll-pb-6">
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">
-        <h2 class="truncate text-md font-semibold text-highlighted">资产管理器</h2>
-        <p class="text-sm text-muted">用于上传和管理当前页面需要的静态资产。</p>
+        <h2 class="truncate text-md font-semibold text-highlighted">{{ t('components.rbphPuzzleAssetManager.assetManager') }}</h2>
+        <p class="text-sm text-muted">{{ t('components.rbphPuzzleAssetManager.description') }}</p>
       </div>
       <u-button color="neutral" variant="ghost" size="xs" icon="material-symbols:refresh-rounded" :loading="loading" @click="refreshAssets" />
     </div>
@@ -619,8 +621,8 @@ onMounted(fetchStorageBackends);
       size="md"
       class="w-full"
       icon="material-symbols:upload-file-outline-rounded"
-      label="上传文件"
-      description="拖入文件或点击选择"
+      :label="t('components.rbphPuzzleAssetManager.uploadFile')"
+      :description="t('components.rbphPuzzleAssetManager.dropzone')"
       :disabled="uploading || !gameId || !hasScope"
       @change="onUploadChange"
     />
@@ -640,7 +642,7 @@ onMounted(fetchStorageBackends);
                 <span>·</span>
                 <span class="truncate">{{ assetDisplayMimeType(item) }}</span>
                 <span v-if="!isSingleAsset(item)">·</span>
-                <span v-if="!isSingleAsset(item)">{{ item.files.length }} 个文件</span>
+                <span v-if="!isSingleAsset(item)">{{ t('components.rbphPuzzleAssetManager.fileCount', { count: item.files.length }) }}</span>
               </div>
               <div class="mt-1 flex justify-end gap-1">
                 <u-button size="xs" color="neutral" variant="ghost" icon="material-symbols:info-outline-rounded" @click="openAssetInfo(item)" />
@@ -655,12 +657,12 @@ onMounted(fetchStorageBackends);
                       <div class="flex items-start gap-2">
                         <u-icon name="material-symbols:warning-outline-rounded" class="mt-0.5 size-4 shrink-0 text-error" />
                         <div class="min-w-0">
-                          <div class="font-medium text-highlighted">删除资产组？</div>
-                          <div class="mt-1 text-xs text-muted">确认删除「{{ item.group.original_name }}」？此操作不可恢复。</div>
+                          <div class="font-medium text-highlighted">{{ t('components.rbphPuzzleAssetManager.deleteAssetGroup') }}</div>
+                          <div class="mt-1 text-xs text-muted">{{ t('components.rbphPuzzleAssetManager.confirmDelete', { name: item.group.original_name }) }}</div>
                         </div>
                       </div>
                       <div class="mt-3 flex justify-end">
-                        <u-button size="xs" color="error" variant="soft" icon="material-symbols:delete-outline-rounded" :loading="deletingId === item.group.id" @click="deleteAsset(item)">删除</u-button>
+                        <u-button size="xs" color="error" variant="soft" icon="material-symbols:delete-outline-rounded" :loading="deletingId === item.group.id" @click="deleteAsset(item)">{{ t('admin.common.delete') }}</u-button>
                       </div>
                     </div>
                   </template>
@@ -672,18 +674,18 @@ onMounted(fetchStorageBackends);
       </div>
     </div>
 
-    <u-modal v-model:open="infoOpen" title="资产组信息" :dismissible="!savingInfo" :close="!savingInfo">
+    <u-modal v-model:open="infoOpen" :title="t('components.rbphPuzzleAssetManager.infoTitle')" :dismissible="!savingInfo" :close="!savingInfo">
       <template #body>
         <u-form :state="infoState" class="space-y-4" @submit.prevent="saveAssetInfo">
-          <rb-form-field name="originalName" row narrow-label label="名称" required class="w-full gap-4" :dirty="infoDirty" :reset="resetAssetInfoName" :ui="{ container: 'w-full' }">
+          <rb-form-field name="originalName" row narrow-label :label="t('admin.common.name')" required class="w-full gap-4" :dirty="infoDirty" :reset="resetAssetInfoName" :ui="{ container: 'w-full' }">
             <div class="w-full min-w-0">
-              <u-input v-model="infoState.originalName" placeholder="资产组名称" :disabled="savingInfo" maxlength="255" class="w-full" />
+              <u-input v-model="infoState.originalName" :placeholder="t('components.rbphPuzzleAssetManager.groupName')" :disabled="savingInfo" maxlength="255" class="w-full" />
             </div>
           </rb-form-field>
 
           <div v-if="infoTarget" class="space-y-3 rounded-md bg-elevated/50 p-3 text-sm">
             <div class="grid grid-cols-[5rem_minmax(0,1fr)] gap-2">
-              <span class="text-muted">存储位置</span>
+              <span class="text-muted">{{ t('components.rbphPuzzleAssetManager.storageBackend') }}</span>
               <u-badge color="neutral" variant="soft" class="w-fit" :icon="storageIcon(infoTarget.group.backend)">{{ storageLabel(infoTarget.group.backend) }}</u-badge>
             </div>
             <div class="grid grid-cols-[5rem_minmax(0,1fr)] gap-2">
@@ -695,7 +697,7 @@ onMounted(fetchStorageBackends);
               <span class="truncate text-highlighted">{{ infoTarget.group.mime_type }}</span>
             </div>
             <div class="grid grid-cols-[5rem_minmax(0,1fr)] gap-2">
-              <span class="text-muted">大小</span>
+              <span class="text-muted">{{ t('components.rbphPuzzleAssetManager.size') }}</span>
               <span class="text-highlighted">{{ formatBytes(infoTarget.group.size) }}</span>
             </div>
             <div class="grid grid-cols-[5rem_minmax(0,1fr)] gap-2">
@@ -706,7 +708,7 @@ onMounted(fetchStorageBackends);
 
           <div v-if="infoTarget" class="space-y-2">
             <div class="flex items-center justify-between gap-2">
-              <h3 class="text-sm font-medium text-highlighted">文件</h3>
+              <h3 class="text-sm font-medium text-highlighted">{{ t('components.rbphPuzzleAssetManager.file') }}</h3>
               <u-badge color="neutral" variant="soft">{{ infoTarget.files.length }}</u-badge>
             </div>
 
@@ -758,13 +760,13 @@ onMounted(fetchStorageBackends);
                               <div class="flex items-start gap-2">
                                 <u-icon name="material-symbols:warning-outline-rounded" class="mt-0.5 size-4 shrink-0 text-error" />
                                 <div class="min-w-0">
-                                  <div class="font-medium text-highlighted">删除文件？</div>
-                                  <div class="mt-1 break-all text-xs text-muted">确认删除「{{ item.file.relative_path }}」？此操作不可恢复。</div>
-                                  <div v-if="infoTarget.files.length <= 1" class="mt-1 text-xs text-error">这是资产组内最后一个文件，删除后资产组也会被删除。</div>
+                                  <div class="font-medium text-highlighted">{{ t('components.rbphPuzzleAssetManager.deleteFile') }}</div>
+                                  <div class="mt-1 break-all text-xs text-muted">{{ t('components.rbphPuzzleAssetManager.confirmDelete', { name: item.file.relative_path }) }}</div>
+                                  <div v-if="infoTarget.files.length <= 1" class="mt-1 text-xs text-error">{{ t('components.rbphPuzzleAssetManager.lastFileWarning') }}</div>
                                 </div>
                               </div>
                               <div class="mt-3 flex justify-end">
-                                <u-button size="xs" color="error" variant="soft" icon="material-symbols:delete-outline-rounded" :loading="deletingFileId === item.file.id" @click="deleteAssetFile(item.file)">删除</u-button>
+                                <u-button size="xs" color="error" variant="soft" icon="material-symbols:delete-outline-rounded" :loading="deletingFileId === item.file.id" @click="deleteAssetFile(item.file)">{{ t('admin.common.delete') }}</u-button>
                               </div>
                             </div>
                           </template>
@@ -781,16 +783,16 @@ onMounted(fetchStorageBackends);
 
       <template #footer>
         <div class="flex w-full justify-end gap-2">
-          <u-button color="neutral" variant="soft" :disabled="savingInfo" @click="infoOpen = false">取消</u-button>
-          <u-button color="primary" icon="material-symbols:save-outline-rounded" :loading="savingInfo" :disabled="!infoDirty || !infoState.originalName.trim()" @click="saveAssetInfo">保存</u-button>
+          <u-button color="neutral" variant="soft" :disabled="savingInfo" @click="infoOpen = false">{{ t('admin.common.cancel') }}</u-button>
+          <u-button color="primary" icon="material-symbols:save-outline-rounded" :loading="savingInfo" :disabled="!infoDirty || !infoState.originalName.trim()" @click="saveAssetInfo">{{ t('admin.common.save') }}</u-button>
         </div>
       </template>
     </u-modal>
 
     <u-modal
       v-model:open="uploadConfirmOpen"
-      title="上传资产"
-      :description="files ? `配置「${files.name}」的上传方式和存储位置。` : ''"
+      :title="t('components.rbphPuzzleAssetManager.uploadAsset')"
+      :description="files ? t('components.rbphPuzzleAssetManager.uploadDescription', { name: files.name }) : ''"
       :dismissible="!uploading"
       :close="!uploading"
       @update:open="onUploadModalOpenChange"
@@ -798,14 +800,14 @@ onMounted(fetchStorageBackends);
       <template #body>
         <div class="space-y-5">
           <div v-if="uploadIsZip" class="space-y-2">
-            <div class="text-sm font-medium text-highlighted">上传方式</div>
+            <div class="text-sm font-medium text-highlighted">{{ t('components.rbphPuzzleAssetManager.uploadMethod') }}</div>
             <u-field-group class="w-full">
               <u-button
                 color="neutral"
                 variant="soft"
                 active-color="primary"
                 icon="material-symbols:folder-zip-outline-rounded"
-                label="资产组"
+                :label="t('components.rbphPuzzleAssetManager.assetGroup')"
                 class="flex-1 justify-center"
                 :active="uploadChoice === 'group'"
                 :disabled="uploading"
@@ -816,7 +818,7 @@ onMounted(fetchStorageBackends);
                 variant="soft"
                 active-color="primary"
                 icon="material-symbols:upload-file-outline-rounded"
-                label="普通文件"
+                :label="t('components.rbphPuzzleAssetManager.regularFile')"
                 class="flex-1 justify-center"
                 :active="uploadChoice === 'file'"
                 :disabled="uploading"
@@ -826,7 +828,7 @@ onMounted(fetchStorageBackends);
           </div>
 
           <div class="space-y-2">
-            <div class="text-sm font-medium text-highlighted">存储位置</div>
+            <div class="text-sm font-medium text-highlighted">{{ t('components.rbphPuzzleAssetManager.storageBackend') }}</div>
             <u-field-group class="flex w-full">
               <u-button
                 v-for="backend in storageBackends"
@@ -849,8 +851,8 @@ onMounted(fetchStorageBackends);
 
       <template #footer>
         <div class="flex w-full justify-end gap-2">
-          <u-button color="neutral" variant="soft" :disabled="uploading" @click="clearUpload"> 取消 </u-button>
-          <u-button color="primary" icon="material-symbols:upload-2-outline-rounded" :loading="uploading" :disabled="uploading || !files" @click="uploadFiles">上传</u-button>
+          <u-button color="neutral" variant="soft" :disabled="uploading" @click="clearUpload"> {{ t('admin.common.cancel') }} </u-button>
+          <u-button color="primary" icon="material-symbols:upload-2-outline-rounded" :loading="uploading" :disabled="uploading || !files" @click="uploadFiles">{{ t('components.rbphPuzzleAssetManager.upload') }}</u-button>
         </div>
       </template>
     </u-modal>

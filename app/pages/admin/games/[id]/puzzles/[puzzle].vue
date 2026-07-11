@@ -1,5 +1,7 @@
-<script setup lang="ts">
-import type { NavigationMenuItem } from '@nuxt/ui';
+<script setup lang="ts">import type { NavigationMenuItem } from '@nuxt/ui';
+
+
+const { t } = useI18n();
 
 const route = useRoute();
 const api = useApi();
@@ -69,9 +71,9 @@ async function applyHeader() {
     type Response = { puzzle: AdminPuzzleData };
     const response = await api.patch<Response>(`/admin/puzzles/${puzzle.value.id}`, body, {
       errorHints: {
-        [-2]: '谜题标题或 slug 不合法。',
-        [-3]: '谜题 slug 不合法或已被使用。',
-        [-1]: '谜题不存在。',
+        [-2]: t('admin.pages.puzzle.puzzleTitleOrSlugInvalid'),
+        [-3]: t('admin.pages.puzzle.puzzleSlugInvalidOr'),
+        [-1]: t('admin.common.puzzleNotFound'),
       },
     });
 
@@ -80,13 +82,13 @@ async function applyHeader() {
     await fetchData();
 
     toast.add({
-      title: '谜题信息已保存',
+      title: t('admin.pages.puzzle.puzzleInfoSaved'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
     return true;
   } catch (error) {
-    handleError(error, '保存谜题信息失败');
+    handleError(error, t('admin.pages.puzzle.savePuzzleInfoFailed'));
     return false;
   } finally {
     headerSaving.value = false;
@@ -105,23 +107,23 @@ async function fetchData() {
 
     const puzzleResp = await api.get<PuzzleResponse>(`/admin/puzzles/${puzzleId.value}`, {
       errorHints: {
-        [-1]: '谜题不存在。',
+        [-1]: t('admin.common.puzzleNotFound'),
       },
     });
 
     if (puzzleResp.data.puzzle.game_id !== gameId.value) {
-      showError({ statusCode: 404, statusMessage: '谜题不存在' });
+      showError({ statusCode: 404, statusMessage: t('admin.pages.puzzle.puzzleNotFound') });
       return;
     }
 
     const roundResp = await api.get<RoundResponse>(`/admin/rounds/${puzzleResp.data.puzzle.round_id}`, {
       errorHints: {
-        [-1]: '区域不存在。',
+        [-1]: t('admin.common.roundNotFound'),
       },
     });
     const backendResp = await api.get<BackendResponse>(`/admin/puzzles/${puzzleId.value}/backend`, {
       errorHints: {
-        [-1]: '后端脚本不存在。',
+        [-1]: t('admin.pages.puzzle.backendScriptNotFound'),
       },
     });
 
@@ -139,7 +141,7 @@ async function fetchData() {
     backend.value = undefined;
     round.value = undefined;
     syncHeaderFromPuzzle();
-    handleError(error, '获取谜题信息失败', true);
+    handleError(error, t('admin.pages.puzzle.loadPuzzleInfoFailed'), true);
   } finally {
     loading.value = false;
   }
@@ -174,28 +176,28 @@ watch(
 );
 
 useHead({
-  titleTemplate: computed(() => buildTitleParts([{ text: displayTitle.value }, { text: game.value?.title, sep: ' - ' }, { text: 'RBPH 管理后台', sep: ' - ' }])),
+  titleTemplate: computed(() => buildTitleParts([{ text: displayTitle.value }, { text: game.value?.title, sep: ' - ' }, { text: t('admin.common.adminPanelTitle'), sep: ' - ' }])),
 });
 
 const navItems = computed<NavigationMenuItem[]>(() => [
   {
-    label: isRoundPuzzle.value ? '区域内容' : '谜题内容',
+    label: isRoundPuzzle.value ? t('admin.common.roundContent') : t('admin.pages.puzzle.puzzleContent'),
     icon: 'material-symbols:article-outline-rounded',
     to: isRoundPuzzle.value && round.value ? `/admin/games/${gameId.value}/rounds/${round.value.id}` : Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}` : undefined,
     exact: true,
   },
   {
-    label: '答案提交',
+    label: t('admin.pages.puzzle.answerSubmission'),
     icon: 'material-symbols:rule-settings-rounded',
     to: Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}/judge` : undefined,
   },
   {
-    label: '提示编辑',
+    label: t('admin.pages.puzzle.hintEdit'),
     icon: 'material-symbols:lightbulb-outline-rounded',
     to: Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}/hints` : undefined,
   },
   {
-    label: '额外设置',
+    label: t('admin.pages.puzzle.settingsTab'),
     icon: 'material-symbols:tune-rounded',
     to: Number.isFinite(gameId.value) && Number.isFinite(puzzleId.value) ? `/admin/games/${gameId.value}/puzzles/${puzzleId.value}/settings` : undefined,
   },
@@ -219,8 +221,8 @@ const isEditablePuzzleHeader = computed(() => isContentPage.value && !isRoundPuz
                   ref="titleInput"
                   v-model="headerState.title"
                   class="min-w-0 flex-1 bg-transparent text-3xl/10 font-bold text-highlighted outline-none placeholder:text-dimmed"
-                  placeholder="谜题标题"
-                  aria-label="谜题标题"
+                  :placeholder="t('admin.pages.puzzle.puzzleTitle')"
+                  :aria-label="t('admin.pages.puzzle.puzzleTitle')"
                   :disabled="headerSaving"
                   @keydown.enter.prevent="focusContentEditor"
                   @keydown.down.prevent="focusContentEditor"
@@ -234,7 +236,7 @@ const isEditablePuzzleHeader = computed(() => isContentPage.value && !isRoundPuz
               </div>
 
               <div class="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2">
-                <u-badge v-if="isRoundPuzzle" variant="soft" color="primary" icon="material-symbols:grid-view-outline-rounded">区域谜题</u-badge>
+                <u-badge v-if="isRoundPuzzle" variant="soft" color="primary" icon="material-symbols:grid-view-outline-rounded">{{ t('admin.common.roundPuzzle') }}</u-badge>
                 <label
                   v-if="isContentPage || displaySlug"
                   class="inline-flex w-max max-w-full items-center gap-1.5 rounded-md px-2 py-1 font-mono text-xs text-muted transition"
@@ -247,7 +249,7 @@ const isEditablePuzzleHeader = computed(() => isContentPage.value && !isRoundPuz
                     class="min-w-[4ch] max-w-[min(36ch,calc(100vw-8rem))] bg-transparent outline-none placeholder:text-dimmed"
                     :style="{ width: slugInputWidth }"
                     placeholder="slug"
-                    aria-label="谜题 slug"
+                    :aria-label="t('admin.pages.puzzle.puzzleSlug')"
                     :disabled="headerSaving"
                   >
                   <input
@@ -256,7 +258,7 @@ const isEditablePuzzleHeader = computed(() => isContentPage.value && !isRoundPuz
                     class="min-w-[4ch] max-w-[min(36ch,calc(100vw-8rem))] bg-transparent outline-none placeholder:text-dimmed"
                     :style="{ width: slugInputWidth }"
                     placeholder="slug"
-                    aria-label="区域 slug"
+                    :aria-label="t('admin.common.roundSlug')"
                     disabled
                   >
                   <span v-else>{{ displaySlug }}</span>
@@ -281,6 +283,6 @@ const isEditablePuzzleHeader = computed(() => isContentPage.value && !isRoundPuz
       <u-skeleton class="h-52 w-full" />
     </div>
 
-    <u-empty v-else icon="material-symbols:extension-off-outline-rounded" title="谜题不存在" />
+    <u-empty v-else icon="material-symbols:extension-off-outline-rounded" :title="t('admin.pages.puzzle.puzzleNotFound')" />
   </div>
 </template>

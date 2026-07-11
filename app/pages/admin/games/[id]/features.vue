@@ -1,4 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 const game = useAdmin().useGame().ref;
 const api = useApi();
 const toast = useToast();
@@ -11,44 +13,44 @@ const phaseDirty = ref(false);
 const phaseManager = ref<{ apply: () => Promise<boolean>; reset: () => void }>();
 
 const featureMeta: Record<RbGameFeature, { label: string; icon: string }> = {
-  team_formation: { label: '组队', icon: 'material-symbols:group-add-outline-rounded' },
-  direct_message: { label: '站内信', icon: 'material-symbols:mail-outline-rounded' },
-  puzzle_ticket: { label: '人工提示', icon: 'material-symbols:near-me-outline-rounded' },
-  leaderboard: { label: '排行榜', icon: 'material-symbols:leaderboard-outline-rounded' },
-  currency: { label: '货币', icon: 'material-symbols:payments-outline-rounded' },
+  team_formation: { label: t('admin.common.teamFormation'), icon: 'material-symbols:group-add-outline-rounded' },
+  direct_message: { label: t('admin.common.directMessage'), icon: 'material-symbols:mail-outline-rounded' },
+  puzzle_ticket: { label: t('admin.common.ticket'), icon: 'material-symbols:near-me-outline-rounded' },
+  leaderboard: { label: t('admin.common.leaderboard'), icon: 'material-symbols:leaderboard-outline-rounded' },
+  currency: { label: t('admin.common.currency'), icon: 'material-symbols:payments-outline-rounded' },
 };
 
 const featureDescriptions: Record<RbGameFeature, Partial<Record<RbGameFeatureState, string>>> = {
   team_formation: {
-    closed: '玩家不能创建或加入队伍，现有队伍不受影响。',
-    open: '玩家可以创建或加入队伍。',
+    closed: t('admin.pages.game.features.teamFormation.closed'),
+    open: t('admin.pages.game.features.teamFormation.open'),
   },
   direct_message: {
-    closed: '玩家不能发送站内信。',
-    existing_only: '只有发送过站内信的队伍可以发送站内信。',
-    open: '玩家可以发送站内信。',
+    closed: t('admin.pages.game.features.directMessage.closed'),
+    existing_only: t('admin.pages.game.features.directMessage.existingOnly'),
+    open: t('admin.pages.game.features.directMessage.open'),
   },
   puzzle_ticket: {
-    closed: '玩家不能发起或回复人工提示。',
-    existing_only: '玩家不能发起，但可以回复已有人工提示。',
-    open: '玩家可以发起和回复人工提示。',
+    closed: t('admin.pages.game.features.puzzleTicket.closed'),
+    existing_only: t('admin.pages.game.features.puzzleTicket.existingOnly'),
+    open: t('admin.pages.game.features.puzzleTicket.open'),
   },
   leaderboard: {
-    live: '排行榜根据当前解题和提交结果实时更新。',
-    locked: '排行榜保留锁定时的排名；新的提交仍然有效，但不会改变展示结果。',
+    live: t('admin.pages.game.features.leaderboard.live'),
+    locked: t('admin.pages.game.features.leaderboard.locked'),
   },
   currency: {
-    closed: '玩家不显示货币，余额停止按时间增长。',
-    open: '玩家可以查看货币，余额正常按时间增长。',
+    closed: t('admin.pages.game.features.currency.closed'),
+    open: t('admin.pages.game.features.currency.open'),
   },
 };
 
 const stateLabels: Record<RbGameFeatureState, string> = {
-  closed: '关闭',
-  existing_only: '仅已有会话/工单',
-  open: '开放',
-  live: '实时',
-  locked: '锁定',
+  closed: t('admin.common.featureState.disabled'),
+  existing_only: t('admin.common.featureState.existingOnly'),
+  open: t('admin.common.featureState.enabled'),
+  live: t('admin.common.realtime'),
+  locked: t('admin.common.locked'),
 };
 
 const stateIcons: Record<RbGameFeatureState, string> = {
@@ -59,12 +61,7 @@ const stateIcons: Record<RbGameFeatureState, string> = {
   locked: 'material-symbols:lock-clock-outline-rounded',
 };
 
-function stateLabel(feature: RbGameFeature, state: RbGameFeatureState) {
-  if (state === 'existing_only') {
-    if (feature === 'direct_message') return '仅已有会话';
-    if (feature === 'puzzle_ticket') return '仅已有工单';
-  }
-
+function stateLabel(state: RbGameFeatureState) {
   return stateLabels[state];
 }
 
@@ -102,7 +99,7 @@ async function fetchFeatures(showLoading = true) {
     syncFeatures(data.features);
     return true;
   } catch (error) {
-    handleError(error, '获取比赛功能失败');
+    handleError(error, t('admin.pages.game.features.loadGameFeaturesFailed'));
     return false;
   } finally {
     if (showLoading) loading.value = false;
@@ -121,7 +118,7 @@ async function apply() {
         `/admin/games/${game.value.id}/features/${change.feature}`,
         { state: change.state },
         {
-          errorHints: { [-2]: '功能状态不合法。', [-1]: '比赛不存在。' },
+          errorHints: { [-2]: t('admin.pages.game.features.featureStateInvalid'), [-1]: t('admin.common.gameNotFound') },
         },
       );
       updatedFeatures = data.features;
@@ -136,9 +133,9 @@ async function apply() {
       syncFeatures(updatedFeatures);
     }
     dirtyToast.clear();
-    toast.add({ title: '比赛功能已保存', icon: 'material-symbols:check-rounded', color: 'success' });
+    toast.add({ title: t('admin.pages.game.features.gameFeaturesSaved'), icon: 'material-symbols:check-rounded', color: 'success' });
   } catch (error) {
-    handleError(error, '保存比赛功能失败');
+    handleError(error, t('admin.pages.game.features.saveGameFeaturesFailed'));
   } finally {
     saving.value = false;
   }
@@ -152,7 +149,7 @@ watch(
 watch(dirty, value => {
   if (value) {
     dirtyToast.show({
-      description: '比赛功能修改尚未保存。',
+      description: t('admin.pages.game.features.gameFeaturesUpdateNotYetSave'),
       guardOnLeave: true,
       apply,
       reset,
@@ -170,7 +167,7 @@ onBeforeUnmount(() => dirtyToast.clear());
     <section class="space-y-4">
       <div class="flex items-center justify-between gap-3">
         <div>
-          <h2 class="text-xl font-semibold text-highlighted">比赛功能</h2>
+          <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.common.gameFeatures') }}</h2>
         </div>
         <u-button size="sm" variant="ghost" icon="material-symbols:refresh-rounded" :loading="loading" :disabled="dirty || saving" @click="fetchFeatures()" />
       </div>
@@ -199,13 +196,13 @@ onBeforeUnmount(() => dirtyToast.clear());
                   :active="drafts[feature.feature] === state"
                   :aria-pressed="drafts[feature.feature] === state"
                   :icon="stateIcons[state]"
-                  :label="stateLabel(feature.feature, state)"
+                  :label="stateLabel(state)"
                   :disabled="saving"
                   class="justify-center"
                   @click="drafts[feature.feature] = state"
                 />
               </u-field-group>
-              <p v-if="feature.next_change" class="text-xs text-muted">{{ formatDate(feature.next_change.release_at) }} 将在「{{ feature.next_change.phase_title }}」切换为 {{ stateLabel(feature.feature, feature.next_change.state) }}</p>
+              <p v-if="feature.next_change" class="text-xs text-muted">{{ t('admin.pages.game.features.scheduledChange', { time: formatDate(feature.next_change.release_at), phase: feature.next_change.phase_title, state: stateLabel(feature.next_change.state) }) }}</p>
             </div>
           </rb-form-field>
         </template>

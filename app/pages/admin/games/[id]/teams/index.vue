@@ -1,4 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 const route = useRoute();
 const api = useApi();
 const toast = useToast();
@@ -22,16 +24,16 @@ const createDraft = reactive({
 });
 
 const errorHints = {
-  [-4]: '该用户已经在本比赛的其他队伍中',
-  [-3]: '队伍信息不合法',
-  [-1]: '目标不存在',
+  [-4]: t('admin.pages.teams.userGameTeam'),
+  [-3]: t('admin.pages.teams.teamInfoInvalid'),
+  [-1]: t('admin.common.targetNotFound'),
 };
 
 const filters = [
-  { label: '全部队伍', value: 'all', icon: 'material-symbols:groups-2-outline-rounded' },
-  { label: '已封禁', value: 'banned', icon: 'material-symbols:block-outline' },
-  { label: '已锁定', value: 'locked', icon: 'material-symbols:lock-outline' },
-  { label: '已完赛', value: 'finished', icon: 'material-symbols:flag-outline-rounded' },
+  { label: t('admin.pages.teams.allTeam'), value: 'all', icon: 'material-symbols:groups-2-outline-rounded' },
+  { label: t('admin.common.bannedLabel'), value: 'banned', icon: 'material-symbols:block-outline' },
+  { label: t('admin.pages.teams.locked'), value: 'locked', icon: 'material-symbols:lock-outline' },
+  { label: t('admin.pages.teams.finished'), value: 'finished', icon: 'material-symbols:flag-outline-rounded' },
 ] as const;
 
 const createValid = computed(() => Boolean(createDraft.name.trim() && createDraft.pass.trim() && createDraft.captain_user_id != null));
@@ -57,7 +59,7 @@ async function loadTeams() {
   } catch (error) {
     teams.value = [];
     total.value = 0;
-    handleError(error, '获取队伍列表失败');
+    handleError(error, t('admin.pages.teams.loadTeamListFailed'));
   } finally {
     loading.value = false;
   }
@@ -102,10 +104,10 @@ async function createTeam() {
       { errorHints },
     );
     createOpen.value = false;
-    toast.add({ title: '队伍已创建', description: data.team.name, icon: 'material-symbols:check-circle-outline-rounded', color: 'success' });
+    toast.add({ title: t('admin.pages.teams.teamCreated'), description: data.team.name, icon: 'material-symbols:check-circle-outline-rounded', color: 'success' });
     await navigateTo(`/admin/games/${gameId.value}/teams/${data.team.id}`);
   } catch (error) {
-    handleError(error, '创建队伍失败', true);
+    handleError(error, t('admin.pages.teams.createTeamFailed'), true);
   } finally {
     creating.value = false;
   }
@@ -113,9 +115,9 @@ async function createTeam() {
 
 function statusBadges(team: AdminTeamListItem) {
   const result: { label: string; color: 'error' | 'warning' | 'success' | 'neutral'; icon: string }[] = [];
-  if (team.is_banned) result.push({ label: '封禁', color: 'error', icon: 'material-symbols:block-outline' });
-  if (team.is_locked) result.push({ label: '锁定', color: 'warning', icon: 'material-symbols:lock-outline' });
-  if (team.finish_at) result.push({ label: '完赛', color: 'success', icon: 'material-symbols:flag-outline-rounded' });
+  if (team.is_banned) result.push({ label: t('admin.common.banned'), color: 'error', icon: 'material-symbols:block-outline' });
+  if (team.is_locked) result.push({ label: t('admin.common.locked'), color: 'warning', icon: 'material-symbols:lock-outline' });
+  if (team.finish_at) result.push({ label: t('admin.pages.teams.finishedLabel'), color: 'success', icon: 'material-symbols:flag-outline-rounded' });
   return result;
 }
 
@@ -128,11 +130,11 @@ onMounted(loadTeams);
   <div class="grid min-h-0 gap-6 xl:grid-cols-[minmax(14rem,18rem)_minmax(0,64rem)_minmax(14rem,18rem)]">
     <aside class="min-w-0">
       <div class="space-y-4 rounded-md border border-default bg-default p-4">
-        <u-form-field label="搜索队伍">
-          <u-input v-model="search" icon="material-symbols:search-rounded" placeholder="名称或队长" variant="subtle" class="w-full" />
+        <u-form-field :label="t('admin.pages.teams.searchTeam')">
+          <u-input v-model="search" icon="material-symbols:search-rounded" :placeholder="t('admin.pages.teams.nameOrCaptain')" variant="subtle" class="w-full" />
         </u-form-field>
 
-        <u-form-field label="队伍状态">
+        <u-form-field :label="t('admin.common.teamState')">
           <div class="flex flex-col gap-1">
             <u-button
               v-for="item in filters"
@@ -151,15 +153,15 @@ onMounted(loadTeams);
         </u-form-field>
 
         <u-separator />
-        <u-button block icon="material-symbols:add-rounded" label="新建队伍" @click="openCreateModal" />
+        <u-button block icon="material-symbols:add-rounded" :label="t('admin.pages.teams.createTeam')" @click="openCreateModal" />
       </div>
     </aside>
 
     <main class="min-w-0 space-y-4">
       <div class="flex items-center justify-between gap-3">
         <div>
-          <h2 class="text-xl font-semibold text-highlighted">队伍列表</h2>
-          <p class="mt-1 text-sm text-muted">共 {{ total }} 支符合条件的队伍</p>
+          <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.pages.teams.teamList') }}</h2>
+          <p class="mt-1 text-sm text-muted">{{ t('admin.pages.teams.matchingCount', { count: total }) }}</p>
         </div>
         <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" :loading="loading" @click="loadTeams" />
       </div>
@@ -167,7 +169,7 @@ onMounted(loadTeams);
       <div v-if="loading && teams.length === 0" class="space-y-2">
         <u-skeleton v-for="i in 4" :key="i" class="h-20 w-full" />
       </div>
-      <u-empty v-else-if="teams.length === 0" icon="material-symbols:groups-2-outline-rounded" title="暂无队伍" description="调整筛选条件，或新建一支队伍。" />
+      <u-empty v-else-if="teams.length === 0" icon="material-symbols:groups-2-outline-rounded" :title="t('admin.pages.teams.emptyTeam')" :description="t('admin.pages.teams.filterConditionOrCreateTeamTeam')" />
       <div v-else class="divide-y divide-default rounded-md border border-default bg-default px-4">
         <nuxt-link v-for="team in teams" :key="team.id" :to="`/admin/games/${gameId}/teams/${team.id}`" class="group flex items-center gap-3 py-4">
           <div class="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
@@ -179,9 +181,9 @@ onMounted(loadTeams);
               <u-badge v-for="badge in statusBadges(team)" :key="badge.label" size="sm" :color="badge.color" variant="soft" :icon="badge.icon">{{ badge.label }}</u-badge>
             </div>
             <div class="mt-1 flex flex-wrap gap-1.5">
-              <u-badge size="sm" :color="team.member_count > 0 ? 'neutral' : 'warning'" variant="soft" icon="material-symbols:group-outline-rounded">{{ team.member_count }} 名成员</u-badge>
-              <u-badge size="sm" :color="team.captain_name ? 'neutral' : 'warning'" variant="soft" icon="material-symbols:award-star-outline-rounded">{{ team.captain_name ?? '无队长' }}</u-badge>
-              <u-badge v-if="team.finish_at" size="sm" color="success" variant="soft" icon="material-symbols:flag-outline-rounded">完赛于 {{ formatDate(team.finish_at) }}</u-badge>
+              <u-badge size="sm" :color="team.member_count > 0 ? 'neutral' : 'warning'" variant="soft" icon="material-symbols:group-outline-rounded">{{ t('admin.pages.teams.memberCount', { count: team.member_count }) }}</u-badge>
+              <u-badge size="sm" :color="team.captain_name ? 'neutral' : 'warning'" variant="soft" icon="material-symbols:award-star-outline-rounded">{{ team.captain_name ?? t('admin.pages.teams.captain') }}</u-badge>
+              <u-badge v-if="team.finish_at" size="sm" color="success" variant="soft" icon="material-symbols:flag-outline-rounded">{{ t('admin.common.finishedAt', { time: formatDate(team.finish_at) }) }}</u-badge>
             </div>
           </div>
           <u-icon name="material-symbols:chevron-right-rounded" class="size-5 shrink-0 text-dimmed transition-transform group-hover:translate-x-0.5" />
@@ -195,19 +197,19 @@ onMounted(loadTeams);
 
     <aside class="hidden xl:block" />
 
-    <rb-confirm-modal v-model:open="createOpen" title="新建队伍" description="创建队伍并指定初始队长。" confirm-label="创建队伍" confirm-icon="material-symbols:add-rounded" :confirm-disabled="!createValid" :busy="creating" @confirm="createTeam">
+    <rb-confirm-modal v-model:open="createOpen" :title="t('admin.pages.teams.createTeam')" :description="t('admin.pages.teams.createTeamSpecifiedCaptain')" :confirm-label="t('admin.pages.teams.createTeamLabel')" confirm-icon="material-symbols:add-rounded" :confirm-disabled="!createValid" :busy="creating" @confirm="createTeam">
       <template #body>
         <div class="space-y-4">
-          <rb-form-field label="队伍名称" required>
-            <u-input v-model="createDraft.name" placeholder="输入队伍名称" class="w-full" :disabled="creating" />
+          <rb-form-field :label="t('admin.common.teamName')" required>
+            <u-input v-model="createDraft.name" :placeholder="t('admin.pages.teams.enterTeamName')" class="w-full" :disabled="creating" />
           </rb-form-field>
-          <rb-form-field label="队伍密码" required>
-            <u-input v-model="createDraft.pass" placeholder="输入队伍密码" class="w-full" :disabled="creating" />
+          <rb-form-field :label="t('admin.common.teamPassword')" required>
+            <u-input v-model="createDraft.pass" :placeholder="t('admin.pages.teams.enterTeamPassword')" class="w-full" :disabled="creating" />
           </rb-form-field>
-          <rb-form-field label="队伍简介">
-            <u-textarea v-model="createDraft.bio" placeholder="可留空" class="w-full" :rows="3" :disabled="creating" />
+          <rb-form-field :label="t('admin.common.teamBio')">
+            <u-textarea v-model="createDraft.bio" :placeholder="t('admin.pages.teams.empty')" class="w-full" :rows="3" :disabled="creating" />
           </rb-form-field>
-          <rb-form-field label="队长" required>
+          <rb-form-field :label="t('admin.common.captain')" required>
             <rbph-admin-user-select v-model="createDraft.captain_user_id" v-model:user="selectedCaptain" :game-id="gameId" :disabled="creating" />
           </rb-form-field>
         </div>

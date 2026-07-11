@@ -1,4 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 interface AdminSystemSettings {
   registration_open: boolean;
   require_email_verification: boolean;
@@ -21,7 +23,7 @@ interface AdminSystemSettingsResponse {
 definePageMeta({ middleware: ['root'] });
 
 useHead({
-  titleTemplate: '系统设置 - RBPH 管理后台',
+  titleTemplate: t('admin.pages.settings.pageTitle'),
 });
 
 const api = useApi();
@@ -81,7 +83,7 @@ async function load() {
     captchaProvider.value = data.captcha_provider ?? undefined;
     syncDraft(data.settings);
   } catch (error) {
-    handleError(error, '获取系统设置失败');
+    handleError(error, t('admin.pages.settings.loadSystemSettingsFailed'));
   } finally {
     loading.value = false;
   }
@@ -108,7 +110,7 @@ async function save() {
         maintenance_enabled: draft.maintenance_enabled,
         maintenance_message: draft.maintenance_message.trim(),
       },
-      { errorHints: { [-1]: '设置值无效，请检查邮件服务和填写内容' } },
+      { errorHints: { [-1]: t('admin.pages.settings.invalidSettings') } },
     );
     settings.value = data.settings;
     emailDeliveryEnabled.value = data.email_delivery_enabled;
@@ -116,16 +118,16 @@ async function save() {
     syncDraft(data.settings);
     await useSystemStatus().refresh(true);
     dirtyToast.clear();
-    toast.add({ title: '系统设置已保存', icon: 'material-symbols:check-circle-outline-rounded', color: 'success' });
+    toast.add({ title: t('admin.pages.settings.systemSettingsSaved'), icon: 'material-symbols:check-circle-outline-rounded', color: 'success' });
   } catch (error) {
-    handleError(error, '保存系统设置失败', true);
+    handleError(error, t('admin.pages.settings.saveSystemSettingsFailed'), true);
   } finally {
     saving.value = false;
   }
 }
 
 watch(dirty, value => {
-  if (value) dirtyToast.show({ description: '系统设置修改尚未保存。', guardOnLeave: true, apply: save, reset });
+  if (value) dirtyToast.show({ description: t('admin.pages.settings.systemSettingsUpdateNotYetSave'), guardOnLeave: true, apply: save, reset });
   else dirtyToast.clear();
 });
 onMounted(load);
@@ -135,7 +137,7 @@ onBeforeUnmount(() => dirtyToast.clear());
 <template>
   <u-dashboard-panel id="admin-system-settings">
     <template #header>
-      <u-dashboard-navbar title="系统设置">
+      <u-dashboard-navbar :title="t('admin.common.systemSettings')">
         <template #leading>
           <u-dashboard-sidebar-collapse />
         </template>
@@ -148,8 +150,8 @@ onBeforeUnmount(() => dirtyToast.clear());
           <main class="min-w-0 space-y-8">
             <div class="flex items-start justify-between gap-3">
               <div>
-                <h2 class="text-xl font-semibold text-highlighted">系统设置</h2>
-                <p class="mt-1 text-sm text-muted">全局运行策略，修改后立即生效。</p>
+                <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.common.systemSettings') }}</h2>
+                <p class="mt-1 text-sm text-muted">{{ t('admin.pages.settings.globalPolicyUpdateImmediate') }}</p>
               </div>
               <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" :loading="loading" :disabled="dirty || saving" @click="load" />
             </div>
@@ -160,13 +162,13 @@ onBeforeUnmount(() => dirtyToast.clear());
             </div>
             <u-form v-else-if="settings" :state="draft" class="flex flex-col gap-8" @submit.prevent="save">
               <section class="space-y-4">
-                <h3 class="text-lg font-semibold text-highlighted">访问与注册</h3>
+                <h3 class="text-lg font-semibold text-highlighted">{{ t('admin.pages.settings.accessRegistration') }}</h3>
                 <div class="space-y-3 rounded-md bg-elevated/60 p-4 ring ring-default">
                   <rb-form-field
                     row
-                    label="开放注册"
+                    :label="t('admin.common.registrationOpen')"
                     icon="material-symbols:how-to-reg-rounded"
-                    description="关闭后不再接受新用户注册。"
+                    :description="t('admin.pages.settings.closeNewUserRegistration')"
                     :dirty="draft.registration_open !== settings.registration_open"
                     :reset="() => (draft.registration_open = settings!.registration_open)"
                   >
@@ -175,9 +177,9 @@ onBeforeUnmount(() => dirtyToast.clear());
                   <u-separator />
                   <rb-form-field
                     row
-                    label="要求邮箱验证"
+                    :label="t('admin.pages.settings.requirementEmailVerification')"
                     icon="material-symbols:mark-email-read-outline-rounded"
-                    :description="emailDeliveryEnabled ? '用户需通过验证邮件完成注册。' : '部署配置未启用邮件服务。'"
+                    :description="emailDeliveryEnabled ? t('admin.pages.settings.emailVerificationDescription') : t('admin.pages.settings.emailServiceDisabled')"
                     :dirty="draft.require_email_verification !== settings.require_email_verification"
                     :reset="() => (draft.require_email_verification = settings!.require_email_verification)"
                   >
@@ -187,13 +189,13 @@ onBeforeUnmount(() => dirtyToast.clear());
               </section>
 
               <section class="space-y-4">
-                <h3 class="text-lg font-semibold text-highlighted">验证码</h3>
+                <h3 class="text-lg font-semibold text-highlighted">{{ t('admin.pages.settings.captcha') }}</h3>
                 <div class="space-y-3 rounded-md bg-elevated/60 p-4 ring ring-default">
                   <rb-form-field
                     row
-                    label="登录验证"
+                    :label="t('admin.pages.settings.loginVerification')"
                     icon="material-symbols:shield-lock-outline-rounded"
-                    :description="captchaProvider ? `通过 ${captchaProvider} 验证后才能登录。` : '部署配置未启用验证码服务。'"
+                    :description="captchaProvider ? t('admin.pages.settings.passVerificationLogin', { method: captchaProvider }) : t('admin.pages.settings.captchaServiceDisabled')"
                     :dirty="draft.captcha_login_required !== settings.captcha_login_required"
                     :reset="() => (draft.captcha_login_required = settings!.captcha_login_required)"
                   >
@@ -202,9 +204,9 @@ onBeforeUnmount(() => dirtyToast.clear());
                   <u-separator />
                   <rb-form-field
                     row
-                    label="注册验证"
+                    :label="t('admin.pages.settings.registrationVerification')"
                     icon="material-symbols:person-shield-outline-rounded"
-                    :description="captchaProvider ? `通过 ${captchaProvider} 验证后才能注册。` : '部署配置未启用验证码服务。'"
+                    :description="captchaProvider ? t('admin.pages.settings.passVerificationRegistration', { method: captchaProvider }) : t('admin.pages.settings.captchaServiceDisabled')"
                     :dirty="draft.captcha_registration_required !== settings.captcha_registration_required"
                     :reset="() => (draft.captcha_registration_required = settings!.captcha_registration_required)"
                   >
@@ -214,13 +216,13 @@ onBeforeUnmount(() => dirtyToast.clear());
               </section>
 
               <section class="space-y-4">
-                <h3 class="text-lg font-semibold text-highlighted">会话策略</h3>
+                <h3 class="text-lg font-semibold text-highlighted">{{ t('admin.pages.settings.sessionPolicy') }}</h3>
                 <div class="space-y-3 rounded-md bg-elevated/60 p-4 ring ring-default">
                   <rb-form-field
                     row
-                    label="最大并发会话"
+                    :label="t('admin.common.maxConcurrentSessions')"
                     icon="material-symbols:devices-rounded"
-                    description="一个用户最多可同时维持的登录会话数量。"
+                    :description="t('admin.pages.settings.itemUserLoginSessionCount')"
                     :dirty="draft.max_sessions !== settings.max_sessions"
                     :reset="() => (draft.max_sessions = settings!.max_sessions)"
                   >
@@ -229,9 +231,9 @@ onBeforeUnmount(() => dirtyToast.clear());
                   <u-separator />
                   <rb-form-field
                     row
-                    label="最大并发连接"
+                    :label="t('admin.common.maxConcurrentConnections')"
                     icon="material-symbols:device-hub-rounded"
-                    description="一个用户最多可同时保持的同步连接数，超限时新连接会替换最旧连接。"
+                    :description="t('admin.pages.settings.connectionLimitDescription')"
                     :dirty="draft.max_websocket_connections !== settings.max_websocket_connections"
                     :reset="() => (draft.max_websocket_connections = settings!.max_websocket_connections)"
                   >
@@ -241,20 +243,20 @@ onBeforeUnmount(() => dirtyToast.clear());
               </section>
 
               <section class="space-y-4">
-                <h3 class="text-lg font-semibold text-highlighted">维护模式</h3>
+                <h3 class="text-lg font-semibold text-highlighted">{{ t('admin.common.maintenanceMode') }}</h3>
                 <div class="space-y-3 rounded-md bg-elevated/60 p-4 ring ring-default">
                   <rb-form-field
                     row
-                    label="启用维护模式"
+                    :label="t('admin.pages.settings.enableMaintenanceMode')"
                     icon="material-symbols:construction-rounded"
-                    description="普通用户和工作人员将无法使用平台，管理员可继续访问。"
+                    :description="t('admin.pages.settings.maintenanceDescription')"
                     :dirty="draft.maintenance_enabled !== settings.maintenance_enabled"
                     :reset="() => (draft.maintenance_enabled = settings!.maintenance_enabled)"
                   >
                     <u-switch v-model="draft.maintenance_enabled" :disabled="saving" />
                   </rb-form-field>
                   <u-separator />
-                  <rb-form-field row label="维护提示" icon="material-symbols:notes-rounded" :dirty="draft.maintenance_message !== settings.maintenance_message" :reset="() => (draft.maintenance_message = settings!.maintenance_message)">
+                  <rb-form-field row :label="t('admin.common.maintenanceMessage')" icon="material-symbols:notes-rounded" :dirty="draft.maintenance_message !== settings.maintenance_message" :reset="() => (draft.maintenance_message = settings!.maintenance_message)">
                     <u-textarea v-model="draft.maintenance_message" class="w-full sm:w-64" :rows="4" :maxlength="500" :disabled="saving" />
                   </rb-form-field>
                 </div>

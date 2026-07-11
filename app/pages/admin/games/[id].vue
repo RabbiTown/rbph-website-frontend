@@ -1,11 +1,13 @@
-<script setup lang="ts">
-import type { NavigationMenuItem } from '@nuxt/ui';
+<script setup lang="ts">import type { NavigationMenuItem } from '@nuxt/ui';
+
+
+const { t } = useI18n();
 
 const gameMgr = useAdmin().useGame();
 const game = gameMgr.ref;
 
 useHead({
-  titleTemplate: computed(() => buildTitleParts([{ text: game.value?.title }, { text: 'RBPH 管理后台', sep: ' - ' }])),
+  titleTemplate: computed(() => buildTitleParts([{ text: game.value?.title }, { text: t('admin.common.adminPanelTitle'), sep: ' - ' }])),
 });
 
 const route = useRoute();
@@ -27,30 +29,30 @@ const tabs = computed(() => {
 
   return [
     {
-      label: '基本设置',
+      label: t('admin.common.basicSettings'),
       icon: 'material-symbols:space-dashboard-outline-rounded',
       to: `/admin/games/${game.value.id}`,
       exact: true,
     },
     {
-      label: '比赛功能',
+      label: t('admin.common.gameFeatures'),
       icon: 'material-symbols:tune-rounded',
       to: `/admin/games/${game.value.id}/features`,
     },
     {
-      label: '谜题管理',
+      label: t('admin.common.puzzleManagement'),
       icon: 'material-symbols:extension-outline-rounded',
       to: `/admin/games/${game.value.id}/puzzles`,
       active: route.path.startsWith(`/admin/games/${game.value.id}/puzzles`) || route.path.startsWith(`/admin/games/${game.value.id}/rounds`),
     },
     {
-      label: '队伍管理',
+      label: t('admin.common.teamManagement'),
       icon: 'material-symbols:groups-2-outline-rounded',
       to: `/admin/games/${game.value.id}/teams`,
       active: route.path.startsWith(`/admin/games/${game.value.id}/teams`),
     },
     {
-      label: '比赛公告',
+      label: t('admin.common.gameAnnouncements'),
       icon: 'material-symbols:campaign-outline-rounded',
       to: `/admin/games/${game.value.id}/announcements`,
     },

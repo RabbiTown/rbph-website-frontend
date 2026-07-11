@@ -1,4 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 type RbphVueAppManifest = {
   type: 'rbph-vue-app';
   version: 1;
@@ -221,7 +223,7 @@ async function render() {
     const mountResult = mountModule(mod, mountEl, createContext(manifestUrl));
     mountedCleanup = normalizeUnmount(mountResult, mod);
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Vue SFC 组件加载失败。';
+    error.value = err instanceof Error ? err.message : t('components.rbphVueAppRenderer.loadFailed');
     cleanup();
   } finally {
     if (seq === renderSeq) loading.value = false;
@@ -235,7 +237,7 @@ onBeforeUnmount(cleanup);
 
 <template>
   <div>
-    <u-alert v-if="error" color="error" variant="soft" icon="material-symbols:error-outline-rounded" title="Vue SFC 组件加载失败" :description="error" />
+    <u-alert v-if="error" color="error" variant="soft" icon="material-symbols:error-outline-rounded" :title="t('components.rbphVueAppRenderer.loadFailedError')" :description="error" />
     <u-skeleton v-else-if="loading" class="h-24 w-full" />
     <div ref="host" />
   </div>

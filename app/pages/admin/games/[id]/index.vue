@@ -1,4 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 const gameMgr = useAdmin().useGame();
 const game = gameMgr.ref;
 
@@ -126,7 +128,7 @@ function syncDirtyToast() {
   }
 
   dirtyToast.show({
-    description: '比赛设置修改尚未保存。',
+    description: t('admin.pages.game.settings.gameSettingsUpdateNotYetSave'),
     guardOnLeave: true,
     apply: submitChanges,
     reset: resetChanges,
@@ -181,9 +183,9 @@ function isCurrencyDraftValid(draft: CurrencyDraft) {
 
 function currencyErrorHints() {
   return {
-    [-3]: '货币标识已存在。',
-    [-2]: '货币信息不合法。',
-    [-1]: '比赛或货币不存在。',
+    [-3]: t('admin.pages.game.settings.currencySlugExists'),
+    [-2]: t('admin.pages.game.settings.currencyInfoInvalid'),
+    [-1]: t('admin.pages.game.settings.gameOrCurrencyNotFound'),
   };
 }
 
@@ -203,7 +205,7 @@ async function fetchCurrencies(gameId: number | undefined) {
   } catch (error) {
     currencies.value = [];
     syncCurrencyDrafts([]);
-    handleError(error, '获取货币列表失败');
+    handleError(error, t('admin.common.loadCurrencyListFailed'));
   } finally {
     currencyLoading.value = false;
   }
@@ -283,7 +285,7 @@ async function submitChanges() {
 
   if (Object.keys(body).length === 0 && !hasCurrencyPatch.value) {
     toast.add({
-      title: '没有需要保存的修改',
+      title: t('admin.pages.game.settings.saveUpdate'),
       icon: 'material-symbols:info-outline-rounded',
       color: 'neutral',
     });
@@ -292,8 +294,8 @@ async function submitChanges() {
 
   if (maxMembers !== null && maxMembers <= 0) {
     toast.add({
-      title: '队伍人数上限不合法',
-      description: '请输入大于 0 的整数，或清空为无上限。',
+      title: t('admin.pages.game.settings.teamMemberLimitInvalid'),
+      description: t('admin.pages.game.settings.enterGreaterThanOrEmptyUnlimited'),
       icon: 'material-symbols:error-outline-rounded',
       color: 'error',
     });
@@ -305,8 +307,8 @@ async function submitChanges() {
     if (!draft) continue;
     if (!currencyDeletePending[currency.id] && !isCurrencyDraftValid(draft)) {
       toast.add({
-        title: '货币信息不合法',
-        description: '请检查名称、Slug、精度、初始值和上限。',
+        title: t('admin.pages.game.settings.currencyInfoInvalidLabel'),
+        description: t('admin.pages.game.settings.currencyValidationHint'),
         icon: 'material-symbols:error-outline-rounded',
         color: 'error',
       });
@@ -322,8 +324,8 @@ async function submitChanges() {
       type Response = { game: RbGameModel };
       const { data } = await api.patch<Response>(`/admin/games/${current.id}`, body, {
         errorHints: {
-          [-2]: '比赛信息不合法。',
-          [-1]: '比赛不存在。',
+          [-2]: t('admin.pages.game.settings.gameInfoInvalid'),
+          [-1]: t('admin.common.gameNotFound'),
         },
       });
       gameMgr.updateCurrent(data.game);
@@ -368,12 +370,12 @@ async function submitChanges() {
     dirtyToast.clear();
 
     toast.add({
-      title: '成功保存比赛设置',
+      title: t('admin.pages.game.settings.successSaveGameSettings'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
   } catch (error) {
-    handleError(error, '保存比赛设置失败', true);
+    handleError(error, t('admin.pages.game.settings.saveGameSettingsFailed'), true);
   } finally {
     submitLoading.value = false;
     currencySubmitting.value = false;
@@ -409,24 +411,24 @@ watch(
       <u-form :state="state" class="flex flex-col gap-4" @submit.prevent>
         <section class="space-y-4">
           <div>
-            <h2 class="text-xl font-semibold text-highlighted">比赛信息</h2>
+            <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.common.gameInfo') }}</h2>
           </div>
           <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
-            <rb-form-field name="title" row label="比赛名称" required description="在平台上显示的名称" :dirty="dirtyFields.title" :reset="() => resetField('title')" :ui="{ container: 'w-full sm:w-96' }">
-              <u-input v-model="state.title" placeholder="输入比赛名称" class="w-full" />
+            <rb-form-field name="title" row :label="t('admin.common.gameName')" required :description="t('admin.pages.game.settings.platformShowName')" :dirty="dirtyFields.title" :reset="() => resetField('title')" :ui="{ container: 'w-full sm:w-96' }">
+              <u-input v-model="state.title" :placeholder="t('admin.common.enterGameName')" class="w-full" />
             </rb-form-field>
             <u-separator />
-            <rb-form-field name="is_listed" row label="公开展示" description="控制运营中的比赛是否出现在公开活动列表" :dirty="dirtyFields.isListed" :reset="() => resetField('isListed')">
+            <rb-form-field name="is_listed" row :label="t('admin.pages.game.settings.public')" :description="t('admin.pages.game.settings.publicListingDescription')" :dirty="dirtyFields.isListed" :reset="() => resetField('isListed')">
               <u-switch v-model="state.is_listed" />
             </rb-form-field>
             <u-separator />
-            <rb-form-field name="is_active" row label="比赛开放" description="控制普通玩家是否可以进入并使用比赛功能" :dirty="dirtyFields.isActive" :reset="() => resetField('isActive')">
+            <rb-form-field name="is_active" row :label="t('admin.pages.game.settings.gameOpen')" :description="t('admin.pages.game.settings.controlNormalPlayerGameFeatures')" :dirty="dirtyFields.isActive" :reset="() => resetField('isActive')">
               <u-switch v-model="state.is_active" />
             </rb-form-field>
             <u-separator />
-            <rb-form-field name="max_members" row label="队伍人数上限" description="限制每支队伍最多可加入的人数" :dirty="dirtyFields.maxMembers" :reset="() => resetField('maxMembers')">
+            <rb-form-field name="max_members" row :label="t('admin.pages.game.settings.teamMemberLimit')" :description="t('admin.pages.game.settings.perTeamTeamJoinMemberCount')" :dirty="dirtyFields.maxMembers" :reset="() => resetField('maxMembers')">
               <div class="flex flex-wrap items-center gap-3">
-                <u-input-number v-model="state.max_members" :min="1" :step="1" orientation="vertical" placeholder="无上限" class="w-32" />
+                <u-input-number v-model="state.max_members" :min="1" :step="1" orientation="vertical" :placeholder="t('admin.pages.game.settings.unlimited')" class="w-32" />
               </div>
             </rb-form-field>
           </div>
@@ -437,8 +439,8 @@ watch(
         <section class="space-y-4">
           <div class="flex items-center justify-between gap-3">
             <div>
-              <h2 class="text-xl font-semibold text-highlighted">货币管理</h2>
-              <p class="mt-1 text-sm text-muted">配置当前比赛可用的货币体系。</p>
+              <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.common.currencyManagement') }}</h2>
+              <p class="mt-1 text-sm text-muted">{{ t('admin.pages.game.settings.currencySectionDescription') }}</p>
             </div>
             <u-button size="sm" variant="ghost" icon="material-symbols:refresh-rounded" :loading="currencyLoading" :disabled="hasDirty || currencySubmitting" @click="fetchCurrencies(game?.id)" />
           </div>
@@ -447,7 +449,7 @@ watch(
             <u-skeleton v-for="i in 3" :key="i" class="h-24 w-full" />
           </div>
 
-          <u-empty v-if="!currencyLoading && currencies.length === 0" icon="material-symbols:money-bag-outline-rounded" title="暂无货币" description="添加一个货币后，可用于提示消耗、提交处罚和自定义后端。" />
+          <u-empty v-if="!currencyLoading && currencies.length === 0" icon="material-symbols:money-bag-outline-rounded" :title="t('admin.pages.game.settings.emptyCurrency')" :description="t('admin.pages.game.settings.currencyDescription')" />
 
           <div v-if="!currencyLoading && currencyEditItems.length > 0" class="space-y-3">
             <template v-for="item in currencyEditItems" :key="item.currency.id">
@@ -460,14 +462,12 @@ watch(
               >
                 <div class="relative rounded-lg bg-elevated/60 px-4 py-3 ring ring-default">
                   <div class="absolute right-3 top-3 z-10 flex items-center justify-end gap-1">
-                    <u-badge v-if="item.currency.local" color="primary" variant="soft">待创建</u-badge>
-                    <u-badge v-else-if="item.deletePending" color="error" variant="soft">待删除</u-badge>
+                    <u-badge v-if="item.currency.local" color="primary" variant="soft">{{ t('admin.pages.game.settings.currencyStatus.pendingCreate') }}</u-badge>
+                    <u-badge v-else-if="item.deletePending" color="error" variant="soft">{{ t('admin.pages.game.settings.currencyStatus.pendingDeletion') }}</u-badge>
                     <u-button v-else-if="item.dirty" size="xs" variant="soft" color="warning" class="group relative h-5 w-12 overflow-hidden px-0 text-[11px]" :disabled="currencySubmitting" @click="resetCurrencyChange(item.currency)">
-                      <span class="absolute inset-0 inline-flex items-center justify-center transition-all duration-150 group-hover:-translate-y-1 group-hover:opacity-0">已修改</span>
+                      <span class="absolute inset-0 inline-flex items-center justify-center transition-all duration-150 group-hover:-translate-y-1 group-hover:opacity-0">{{ t('admin.pages.game.settings.currencyStatus.updated') }}</span>
                       <span class="absolute inset-0 inline-flex translate-y-1 items-center justify-center gap-0.5 opacity-0 transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100">
-                        <u-icon name="material-symbols:restart-alt-rounded" class="size-3" />
-                        重置
-                      </span>
+                        <u-icon name="material-symbols:restart-alt-rounded" class="size-3" /> {{ t('admin.common.reset') }} </span>
                     </u-button>
                     <u-button v-if="item.deletePending" icon="material-symbols:undo-rounded" color="neutral" variant="ghost" size="sm" :disabled="currencySubmitting" @click="restoreCurrency(item.currency)" />
                     <u-popover v-else arrow :content="{ side: 'top', align: 'end', sideOffset: 8 }">
@@ -477,12 +477,12 @@ watch(
                           <div class="flex items-start gap-2">
                             <u-icon name="material-symbols:warning-outline-rounded" class="mt-0.5 size-4 shrink-0 text-error" />
                             <div class="min-w-0">
-                              <div class="font-medium text-highlighted">删除货币？</div>
-                              <div class="mt-1 text-xs text-muted">确认将「{{ item.currency.name }}」标记为待删除？保存后相关队伍余额、提示消耗和处罚配置会被清除或置空。</div>
+                              <div class="font-medium text-highlighted">{{ t('admin.pages.game.settings.deleteCurrency') }}</div>
+                              <div class="mt-1 text-xs text-muted">{{ t('admin.pages.game.settings.confirmDeleteCurrency', { currency: item.currency.name }) }}</div>
                             </div>
                           </div>
                           <div class="mt-3 flex justify-end">
-                            <u-button size="xs" color="error" variant="soft" icon="material-symbols:delete-outline-rounded" @click="markCurrencyDeleting(item.currency)">标记删除</u-button>
+                            <u-button size="xs" color="error" variant="soft" icon="material-symbols:delete-outline-rounded" @click="markCurrencyDeleting(item.currency)">{{ t('admin.pages.game.settings.markDelete') }}</u-button>
                           </div>
                         </div>
                       </template>
@@ -490,18 +490,18 @@ watch(
                   </div>
                   <div class="flex flex-col gap-3">
                     <div class="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-                      <rb-form-field label="名称">
-                        <u-input v-model="item.draft.name" placeholder="例如 提示点" class="w-full" :disabled="currencySubmitting || item.deletePending" />
+                      <rb-form-field :label="t('admin.common.name')">
+                        <u-input v-model="item.draft.name" :placeholder="t('admin.pages.game.settings.exampleHint')" class="w-full" :disabled="currencySubmitting || item.deletePending" />
                       </rb-form-field>
-                      <rb-form-field label="内部 ID">
-                        <u-input v-model="item.draft.slug" placeholder="例如 hint" class="w-full font-mono" :disabled="currencySubmitting || item.deletePending" />
+                      <rb-form-field :label="t('admin.pages.game.settings.internalId')">
+                        <u-input v-model="item.draft.slug" :placeholder="t('admin.pages.game.settings.exampleHintLabel')" class="w-full font-mono" :disabled="currencySubmitting || item.deletePending" />
                       </rb-form-field>
                     </div>
                     <div class="grid gap-3 md:grid-cols-[7rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_8rem]">
-                      <rb-form-field label="精度">
+                      <rb-form-field :label="t('admin.pages.game.settings.precision')">
                         <u-input-number v-model="item.draft.prec" :min="0" :max="6" :step="1" orientation="vertical" class="w-full" :disabled="currencySubmitting || item.deletePending" />
                       </rb-form-field>
-                      <rb-form-field label="初始值">
+                      <rb-form-field :label="t('admin.pages.game.settings.initialValue')">
                         <rb-input-number
                           v-model="item.draft.init_amount"
                           :prec="item.draft.prec"
@@ -513,10 +513,10 @@ watch(
                           :disabled="currencySubmitting || item.deletePending"
                         />
                       </rb-form-field>
-                      <rb-form-field label="增长/分钟">
+                      <rb-form-field :label="t('admin.common.growthPerMinute')">
                         <rb-input-number v-model="item.draft.growth" :prec="item.draft.prec" :max="currencyAmountMax" :step="10 ** item.draft.prec" orientation="vertical" class="w-full" :disabled="currencySubmitting || item.deletePending" />
                       </rb-form-field>
-                      <rb-form-field label="上限">
+                      <rb-form-field :label="t('admin.pages.game.settings.limit')">
                         <rb-input-number
                           v-model="item.draft.max_amount"
                           :prec="item.draft.prec"
@@ -528,7 +528,7 @@ watch(
                           :disabled="currencySubmitting || item.deletePending"
                         />
                       </rb-form-field>
-                      <rb-form-field label="初始隐藏">
+                      <rb-form-field :label="t('admin.pages.game.settings.hide')">
                         <u-switch v-model="item.draft.init_hidden" :disabled="currencySubmitting || item.deletePending" class="mt-2.5" />
                       </rb-form-field>
                     </div>
@@ -539,7 +539,7 @@ watch(
           </div>
 
           <div v-if="!currencyLoading" class="flex justify-end">
-            <u-button icon="material-symbols:add-rounded" label="新建货币" :disabled="currencySubmitting" @click="addCurrencyDraft" />
+            <u-button icon="material-symbols:add-rounded" :label="t('admin.pages.game.settings.createCurrency')" :disabled="currencySubmitting" @click="addCurrencyDraft" />
           </div>
         </section>
       </u-form>

@@ -1,4 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 interface AnnouncementState {
   id: number;
   title: string;
@@ -88,7 +90,7 @@ async function fetchData(openIds = expandedIds()) {
     await Promise.all(requests);
     reset(openIds);
   } catch (error) {
-    handleError(error, '获取公告配置失败');
+    handleError(error, t('components.rbphAnnouncementManager.loadFailed'));
   } finally {
     loading.value = false;
   }
@@ -117,11 +119,11 @@ function restoreAnnouncement(announcement: AnnouncementState) {
 }
 
 function targetLabel(announcement: AnnouncementState) {
-  if (isGlobal.value) return '全局公告';
-  if (announcement.puzzle_ids.length === 0) return '比赛公告';
-  if (announcement.puzzle_ids.length > 1) return `${announcement.puzzle_ids.length} 道谜题`;
+  if (isGlobal.value) return t('admin.common.globalAnnouncements');
+  if (announcement.puzzle_ids.length === 0) return t('admin.common.gameAnnouncements');
+  if (announcement.puzzle_ids.length > 1) return t('components.rbphAnnouncementManager.puzzleCount', { count: announcement.puzzle_ids.length });
   const puzzleId = announcement.puzzle_ids[0];
-  return puzzles.value.find(item => item.id === puzzleId)?.title ?? `谜题 #${puzzleId}`;
+  return puzzles.value.find(item => item.id === puzzleId)?.title ?? t('components.rbphAnnouncementManager.puzzleId', { id: puzzleId });
 }
 
 async function save() {
@@ -129,7 +131,7 @@ async function save() {
   const invalid = state.value.find(item => !item.deleting && !item.title.trim());
   if (invalid) {
     invalid.open = true;
-    toast.add({ title: '公告标题不能为空', icon: 'material-symbols:error-outline-rounded', color: 'error' });
+    toast.add({ title: t('components.rbphAnnouncementManager.titleRequired'), icon: 'material-symbols:error-outline-rounded', color: 'error' });
     return;
   }
 
@@ -138,26 +140,26 @@ async function save() {
   try {
     for (const announcement of state.value) {
       if (announcement.deleting && announcement.id > 0) {
-        await api.del(`/admin/announcements/${announcement.id}`, { errorHints: { [-1]: '公告不存在。' } });
+        await api.del(`/admin/announcements/${announcement.id}`, { errorHints: { [-1]: t('components.rbphAnnouncementManager.announcementNotFound') } });
       }
     }
     for (const announcement of state.value.filter(item => !item.deleting && isDirty(item))) {
       if (announcement.id > 0) {
         await api.patch(`/admin/announcements/${announcement.id}`, snapshot(announcement), {
-          errorHints: { [-2]: '公告配置不合法。', [-1]: '公告不存在。' },
+          errorHints: { [-2]: t('components.rbphAnnouncementManager.invalidConfiguration'), [-1]: t('components.rbphAnnouncementManager.announcementNotFound') },
         });
       } else {
         const { data } = await api.post<{ announcement: AdminAnnouncementData }>('/admin/announcements', snapshot(announcement), {
-          errorHints: { [-2]: '公告配置不合法。' },
+          errorHints: { [-2]: t('components.rbphAnnouncementManager.invalidConfiguration') },
         });
         if (announcement.open) openIds.add(data.announcement.id);
       }
     }
     await fetchData(openIds);
     dirtyToast.clear();
-    toast.add({ title: '公告配置已保存', icon: 'material-symbols:check-rounded', color: 'success' });
+    toast.add({ title: t('components.rbphAnnouncementManager.saved'), icon: 'material-symbols:check-rounded', color: 'success' });
   } catch (error) {
-    handleError(error, '保存公告配置失败', true);
+    handleError(error, t('components.rbphAnnouncementManager.saveFailed'), true);
   } finally {
     saving.value = false;
   }
@@ -170,7 +172,7 @@ watch(
 );
 
 watch(dirty, value => {
-  if (value) dirtyToast.show({ description: '公告配置修改尚未保存。', guardOnLeave: true, apply: save, reset });
+  if (value) dirtyToast.show({ description: t('components.rbphAnnouncementManager.unsavedChanges'), guardOnLeave: true, apply: save, reset });
   else dirtyToast.clear();
 });
 
@@ -183,13 +185,13 @@ onBeforeUnmount(() => dirtyToast.clear());
 
     <u-form :state="{ announcements: state }" class="flex min-w-0 flex-col gap-4" @submit.prevent="save">
       <div>
-        <h2 class="text-xl font-semibold text-highlighted">{{ isGlobal ? '全局公告' : '比赛公告' }}</h2>
-        <p class="mt-1 text-sm text-muted">{{ isGlobal ? '已发布的公告会显示在所有比赛中。' : '管理整场比赛或具体谜题的公告。' }}</p>
+        <h2 class="text-xl font-semibold text-highlighted">{{ isGlobal ? t('admin.common.globalAnnouncements') : t('admin.common.gameAnnouncements') }}</h2>
+        <p class="mt-1 text-sm text-muted">{{ isGlobal ? t('components.rbphAnnouncementManager.globalDescription') : t('components.rbphAnnouncementManager.gameDescription') }}</p>
       </div>
 
-      <u-empty v-if="!loading && state.length === 0" icon="material-symbols:campaign-outline-rounded" title="暂无公告" description="新建公告后可编辑并发布。">
+      <u-empty v-if="!loading && state.length === 0" icon="material-symbols:campaign-outline-rounded" :title="t('components.rbphAnnouncementManager.emptyTitle')" :description="t('components.rbphAnnouncementManager.emptyDescription')">
         <template #actions>
-          <u-button icon="material-symbols:add-rounded" label="新建公告" :disabled="loading || saving" @click="addAnnouncement" />
+          <u-button icon="material-symbols:add-rounded" :label="t('components.rbphAnnouncementManager.createAnnouncement')" :disabled="loading || saving" @click="addAnnouncement" />
         </template>
       </u-empty>
 
@@ -207,14 +209,14 @@ onBeforeUnmount(() => dirtyToast.clear());
             <div class="group flex cursor-pointer items-center gap-3 rounded-lg bg-elevated/60 px-4 py-2 ring ring-default">
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <u-icon name="material-symbols:campaign-outline-rounded" class="shrink-0 text-primary" />
-                <u-input v-if="announcement.open" v-model="announcement.title" class="-mx-2.5 -my-1.5 w-full font-medium" placeholder="公告标题" variant="ghost" :maxlength="120" :disabled="saving || announcement.deleting" @click.stop />
-                <div v-else class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">{{ announcement.title || '未命名公告' }}</div>
+                <u-input v-if="announcement.open" v-model="announcement.title" class="-mx-2.5 -my-1.5 w-full font-medium" :placeholder="t('components.rbphAnnouncementManager.title')" variant="ghost" :maxlength="120" :disabled="saving || announcement.deleting" @click.stop />
+                <div v-else class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">{{ announcement.title || t('components.rbphAnnouncementManager.untitledAnnouncement') }}</div>
               </div>
               <div class="flex min-w-0 flex-none flex-wrap justify-end gap-1" @click.stop>
                 <u-badge :color="announcement.is_shown ? 'success' : 'neutral'" variant="soft" :icon="announcement.is_shown ? 'material-symbols:visibility-outline-rounded' : 'material-symbols:visibility-off-outline-rounded'">
-                  {{ announcement.is_shown ? '已发布' : '草稿' }}
+                  {{ announcement.is_shown ? t('admin.common.published') : t('components.rbphAnnouncementManager.draft') }}
                 </u-badge>
-                <u-badge v-if="announcement.is_pinned" color="warning" variant="soft" icon="material-symbols:keep-outline-rounded">置顶</u-badge>
+                <u-badge v-if="announcement.is_pinned" color="warning" variant="soft" icon="material-symbols:keep-outline-rounded">{{ t('components.rbphAnnouncementManager.pinned') }}</u-badge>
                 <u-badge color="neutral" variant="soft" :icon="announcement.puzzle_ids.length ? 'material-symbols:extension-outline-rounded' : 'material-symbols:sports-esports-outline-rounded'">{{ targetLabel(announcement) }}</u-badge>
               </div>
               <div class="flex items-center gap-1" @click.stop>
@@ -228,24 +230,24 @@ onBeforeUnmount(() => dirtyToast.clear());
               <div class="border-t border-default bg-elevated/40 px-4 pt-4 pb-4">
                 <div class="flex flex-col gap-4">
                   <div class="grid grid-cols-2 gap-4">
-                    <rb-form-field v-if="!isGlobal" row narrow-label label="关联谜题" class="col-span-2">
+                    <rb-form-field v-if="!isGlobal" row narrow-label :label="t('components.rbphAnnouncementManager.relatedPuzzle')" class="col-span-2">
                       <rbph-admin-puzzle-select
                         v-model="announcement.puzzle_ids"
                         :puzzles="puzzles"
                         multiple
-                        placeholder="不关联谜题（整场比赛）"
+                        :placeholder="t('components.rbphAnnouncementManager.noRelatedPuzzle')"
                         :loading="loading"
                         :disabled="saving || announcement.deleting"
                       />
                     </rb-form-field>
-                    <rb-form-field row narrow-label label="发布状态">
-                      <u-switch v-model="announcement.is_shown" class="mt-1.5" label="发布公告" :disabled="saving || announcement.deleting" />
+                    <rb-form-field row narrow-label :label="t('components.rbphAnnouncementManager.publishedState')">
+                      <u-switch v-model="announcement.is_shown" class="mt-1.5" :label="t('components.rbphAnnouncementManager.publish')" :disabled="saving || announcement.deleting" />
                     </rb-form-field>
-                    <rb-form-field row narrow-label label="置顶显示">
-                      <u-switch v-model="announcement.is_pinned" class="mt-1.5" label="置顶公告" :disabled="saving || announcement.deleting" />
+                    <rb-form-field row narrow-label :label="t('components.rbphAnnouncementManager.pinnedDisplay')">
+                      <u-switch v-model="announcement.is_pinned" class="mt-1.5" :label="t('components.rbphAnnouncementManager.pinAnnouncement')" :disabled="saving || announcement.deleting" />
                     </rb-form-field>
                   </div>
-                  <rbph-content-editor v-model="announcement.content" framed placeholder="公告正文" :disabled="saving || announcement.deleting" @save="save" />
+                  <rbph-content-editor v-model="announcement.content" framed :placeholder="t('components.rbphAnnouncementManager.content')" :disabled="saving || announcement.deleting" @save="save" />
                 </div>
               </div>
             </template>
@@ -253,7 +255,7 @@ onBeforeUnmount(() => dirtyToast.clear());
         </div>
 
         <div class="sticky bottom-4 z-20 flex justify-end">
-          <u-button icon="material-symbols:add-rounded" label="新建公告" size="lg" class="shadow-lg shadow-primary/20" :disabled="loading || saving" @click="addAnnouncement" />
+          <u-button icon="material-symbols:add-rounded" :label="t('components.rbphAnnouncementManager.createAnnouncement')" size="lg" class="shadow-lg shadow-primary/20" :disabled="loading || saving" @click="addAnnouncement" />
         </div>
       </template>
     </u-form>

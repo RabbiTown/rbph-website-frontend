@@ -1,11 +1,13 @@
-<script setup lang="ts">
-import TextAlign from '@tiptap/extension-text-align';
+<script setup lang="ts">import TextAlign from '@tiptap/extension-text-align';
 import Color from '@tiptap/extension-color';
 import type { ChainedCommands, Editor, JSONContent } from '@tiptap/core';
 import type { EditorSuggestionMenuItem } from '@nuxt/ui';
 import { Fragment, Slice } from '@tiptap/pm/model';
 import { NodeSelection } from '@tiptap/pm/state';
 import { dropPoint } from '@tiptap/pm/transform';
+
+
+const { t } = useI18n();
 
 const model = defineModel<string>({ default: '' });
 const attrs = useAttrs();
@@ -61,14 +63,14 @@ const editorProps = {
   },
 };
 const blockTypeItems = [
-  { kind: 'paragraph', label: '段落', icon: 'material-symbols:format-paragraph-rounded' },
-  { kind: 'heading', level: 1, label: '一级标题', icon: 'material-symbols:format-h1-rounded' },
-  { kind: 'heading', level: 2, label: '二级标题', icon: 'material-symbols:format-h2-rounded' },
-  { kind: 'heading', level: 3, label: '三级标题', icon: 'material-symbols:format-h3-rounded' },
-  { kind: 'bulletList', icon: 'material-symbols:format-list-bulleted-rounded', label: '无序列表', tooltip: { text: '无序列表' } },
-  { kind: 'orderedList', icon: 'material-symbols:format-list-numbered-rounded', label: '有序列表', tooltip: { text: '有序列表' } },
-  { kind: 'blockquote', icon: 'material-symbols:format-quote-rounded', label: '引用', tooltip: { text: '引用' } },
-  { kind: 'codeBlock', icon: 'material-symbols:integration-instructions-rounded', label: '代码块', tooltip: { text: '代码块' } },
+  { kind: 'paragraph', label: t('components.rbphContentEditor.paragraph'), icon: 'material-symbols:format-paragraph-rounded' },
+  { kind: 'heading', level: 1, label: t('components.rbphContentEditor.heading1'), icon: 'material-symbols:format-h1-rounded' },
+  { kind: 'heading', level: 2, label: t('components.rbphContentEditor.heading2'), icon: 'material-symbols:format-h2-rounded' },
+  { kind: 'heading', level: 3, label: t('components.rbphContentEditor.heading3'), icon: 'material-symbols:format-h3-rounded' },
+  { kind: 'bulletList', icon: 'material-symbols:format-list-bulleted-rounded', label: t('components.rbphContentEditor.bulletList'), tooltip: { text: t('components.rbphContentEditor.bulletList') } },
+  { kind: 'orderedList', icon: 'material-symbols:format-list-numbered-rounded', label: t('components.rbphContentEditor.orderedList'), tooltip: { text: t('components.rbphContentEditor.orderedList') } },
+  { kind: 'blockquote', icon: 'material-symbols:format-quote-rounded', label: t('components.rbphContentEditor.blockquote'), tooltip: { text: t('components.rbphContentEditor.blockquote') } },
+  { kind: 'codeBlock', icon: 'material-symbols:integration-instructions-rounded', label: t('components.rbphContentEditor.codeBlock'), tooltip: { text: t('components.rbphContentEditor.codeBlock') } },
 ] as const;
 type AlignEditor = Pick<Editor, 'chain' | 'isActive'> & {
   chain: () => ChainedCommands & {
@@ -322,46 +324,46 @@ const toolbarItems = [
     },
   ],
   [
-    { kind: 'mark', mark: 'bold', icon: 'material-symbols:format-bold-rounded', 'aria-label': '加粗', tooltip: { text: '加粗' } },
-    { kind: 'mark', mark: 'italic', icon: 'material-symbols:format-italic-rounded', 'aria-label': '斜体', tooltip: { text: '斜体' } },
-    { kind: 'mark', mark: 'underline', icon: 'material-symbols:format-underlined-rounded', 'aria-label': '下划线', tooltip: { text: '下划线' } },
-    { kind: 'mark', mark: 'strike', icon: 'material-symbols:format-strikethrough-rounded', 'aria-label': '删除线', tooltip: { text: '删除线' } },
-    { kind: 'mark', mark: 'code', icon: 'material-symbols:code-rounded', 'aria-label': '行内代码', tooltip: { text: '行内代码' } },
-    { icon: 'material-symbols:link-rounded', 'aria-label': '链接', tooltip: { text: '链接' }, slot: 'link' },
+    { kind: 'mark', mark: 'bold', icon: 'material-symbols:format-bold-rounded', 'aria-label': t('components.rbphContentEditor.bold'), tooltip: { text: t('components.rbphContentEditor.bold') } },
+    { kind: 'mark', mark: 'italic', icon: 'material-symbols:format-italic-rounded', 'aria-label': t('components.rbphContentEditor.italic'), tooltip: { text: t('components.rbphContentEditor.italic') } },
+    { kind: 'mark', mark: 'underline', icon: 'material-symbols:format-underlined-rounded', 'aria-label': t('components.rbphContentEditor.underline'), tooltip: { text: t('components.rbphContentEditor.underline') } },
+    { kind: 'mark', mark: 'strike', icon: 'material-symbols:format-strikethrough-rounded', 'aria-label': t('components.rbphContentEditor.strikethrough'), tooltip: { text: t('components.rbphContentEditor.strikethrough') } },
+    { kind: 'mark', mark: 'code', icon: 'material-symbols:code-rounded', 'aria-label': t('components.rbphContentEditor.inlineCode'), tooltip: { text: t('components.rbphContentEditor.inlineCode') } },
+    { icon: 'material-symbols:link-rounded', 'aria-label': t('components.rbphContentEditor.link'), tooltip: { text: t('components.rbphContentEditor.link') }, slot: 'link' },
     {
       icon: 'material-symbols:format-color-text-rounded',
-      'aria-label': '文字颜色',
-      tooltip: { text: '文字颜色' },
+      'aria-label': t('components.rbphContentEditor.textColor'),
+      tooltip: { text: t('components.rbphContentEditor.textColor') },
       slot: 'textColor',
     },
   ],
   [
-    { kind: 'rbAlign', align: 'left', icon: 'material-symbols:format-align-left-rounded', 'aria-label': '左对齐', tooltip: { text: '左对齐' } },
-    { kind: 'rbAlign', align: 'center', icon: 'material-symbols:format-align-center-rounded', 'aria-label': '居中', tooltip: { text: '居中' } },
-    { kind: 'rbAlign', align: 'right', icon: 'material-symbols:format-align-right-rounded', 'aria-label': '右对齐', tooltip: { text: '右对齐' } },
+    { kind: 'rbAlign', align: 'left', icon: 'material-symbols:format-align-left-rounded', 'aria-label': t('components.rbphContentEditor.alignLeft'), tooltip: { text: t('components.rbphContentEditor.alignLeft') } },
+    { kind: 'rbAlign', align: 'center', icon: 'material-symbols:format-align-center-rounded', 'aria-label': t('components.rbphContentEditor.alignCenter'), tooltip: { text: t('components.rbphContentEditor.alignCenter') } },
+    { kind: 'rbAlign', align: 'right', icon: 'material-symbols:format-align-right-rounded', 'aria-label': t('components.rbphContentEditor.alignRight'), tooltip: { text: t('components.rbphContentEditor.alignRight') } },
   ],
-  [{ kind: 'clearFormatting', icon: 'material-symbols:format-clear-rounded', 'aria-label': '清除格式', tooltip: { text: '清除格式' } }],
+  [{ kind: 'clearFormatting', icon: 'material-symbols:format-clear-rounded', 'aria-label': t('components.rbphContentEditor.clearFormatting'), tooltip: { text: t('components.rbphContentEditor.clearFormatting') } }],
 ];
 
 const suggestionItems = [
-  { type: 'label', label: '基础块' },
-  { kind: 'paragraph', label: '段落', aliases: ['paragraph', 'para', 'p'], icon: 'material-symbols:format-paragraph-rounded' },
-  { kind: 'heading', level: 1, label: '一级标题', aliases: ['heading', 'heading1', 'h1'], icon: 'material-symbols:title-rounded' },
-  { kind: 'heading', level: 2, label: '二级标题', aliases: ['heading2', 'h2'], icon: 'material-symbols:title-rounded' },
-  { kind: 'heading', level: 3, label: '三级标题', aliases: ['heading3', 'h3'], icon: 'material-symbols:title-rounded' },
+  { type: 'label', label: t('components.rbphContentEditor.basicBlocks') },
+  { kind: 'paragraph', label: t('components.rbphContentEditor.paragraph'), aliases: ['paragraph', 'para', 'p'], icon: 'material-symbols:format-paragraph-rounded' },
+  { kind: 'heading', level: 1, label: t('components.rbphContentEditor.heading1'), aliases: ['heading', 'heading1', 'h1'], icon: 'material-symbols:title-rounded' },
+  { kind: 'heading', level: 2, label: t('components.rbphContentEditor.heading2'), aliases: ['heading2', 'h2'], icon: 'material-symbols:title-rounded' },
+  { kind: 'heading', level: 3, label: t('components.rbphContentEditor.heading3'), aliases: ['heading3', 'h3'], icon: 'material-symbols:title-rounded' },
   { type: 'separator' },
-  { type: 'label', label: '内容' },
-  { kind: 'bulletList', label: '无序列表', aliases: ['bullet', 'bulletlist', 'ul', 'list'], icon: 'material-symbols:format-list-bulleted-rounded' },
-  { kind: 'orderedList', label: '有序列表', aliases: ['ordered', 'orderedlist', 'ol', 'numberedlist'], icon: 'material-symbols:format-list-numbered-rounded' },
-  { kind: 'blockquote', label: '引用', aliases: ['quote', 'blockquote'], icon: 'material-symbols:format-quote-rounded' },
-  { kind: 'codeBlock', label: '代码块', aliases: ['code', 'codeblock'], icon: 'material-symbols:integration-instructions-rounded' },
-  { kind: 'horizontalRule', label: '分割线', aliases: ['hr', 'divider', 'separator', 'rule'], icon: 'material-symbols:horizontal-rule-rounded' },
-  { kind: 'rbImage', label: '图片', aliases: ['image', 'img', 'picture'], icon: 'material-symbols:image-outline-rounded' },
-  { kind: 'rbTable', label: '表格', aliases: ['table', 'grid'], icon: 'material-symbols:grid-on-outline' },
-  { kind: 'mathInline', label: '行内公式', aliases: ['math', 'latex', 'tex', 'inline'], icon: 'material-symbols:function-rounded' },
-  { kind: 'mathBlock', label: '块级公式', aliases: ['mathblock', 'latexblock', 'texblock', 'equation'], icon: 'material-symbols:functions-rounded' },
+  { type: 'label', label: t('components.rbphContentEditor.content') },
+  { kind: 'bulletList', label: t('components.rbphContentEditor.bulletList'), aliases: ['bullet', 'bulletlist', 'ul', 'list'], icon: 'material-symbols:format-list-bulleted-rounded' },
+  { kind: 'orderedList', label: t('components.rbphContentEditor.orderedList'), aliases: ['ordered', 'orderedlist', 'ol', 'numberedlist'], icon: 'material-symbols:format-list-numbered-rounded' },
+  { kind: 'blockquote', label: t('components.rbphContentEditor.blockquote'), aliases: ['quote', 'blockquote'], icon: 'material-symbols:format-quote-rounded' },
+  { kind: 'codeBlock', label: t('components.rbphContentEditor.codeBlock'), aliases: ['code', 'codeblock'], icon: 'material-symbols:integration-instructions-rounded' },
+  { kind: 'horizontalRule', label: t('components.rbphContentEditor.horizontalRule'), aliases: ['hr', 'divider', 'separator', 'rule'], icon: 'material-symbols:horizontal-rule-rounded' },
+  { kind: 'rbImage', label: t('components.rbphContentEditor.image'), aliases: ['image', 'img', 'picture'], icon: 'material-symbols:image-outline-rounded' },
+  { kind: 'rbTable', label: t('components.rbphContentEditor.table'), aliases: ['table', 'grid'], icon: 'material-symbols:grid-on-outline' },
+  { kind: 'mathInline', label: t('components.rbphContentEditor.inlineMath'), aliases: ['math', 'latex', 'tex', 'inline'], icon: 'material-symbols:function-rounded' },
+  { kind: 'mathBlock', label: t('components.rbphContentEditor.blockMath'), aliases: ['mathblock', 'latexblock', 'texblock', 'equation'], icon: 'material-symbols:functions-rounded' },
   { type: 'separator' },
-  { type: 'label', label: '高级' },
+  { type: 'label', label: t('components.rbphContentEditor.advanced') },
   { kind: 'rbRawHtml', label: 'HTML', aliases: ['html', 'raw', 'script', 'style', 'iframe'], icon: 'material-symbols:web-asset' },
   { kind: 'rbVueApp', label: 'Vue SFC', aliases: ['vue', 'sfc', 'component', 'app'], icon: 'material-symbols:deployed-code-outline' },
 ] satisfies EditorSuggestionMenuItem[];
@@ -598,9 +600,9 @@ defineExpose({ focus });
   >
     <div v-if="!props.framed || framedFocused" class="pointer-events-none z-20 h-0" :class="props.framed ? 'absolute inset-x-0 top-0' : 'sticky top-4'">
       <div class="pointer-events-auto ms-auto flex w-max items-center gap-1 rounded-md bg-default/95 p-1 shadow-sm ring ring-default backdrop-blur" :class="props.framed ? '-translate-y-[calc(100%+0.25rem)] me-0' : '-translate-y-8'">
-        <u-button icon="material-symbols:edit-note-outline-rounded" color="neutral" :variant="mode === 'editor' ? 'soft' : 'ghost'" size="sm" :disabled="disabled" label="编辑器" @click="setMode('editor')" />
-        <u-button icon="material-symbols:code-blocks-outline-rounded" color="neutral" :variant="isSourceMode ? 'soft' : 'ghost'" size="sm" :disabled="disabled" label="源代码" @click="setMode('source')" />
-        <u-button icon="material-symbols:visibility-outline-rounded" color="neutral" :variant="isPreviewMode ? 'soft' : 'ghost'" size="sm" label="预览" @click="setMode('preview')" />
+        <u-button icon="material-symbols:edit-note-outline-rounded" color="neutral" :variant="mode === 'editor' ? 'soft' : 'ghost'" size="sm" :disabled="disabled" :label="t('components.rbphContentEditor.editor')" @click="setMode('editor')" />
+        <u-button icon="material-symbols:code-blocks-outline-rounded" color="neutral" :variant="isSourceMode ? 'soft' : 'ghost'" size="sm" :disabled="disabled" :label="t('components.rbphContentEditor.sourceCode')" @click="setMode('source')" />
+        <u-button icon="material-symbols:visibility-outline-rounded" color="neutral" :variant="isPreviewMode ? 'soft' : 'ghost'" size="sm" :label="t('admin.common.preview')" @click="setMode('preview')" />
       </div>
     </div>
 
@@ -689,21 +691,21 @@ defineExpose({ focus });
         :style="{ top: `${tableMenu.top}px`, left: `${tableMenu.left}px` }"
         @mousedown.prevent
       >
-        <u-tooltip text="下方添加行">
+        <u-tooltip :text="t('components.rbphContentEditor.addRowBelow')">
           <u-button color="neutral" variant="ghost" size="xs" square icon="material-symbols:playlist-add-rounded" :disabled="disabled" @click="runTableAction(addRbTableRow)" />
         </u-tooltip>
-        <u-tooltip text="删除行">
+        <u-tooltip :text="t('components.rbphContentEditor.deleteRow')">
           <u-button color="neutral" variant="ghost" size="xs" square icon="material-symbols:playlist-remove-rounded" :disabled="disabled" @click="runTableAction(deleteRbTableRow)" />
         </u-tooltip>
         <u-separator orientation="vertical" class="mx-0.5 h-5" />
-        <u-tooltip text="右侧添加列">
+        <u-tooltip :text="t('components.rbphContentEditor.addColumnRight')">
           <u-button color="neutral" variant="ghost" size="xs" square icon="material-symbols:add-column-right-outline-rounded" :disabled="disabled" @click="runTableAction(addRbTableColumn)" />
         </u-tooltip>
-        <u-tooltip text="删除列">
+        <u-tooltip :text="t('components.rbphContentEditor.deleteColumn')">
           <u-button color="neutral" variant="ghost" size="xs" square icon="material-symbols:delete-outline-rounded" :disabled="disabled" @click="runTableAction(deleteRbTableColumn)" />
         </u-tooltip>
         <u-separator orientation="vertical" class="mx-0.5 h-5" />
-        <u-tooltip text="删除表格">
+        <u-tooltip :text="t('components.rbphContentEditor.deleteTable')">
           <u-button color="error" variant="ghost" size="xs" square icon="material-symbols:table-rows-narrow-rounded" :disabled="disabled" @click="runTableAction(deleteRbTable)" />
         </u-tooltip>
       </div>

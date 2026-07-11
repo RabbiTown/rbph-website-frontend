@@ -1,4 +1,6 @@
-<script setup lang="ts">
+<script setup lang="ts">const { t } = useI18n();
+
+
 interface BlockDropTarget {
   id: number;
   side: 'top' | 'bottom';
@@ -61,7 +63,7 @@ const infoTargetDirty = computed(() => Boolean(infoTarget.value && props.isDirty
 const contentTypeItems = [
   { label: 'Markdown', value: RbContentType.Markdown, icon: 'material-symbols:markdown-rounded' },
   { label: 'HTML', value: RbContentType.Html, icon: 'material-symbols:html-rounded' },
-  { label: '不安全 Markdown', value: RbContentType.UnsafeMarkdown, icon: 'material-symbols:code-rounded' },
+  { label: t('components.rbphContentBlockBrowser.unsafeMarkdown'), value: RbContentType.UnsafeMarkdown, icon: 'material-symbols:code-rounded' },
 ];
 
 function openInfo(block: AdminContentBlock) {
@@ -93,9 +95,9 @@ async function applyInfo() {
       visibility_cond: infoState.visibilityCond,
     });
     infoOpen.value = false;
-    toast.add({ title: '内容块信息已保存', icon: 'material-symbols:check-rounded', color: 'success' });
+    toast.add({ title: t('components.rbphContentBlockBrowser.saved'), icon: 'material-symbols:check-rounded', color: 'success' });
   } catch (error) {
-    handleError(error, '保存内容块信息失败');
+    handleError(error, t('components.rbphContentBlockBrowser.saveFailed'));
   } finally {
     savingInfo.value = false;
   }
@@ -108,9 +110,9 @@ async function uploadInfoTarget() {
   try {
     await props.upload(block.id);
     uploadCdnOpen.value = false;
-    toast.add({ title: '内容块已上传到 CDN', icon: 'material-symbols:cloud-done-outline-rounded', color: 'success' });
+    toast.add({ title: t('components.rbphContentBlockBrowser.cdnUploaded'), icon: 'material-symbols:cloud-done-outline-rounded', color: 'success' });
   } catch (error) {
-    handleError(error, '上传内容块失败');
+    handleError(error, t('components.rbphContentBlockBrowser.cdnUploadFailed'));
   } finally {
     uploadingCdn.value = false;
   }
@@ -123,9 +125,9 @@ async function removeInfoTargetUpload() {
   try {
     await props.removeUpload(block.id);
     removeCdnOpen.value = false;
-    toast.add({ title: '内容块已撤销上传', icon: 'material-symbols:cloud-off-outline-rounded', color: 'success' });
+    toast.add({ title: t('components.rbphContentBlockBrowser.cdnUploadRemoved'), icon: 'material-symbols:cloud-off-outline-rounded', color: 'success' });
   } catch (error) {
-    handleError(error, '撤销内容块上传失败');
+    handleError(error, t('components.rbphContentBlockBrowser.cdnRemoveFailed'));
   } finally {
     removingCdn.value = false;
   }
@@ -274,10 +276,10 @@ onBeforeUnmount(clearDragState);
   <aside class="flex min-w-0 flex-col gap-4">
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">
-        <h2 class="truncate text-md font-semibold text-highlighted">内容块管理器</h2>
-        <p class="text-sm text-muted">创建、选择和调整正文内容块。</p>
+        <h2 class="truncate text-md font-semibold text-highlighted">{{ t('components.rbphContentBlockBrowser.contentBlockManager') }}</h2>
+        <p class="text-sm text-muted">{{ t('components.rbphContentBlockBrowser.description') }}</p>
       </div>
-      <u-button icon="material-symbols:add-rounded" color="neutral" variant="ghost" size="xs" :disabled="disabled" title="新建内容块" @click="emit('create')" />
+      <u-button icon="material-symbols:add-rounded" color="neutral" variant="ghost" size="xs" :disabled="disabled" :title="t('components.rbphContentBlockBrowser.create')" @click="emit('create')" />
     </div>
 
     <div class="space-y-2" @dragover="onGlobalDragOver" @drop="onDrop">
@@ -293,19 +295,19 @@ onBeforeUnmount(clearDragState);
             <span class="block truncate text-sm font-medium text-highlighted">{{ block.name }}</span>
             <span class="mt-1 flex min-w-0 flex-wrap items-center gap-1">
               <u-badge size="xs" variant="soft" :color="block.visibility_cond === 'default' ? 'neutral' : 'warning'" :icon="block.visibility_cond === 'default' ? 'material-symbols:visibility-outline-rounded' : 'material-symbols:rule-rounded'">
-                {{ block.visibility_cond === 'default' ? '始终显示' : '条件显示' }}
+                {{ block.visibility_cond === 'default' ? t('components.rbphContentBlockBrowser.alwaysVisible') : t('components.rbphContentBlockBrowser.conditionallyVisible') }}
               </u-badge>
-              <u-badge v-if="block.cdn_backend" size="xs" variant="soft" color="success" icon="material-symbols:cloud-done-outline-rounded"> 已上传 </u-badge>
+              <u-badge v-if="block.cdn_backend" size="xs" variant="soft" color="success" icon="material-symbols:cloud-done-outline-rounded"> {{ t('components.rbphContentBlockBrowser.uploaded') }} </u-badge>
             </span>
           </button>
           <div class="flex shrink-0 items-center gap-1">
-            <u-button icon="material-symbols:info-outline-rounded" color="neutral" variant="ghost" size="xs" :disabled="disabled" title="内容块信息" @click="openInfo(block)" />
+            <u-button icon="material-symbols:info-outline-rounded" color="neutral" variant="ghost" size="xs" :disabled="disabled" :title="t('components.rbphContentBlockBrowser.infoTitle')" @click="openInfo(block)" />
             <u-button
               icon="material-symbols:drag-indicator"
               color="neutral"
               variant="ghost"
               size="xs"
-              aria-label="拖动排序"
+              :aria-label="t('admin.common.dragToReorder')"
               class="cursor-grab active:cursor-grabbing"
               draggable="true"
               :disabled="disabled"
@@ -313,18 +315,18 @@ onBeforeUnmount(clearDragState);
               @dragend="clearDragState"
             />
             <u-popover arrow :content="{ side: 'top', align: 'end', sideOffset: 8 }">
-              <u-button icon="material-symbols:delete-outline-rounded" color="error" variant="ghost" size="xs" :disabled="disabled" title="删除内容块" />
+              <u-button icon="material-symbols:delete-outline-rounded" color="error" variant="ghost" size="xs" :disabled="disabled" :title="t('components.rbphContentBlockBrowser.deleteContentBlock')" />
               <template #content>
                 <div class="w-64 p-3 text-sm">
                   <div class="flex items-start gap-2">
                     <u-icon name="material-symbols:warning-outline-rounded" class="mt-0.5 size-4 shrink-0 text-error" />
                     <div class="min-w-0">
-                      <div class="font-medium text-highlighted">删除内容块？</div>
-                      <div class="mt-1 text-xs text-muted">此操作立即生效且不可恢复。</div>
+                      <div class="font-medium text-highlighted">{{ t('components.rbphContentBlockBrowser.confirmDeleteContentBlock') }}</div>
+                      <div class="mt-1 text-xs text-muted">{{ t('components.rbphContentBlockBrowser.irreversibleWarning') }}</div>
                     </div>
                   </div>
                   <div class="mt-3 flex justify-end">
-                    <u-button label="删除" icon="material-symbols:delete-outline-rounded" color="error" variant="soft" size="xs" @click="emit('remove', block.id)" />
+                    <u-button :label="t('admin.common.delete')" icon="material-symbols:delete-outline-rounded" color="error" variant="soft" size="xs" @click="emit('remove', block.id)" />
                   </div>
                 </div>
               </template>
@@ -332,17 +334,17 @@ onBeforeUnmount(clearDragState);
           </div>
         </div>
       </div>
-      <p v-if="blocks.length === 0" class="py-8 text-center text-sm text-muted">暂无内容块</p>
+      <p v-if="blocks.length === 0" class="py-8 text-center text-sm text-muted">{{ t('components.rbphContentBlockBrowser.empty') }}</p>
     </div>
 
-    <u-modal v-model:open="infoOpen" title="内容块信息" :dismissible="!disabled && !savingInfo && !uploadingCdn && !removingCdn" :close="!disabled && !savingInfo && !uploadingCdn && !removingCdn" :ui="{ content: 'sm:max-w-3xl' }">
+    <u-modal v-model:open="infoOpen" :title="t('components.rbphContentBlockBrowser.infoTitle')" :dismissible="!disabled && !savingInfo && !uploadingCdn && !removingCdn" :close="!disabled && !savingInfo && !uploadingCdn && !removingCdn" :ui="{ content: 'sm:max-w-3xl' }">
       <template #body>
         <u-form :state="infoState" class="space-y-4" @submit.prevent="applyInfo">
-          <rb-form-field label="名称" tooltip="仅便于后台区分内容块，不会向玩家公开。" row narrow-label required>
-            <u-input v-model="infoState.name" class="w-full" placeholder="内容块名称" maxlength="120" :disabled="disabled || savingInfo" />
+          <rb-form-field :label="t('admin.common.name')" :tooltip="t('components.rbphContentBlockBrowser.contentBlockPlayerPublic')" row narrow-label required>
+            <u-input v-model="infoState.name" class="w-full" :placeholder="t('components.rbphContentBlockBrowser.name')" maxlength="120" :disabled="disabled || savingInfo" />
           </rb-form-field>
           <!-- todo -->
-          <rb-form-field v-if="false" label="正文格式" row narrow-label>
+          <rb-form-field v-if="false" :label="t('components.rbphContentBlockBrowser.format')" row narrow-label>
             <u-field-group>
               <u-button
                 v-for="item in contentTypeItems"
@@ -356,14 +358,14 @@ onBeforeUnmount(clearDragState);
               />
             </u-field-group>
           </rb-form-field>
-          <rb-form-field v-if="cdnAvailable" label="内容分发" row narrow-label>
+          <rb-form-field v-if="cdnAvailable" :label="t('components.rbphContentBlockBrowser.distribution')" row narrow-label>
             <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
               <u-badge :color="infoTarget?.cdn_backend ? 'success' : 'neutral'" variant="soft" :icon="infoTarget?.cdn_backend ? 'material-symbols:cloud-done-outline-rounded' : 'material-symbols:cloud-off-outline-rounded'">
-                {{ infoTarget?.cdn_backend ? '已上传' : '未上传' }}
+                {{ infoTarget?.cdn_backend ? t('components.rbphContentBlockBrowser.uploaded') : t('components.rbphContentBlockBrowser.notUploaded') }}
               </u-badge>
               <u-popover v-model:open="uploadCdnOpen" arrow>
                 <u-button
-                  :label="infoTarget?.cdn_backend ? '重新上传' : '上传到 CDN'"
+                  :label="infoTarget?.cdn_backend ? t('components.rbphContentBlockBrowser.reupload') : t('components.rbphContentBlockBrowser.uploadToCdn')"
                   icon="material-symbols:upload-2-outline-rounded"
                   color="primary"
                   variant="soft"
@@ -373,42 +375,42 @@ onBeforeUnmount(clearDragState);
                 <template #content>
                   <div class="w-64 p-3 text-sm">
                     <p class="text-muted">
-                      {{ infoTarget?.cdn_backend ? '将使用当前已保存正文替换现有 CDN 内容。' : '将当前已保存正文上传到 CDN。' }}
+                      {{ infoTarget?.cdn_backend ? t('components.rbphContentBlockBrowser.replaceCdnDescription') : t('components.rbphContentBlockBrowser.uploadCdnDescription') }}
                     </p>
                     <div class="mt-3 flex justify-end">
-                      <u-button :label="infoTarget?.cdn_backend ? '确认重新上传' : '确认上传'" icon="material-symbols:upload-2-outline-rounded" color="primary" variant="soft" size="xs" :loading="uploadingCdn" @click="uploadInfoTarget" />
+                      <u-button :label="infoTarget?.cdn_backend ? t('components.rbphContentBlockBrowser.confirmReupload') : t('admin.common.confirmUpload')" icon="material-symbols:upload-2-outline-rounded" color="primary" variant="soft" size="xs" :loading="uploadingCdn" @click="uploadInfoTarget" />
                     </div>
                   </div>
                 </template>
               </u-popover>
               <u-popover v-if="infoTarget?.cdn_backend" v-model:open="removeCdnOpen" arrow>
-                <u-button label="撤销上传" icon="material-symbols:cloud-off-outline-rounded" color="error" variant="soft" :loading="removingCdn" :disabled="disabled || savingInfo || uploadingCdn || removingCdn" />
+                <u-button :label="t('components.rbphContentBlockBrowser.removeUpload')" icon="material-symbols:cloud-off-outline-rounded" color="error" variant="soft" :loading="removingCdn" :disabled="disabled || savingInfo || uploadingCdn || removingCdn" />
                 <template #content>
                   <div class="w-64 p-3 text-sm">
-                    <p class="text-muted">撤销后玩家将重新从后端接口获取此内容块。</p>
+                    <p class="text-muted">{{ t('components.rbphContentBlockBrowser.removeCdnDescription') }}</p>
                     <div class="mt-3 flex justify-end">
-                      <u-button label="确认撤销" icon="material-symbols:cloud-off-outline-rounded" color="error" variant="soft" size="xs" :loading="removingCdn" @click="removeInfoTargetUpload" />
+                      <u-button :label="t('components.rbphContentBlockBrowser.confirmRemoveUpload')" icon="material-symbols:cloud-off-outline-rounded" color="error" variant="soft" size="xs" :loading="removingCdn" @click="removeInfoTargetUpload" />
                     </div>
                   </div>
                 </template>
               </u-popover>
-              <span v-if="infoTargetDirty" class="text-xs text-warning">请先保存正文修改</span>
-              <span v-else-if="!infoTarget?.content" class="text-xs text-muted">空内容块无需上传</span>
+              <span v-if="infoTargetDirty" class="text-xs text-warning">{{ t('components.rbphContentBlockBrowser.saveContentFirst') }}</span>
+              <span v-else-if="!infoTarget?.content" class="text-xs text-muted">{{ t('components.rbphContentBlockBrowser.emptyContentNoUpload') }}</span>
               <span v-else-if="infoTarget?.cdn_backend" class="text-xs text-muted">{{ infoTarget.cdn_backend }}</span>
             </div>
           </rb-form-field>
-          <rb-form-field label="显示条件" tooltip="首次满足后将对该队伍永久解锁。">
+          <rb-form-field :label="t('components.rbphContentBlockBrowser.visibilityCondition')" :tooltip="t('components.rbphContentBlockBrowser.permanentUnlockDescription')">
             <rbph-content-block-visibility-editor v-model="infoState.visibilityCond" :game-id="gameId" :current-puzzle-id="currentPuzzleId" :disabled="disabled || savingInfo" />
           </rb-form-field>
           <u-separator />
-          <rb-form-field label="危险区域" row narrow-label>
+          <rb-form-field :label="t('admin.common.dangerZone')" row narrow-label>
             <u-popover v-model:open="clearUnlocksOpen" arrow>
-              <u-button label="清除永久解锁记录" icon="material-symbols:lock-reset-rounded" color="warning" variant="soft" :disabled="disabled || savingInfo" />
+              <u-button :label="t('components.rbphContentBlockBrowser.clearPermanentUnlocks')" icon="material-symbols:lock-reset-rounded" color="warning" variant="soft" :disabled="disabled || savingInfo" />
               <template #content>
                 <div class="w-64 p-3 text-sm">
-                  <p class="mb-3 text-muted">清除后，各队伍将重新按当前条件判断此内容块。</p>
+                  <p class="mb-3 text-muted">{{ t('components.rbphContentBlockBrowser.clearPermanentUnlocksDescription') }}</p>
                   <div class="mt-3 flex justify-end">
-                    <u-button label="确认清除" color="warning" variant="soft" size="xs" @click="confirmClearUnlocks" />
+                    <u-button :label="t('components.rbphContentBlockBrowser.confirmClear')" color="warning" variant="soft" size="xs" @click="confirmClearUnlocks" />
                   </div>
                 </div>
               </template>
@@ -418,8 +420,8 @@ onBeforeUnmount(clearDragState);
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">
-          <u-button label="取消" color="neutral" variant="soft" :disabled="disabled || savingInfo || uploadingCdn || removingCdn" @click="infoOpen = false" />
-          <u-button label="保存" icon="material-symbols:save-outline-rounded" :loading="savingInfo" :disabled="disabled || uploadingCdn || removingCdn || !infoState.name.trim()" @click="applyInfo" />
+          <u-button :label="t('admin.common.cancel')" color="neutral" variant="soft" :disabled="disabled || savingInfo || uploadingCdn || removingCdn" @click="infoOpen = false" />
+          <u-button :label="t('admin.common.save')" icon="material-symbols:save-outline-rounded" :loading="savingInfo" :disabled="disabled || uploadingCdn || removingCdn || !infoState.name.trim()" @click="applyInfo" />
         </div>
       </template>
     </u-modal>

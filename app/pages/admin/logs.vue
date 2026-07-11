@@ -41,18 +41,18 @@ const filters = reactive({
 });
 
 const scopeItems = [
-  { label: '全部范围', value: null },
-  { label: '队伍动态', value: 1 },
-  { label: '系统', value: 2 },
-  { label: '管理', value: 3 },
-  { label: '安全', value: 4 },
+  { label: t('admin.pages.logs.scopeOption.all'), value: null },
+  { label: t('admin.pages.logs.scopeOption.teamActivity'), value: 1 },
+  { label: t('admin.pages.logs.scopeOption.system'), value: 2 },
+  { label: t('admin.pages.logs.scopeOption.management'), value: 3 },
+  { label: t('admin.pages.logs.scopeOption.security'), value: 4 },
 ];
 
 const severityItems = [
-  { label: '全部级别', value: null },
-  { label: '信息', value: 0 },
-  { label: '警告', value: 1 },
-  { label: '错误', value: 2 },
+  { label: t('admin.pages.logs.severityOption.all'), value: null },
+  { label: t('admin.pages.logs.severityOption.info'), value: 0 },
+  { label: t('admin.pages.logs.severityOption.warning'), value: 1 },
+  { label: t('admin.pages.logs.severityOption.error'), value: 2 },
 ];
 
 function scopeLabel(value: number) {
@@ -60,9 +60,9 @@ function scopeLabel(value: number) {
 }
 
 function severityMeta(value: number) {
-  if (value === 1) return { label: '警告', color: 'warning' as const };
-  if (value === 2) return { label: '错误', color: 'error' as const };
-  return { label: '信息', color: 'neutral' as const };
+  if (value === 1) return { label: t('admin.pages.logs.severityOption.warning'), color: 'warning' as const };
+  if (value === 2) return { label: t('admin.pages.logs.severityOption.error'), color: 'error' as const };
+  return { label: t('admin.pages.logs.severityOption.info'), color: 'neutral' as const };
 }
 
 function hasNumberFilter(value: number | null | undefined) {
@@ -73,27 +73,23 @@ const hasActiveFilters = computed(() => filters.scope !== null || filters.severi
 
 const activeFilterChips = computed(() =>
   [
-    filters.scope !== null ? { key: 'scope', label: `范围：${scopeLabel(filters.scope)}` } : null,
-    filters.severity !== null ? { key: 'severity', label: `级别：${severityMeta(filters.severity).label}` } : null,
-    filters.event_type.trim() ? { key: 'event_type', label: `事件：${filters.event_type.trim()}` } : null,
+    filters.scope !== null ? { key: 'scope', label: t('admin.pages.logs.scope', { scope: scopeLabel(filters.scope) }) } : null,
+    filters.severity !== null ? { key: 'severity', label: t('admin.pages.logs.level', { level: severityMeta(filters.severity).label }) } : null,
+    filters.event_type.trim() ? { key: 'event_type', label: t('admin.pages.logs.event', { event: filters.event_type.trim() }) } : null,
     hasNumberFilter(filters.game_id) ? { key: 'game_id', label: `game:${filters.game_id}` } : null,
     hasNumberFilter(filters.team_id) ? { key: 'team_id', label: `team:${filters.team_id}` } : null,
     hasNumberFilter(filters.user_id) ? { key: 'user_id', label: `user:${filters.user_id}` } : null,
   ].filter((item): item is { key: keyof typeof filters; label: string } => item !== null),
 );
 
-function actorTitle(log: AdminLogData, action: string) {
-  return activityActorTitle(log, action);
-}
-
 function submissionDetails(log: AdminLogData) {
   const submission = log.data.submission;
   if (!submission) return [];
   const result =
     submission.answer !== undefined && submission.answer !== null
-      ? `答案 [${submission.answer}] 提交结果：${activityJudgeResultLabel(submission.action, submission.ignored)}`
-      : `提交结果：${activityJudgeResultLabel(submission.action, submission.ignored)}`;
-  return [result, submission.result ? `返回信息：${submission.result}` : ''].filter(Boolean);
+      ? t('activityLog.details.answerSubmissionResult', { answer: submission.answer, result: activityJudgeResultLabel(submission.action, submission.ignored) })
+      : t('activityLog.details.submissionResult', { result: activityJudgeResultLabel(submission.action, submission.ignored) });
+  return [result, submission.result ? t('activityLog.details.response', { message: submission.result }) : ''].filter(Boolean);
 }
 
 function fieldDetails(fields: Record<string, boolean> | null | undefined, names: Record<string, string>) {
@@ -101,7 +97,7 @@ function fieldDetails(fields: Record<string, boolean> | null | undefined, names:
   const changed = Object.entries(fields)
     .filter(([, enabled]) => enabled)
     .map(([key]) => names[key] ?? key);
-  return changed.length > 0 ? [`修改字段：${changed.join('、')}`] : [];
+  return changed.length > 0 ? [t('activityLog.details.updatedFields', { fields: changed })] : [];
 }
 
 function logView(log: AdminLogData) {
@@ -116,45 +112,45 @@ function logView(log: AdminLogData) {
 
   switch (log.type) {
     case 'auth.login':
-      return { icon: 'material-symbols:login-rounded', color: 'success' as const, title: actorTitle(log, '登录'), details: [] };
+      return { icon: 'material-symbols:login-rounded', color: 'success' as const, title: t('activityLog.events.loggedIn', { actor }), details: [] };
     case 'auth.logout':
-      return { icon: 'material-symbols:logout-rounded', color: 'neutral' as const, title: actorTitle(log, '退出登录'), details: [] };
+      return { icon: 'material-symbols:logout-rounded', color: 'neutral' as const, title: t('activityLog.events.loggedOut', { actor }), details: [] };
     case 'auth.register_requested':
-      return { icon: 'material-symbols:how-to-reg-outline-rounded', color: 'primary' as const, title: '请求注册账号', details: data.email ? [`邮箱：${data.email}`] : [] };
+      return { icon: 'material-symbols:how-to-reg-outline-rounded', color: 'primary' as const, title: t('activityLog.events.registrationRequested', { actor }), details: data.email ? [t('activityLog.details.email', { email: data.email })] : [] };
     case 'auth.registered':
-      return { icon: 'material-symbols:person-add-outline-rounded', color: 'success' as const, title: actorTitle(log, '注册账号'), details: [] };
+      return { icon: 'material-symbols:person-add-outline-rounded', color: 'success' as const, title: t('activityLog.events.registered', { actor }), details: [] };
     case 'auth.verified':
-      return { icon: 'material-symbols:verified-user-outline-rounded', color: 'success' as const, title: actorTitle(log, '完成账号验证'), details: [] };
+      return { icon: 'material-symbols:verified-user-outline-rounded', color: 'success' as const, title: t('activityLog.events.accountVerified', { actor }), details: [] };
     case 'admin.system_settings_updated':
       return {
         icon: 'material-symbols:settings-outline-rounded',
         color: 'warning' as const,
-        title: actorTitle(log, '修改了系统设置'),
+        title: t('activityLog.events.systemSettingsUpdated', { actor }),
         details: fieldDetails(data.fields, {
-          registration_open: '开放注册',
-          require_email_verification: '邮箱验证',
-          captcha_login_required: '登录验证码',
-          captcha_registration_required: '注册验证码',
-          max_sessions: '最大并发会话',
-          max_websocket_connections: '最大并发连接',
-          maintenance_enabled: '维护模式',
-          maintenance_message: '维护提示',
+          registration_open: t('admin.common.registrationOpen'),
+          require_email_verification: t('activityLog.fields.emailVerification'),
+          captcha_login_required: t('activityLog.fields.loginCaptcha'),
+          captcha_registration_required: t('activityLog.fields.registrationCaptcha'),
+          max_sessions: t('admin.common.maxConcurrentSessions'),
+          max_websocket_connections: t('admin.common.maxConcurrentConnections'),
+          maintenance_enabled: t('admin.common.maintenanceMode'),
+          maintenance_message: t('admin.common.maintenanceMessage'),
         }),
       };
     case 'user.profile_updated':
-      return { icon: 'material-symbols:manage-accounts-outline-rounded', color: 'neutral' as const, title: actorTitle(log, '更新了个人资料'), details: fieldDetails(data.fields, { nickname: '用户名', bio: '个人简介' }) };
+      return { icon: 'material-symbols:manage-accounts-outline-rounded', color: 'neutral' as const, title: t('activityLog.events.profileUpdated', { actor }), details: fieldDetails(data.fields, { nickname: t('activityLog.fields.nickname'), bio: t('admin.common.userBio') }) };
     case 'team.created':
       return { icon: 'material-symbols:group-add-outline-rounded', color: 'success' as const, title: t('activityLog.teamCreated', { actor, team: teamName }), details: [] };
     case 'team.updated':
-      return { icon: 'material-symbols:edit-outline-rounded', color: 'neutral' as const, title: actorTitle(log, '更新了队伍信息'), details: fieldDetails(data.fields, { name: '队伍名称', pass: '队伍密码', bio: '队伍简介' }) };
+      return { icon: 'material-symbols:edit-outline-rounded', color: 'neutral' as const, title: t('activityLog.teamUpdated', { actor }), details: fieldDetails(data.fields, { name: t('admin.common.teamName'), pass: t('admin.common.teamPassword'), bio: t('admin.common.teamBio') }) };
     case 'team.member.joined':
-      return { icon: 'material-symbols:person-add-outline-rounded', color: 'success' as const, title: actorTitle(log, '加入了队伍'), details: [] };
+      return { icon: 'material-symbols:person-add-outline-rounded', color: 'success' as const, title: t('activityLog.memberJoined', { actor }), details: [] };
     case 'team.member.left':
-      return { icon: 'material-symbols:logout-rounded', color: 'neutral' as const, title: actorTitle(log, '离开了队伍'), details: [] };
+      return { icon: 'material-symbols:logout-rounded', color: 'neutral' as const, title: t('activityLog.memberLeft', { actor }), details: [] };
     case 'team.member.kicked':
-      return { icon: 'material-symbols:person-remove-outline-rounded', color: 'warning' as const, title: targetUser ? `移除了成员 ${targetUser}` : '移除了成员', details: [] };
+      return { icon: 'material-symbols:person-remove-outline-rounded', color: 'warning' as const, title: t('activityLog.memberKicked', { actor, target: targetUser }), details: [] };
     case 'team.member.promoted':
-      return { icon: 'material-symbols:award-star-outline-rounded', color: 'primary' as const, title: targetUser ? `将 ${targetUser} 设置为队长` : '变更了队长', details: [] };
+      return { icon: 'material-symbols:award-star-outline-rounded', color: 'primary' as const, title: t('activityLog.memberPromoted', { actor, target: targetUser }), details: [] };
     case 'team.disbanded':
       return { icon: 'material-symbols:group-remove-outline-rounded', color: 'warning' as const, title: t('activityLog.teamDisbanded', { team: teamName, teamId: data.team?.id ?? log.team_id ?? '' }), details: [] };
     case 'submission.judged':
@@ -171,7 +167,7 @@ function logView(log: AdminLogData) {
     case 'puzzle.unlocked':
       return { icon: 'material-symbols:lock-open-outline-rounded', color: 'primary' as const, title: t('activityLog.openedPuzzle', { puzzle }), details: [] };
     case 'game.started':
-      return { icon: 'material-symbols:flag-outline-rounded', color: 'success' as const, title: actorTitle(log, '开始了比赛'), details: [] };
+      return { icon: 'material-symbols:flag-outline-rounded', color: 'success' as const, title: t('activityLog.startedGame', { actor }), details: [] };
     case 'hint.purchased':
       return {
         icon: 'material-symbols:emoji-objects-outline-rounded',
@@ -186,7 +182,7 @@ function logView(log: AdminLogData) {
       return {
         icon: 'material-symbols:account-balance-wallet-outline-rounded',
         color: log.delta_amount && log.delta_amount < 0 ? ('warning' as const) : ('success' as const),
-        title: actorTitle(log, activityCurrencyReasonTitle(log, t)),
+        title: t('activityLog.currencyChanged', { actor, reason: activityCurrencyReasonTitle(log, t) }),
         details: activityCurrencyDetails(log),
       };
     case 'ticket.opened':
@@ -199,7 +195,7 @@ function logView(log: AdminLogData) {
       return {
         icon: severity.color === 'error' ? 'material-symbols:error-outline-rounded' : severity.color === 'warning' ? 'material-symbols:warning-outline-rounded' : 'material-symbols:history-rounded',
         color: severity.color,
-        title: actorTitle(log, `触发了事件 ${log.type}`),
+        title: t('activityLog.events.unknown', { actor, event: log.type }),
         details: [],
       };
   }
@@ -254,7 +250,7 @@ async function loadPage(targetPage: number) {
     page.value = targetPage;
     updateTime.value = Date.now();
   } catch (error) {
-    handleError(error, '系统日志获取失败');
+    handleError(error, t('admin.pages.logs.systemLogsLoadFailed'));
   } finally {
     loading.value = false;
   }
@@ -291,14 +287,14 @@ function clearFilter(key: keyof typeof filters) {
 onMounted(reloadLogs);
 
 useHead({
-  titleTemplate: computed(() => buildTitleParts([{ text: '系统日志' }, { text: 'RBPH 管理后台', sep: ' - ' }])),
+  titleTemplate: computed(() => buildTitleParts([{ text: t('admin.common.systemLogs') }, { text: t('admin.common.adminPanelTitle'), sep: ' - ' }])),
 });
 </script>
 
 <template>
   <u-dashboard-panel id="admin-logs">
     <template #header>
-      <u-dashboard-navbar title="系统日志">
+      <u-dashboard-navbar :title="t('admin.common.systemLogs')">
         <template #leading>
           <u-dashboard-sidebar-collapse />
         </template>
@@ -306,8 +302,8 @@ useHead({
           <div class="flex items-center gap-2 text-xs text-muted">
             <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" size="sm" :loading="loading" @click="reloadLogs" />
             <span>
-              <template v-if="updateTime">更新于 {{ formatDate(updateTime) }}</template>
-              <template v-else>尚未更新</template>
+              <template v-if="updateTime">{{ t('admin.pages.logs.updatedAt', { time: formatDate(updateTime) }) }}</template>
+              <template v-else>{{ t('admin.pages.logs.notYetUpdate') }}</template>
             </span>
           </div>
         </template>
@@ -319,33 +315,33 @@ useHead({
         <aside class="min-w-0">
           <form class="rounded-md border border-default bg-default p-4" @submit.prevent="reloadLogs">
             <div class="space-y-4">
-              <u-form-field label="范围">
+              <u-form-field :label="t('admin.pages.logs.scopeLabel')">
                 <u-select v-model="filters.scope" :items="scopeItems" variant="subtle" class="w-full" />
               </u-form-field>
-              <u-form-field label="级别">
+              <u-form-field :label="t('admin.pages.logs.levelLabel')">
                 <u-select v-model="filters.severity" :items="severityItems" variant="subtle" class="w-full" />
               </u-form-field>
-              <u-form-field label="事件类型">
+              <u-form-field :label="t('admin.pages.logs.eventType')">
                 <u-input v-model="filters.event_type" placeholder="auth.login" variant="subtle" class="w-full" />
               </u-form-field>
               <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
-                <u-form-field label="比赛 ID">
+                <u-form-field :label="t('admin.pages.logs.gameID')">
                   <u-input-number v-model="filters.game_id" placeholder="game" variant="subtle" orientation="vertical" class="w-full" />
                 </u-form-field>
-                <u-form-field label="队伍 ID">
+                <u-form-field :label="t('admin.pages.logs.teamID')">
                   <u-input-number v-model="filters.team_id" placeholder="team" variant="subtle" orientation="vertical" class="w-full" />
                 </u-form-field>
-                <u-form-field label="用户 ID">
+                <u-form-field :label="t('admin.pages.logs.userID')">
                   <u-input-number v-model="filters.user_id" placeholder="user" variant="subtle" orientation="vertical" class="w-full" />
                 </u-form-field>
               </div>
               <div class="flex gap-2">
-                <u-button type="submit" label="筛选" icon="material-symbols:filter-list-rounded" :loading="loading" />
-                <u-button label="重置" icon="material-symbols:filter-list-off-rounded" color="neutral" variant="ghost" :disabled="loading || !hasActiveFilters" @click="resetFilters" />
+                <u-button type="submit" :label="t('admin.pages.logs.filter')" icon="material-symbols:filter-list-rounded" :loading="loading" />
+                <u-button :label="t('admin.common.reset')" icon="material-symbols:filter-list-off-rounded" color="neutral" variant="ghost" :disabled="loading || !hasActiveFilters" @click="resetFilters" />
               </div>
 
               <div v-if="activeFilterChips.length > 0" class="flex flex-wrap items-center gap-2">
-                <span class="text-xs text-muted">当前筛选</span>
+                <span class="text-xs text-muted">{{ t('admin.pages.logs.currentFilter') }}</span>
                 <u-button v-for="item in activeFilterChips" :key="item.key" size="xs" color="neutral" variant="soft" trailing-icon="material-symbols:close-rounded" :label="item.label" :disabled="loading" @click="clearFilter(item.key)" />
               </div>
             </div>
@@ -355,10 +351,10 @@ useHead({
         <main class="min-w-0 space-y-4">
           <div v-if="loading && logs.length === 0" class="flex items-center gap-2 py-8 text-sm text-muted">
             <u-icon name="material-symbols:progress-activity" class="size-4 animate-spin" />
-            <span>加载中</span>
+            <span>{{ t('admin.pages.logs.loading') }}</span>
           </div>
 
-          <u-empty v-else-if="logs.length === 0" icon="material-symbols:receipt-long-outline-rounded" title="暂无日志" />
+          <u-empty v-else-if="logs.length === 0" icon="material-symbols:receipt-long-outline-rounded" :title="t('admin.pages.logs.emptyLog')" />
 
           <div v-else class="divide-y divide-default rounded-md border border-default bg-default px-4 mb-4">
             <div v-for="log in logs" :key="log.id" :class="['flex gap-3 py-4 first:pt-4 last:pb-4', logView(log).details.length === 0 ? 'items-center' : 'items-start']">
@@ -369,7 +365,7 @@ useHead({
                 <div :class="['flex justify-between gap-3', logView(log).details.length === 0 ? 'items-center' : 'items-start']">
                   <div class="min-w-0">
                     <div class="wrap-break-word text-sm font-medium text-highlighted">
-                      <u-badge v-if="isStaffActivityLog(log)" size="sm" color="warning" variant="soft" class="mr-1 align-middle">工作人员</u-badge>
+                      <u-badge v-if="isStaffActivityLog(log)" size="sm" color="warning" variant="soft" class="mr-1 align-middle">{{ t('admin.common.staff') }}</u-badge>
                       <span>{{ logView(log).title }}</span>
                     </div>
                     <div class="mt-1 flex flex-wrap items-center gap-1.5">
