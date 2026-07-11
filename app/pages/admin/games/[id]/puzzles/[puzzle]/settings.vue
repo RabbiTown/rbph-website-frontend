@@ -45,11 +45,11 @@ const functionItems = computed<SelectItem[]>(() =>
 );
 const unlockCheckConfirmDescription = computed(() => {
   if (!puzzle.value) return '';
-  return t('admin.pages.puzzle.settings.confirmCheckUnlocks', { value0: puzzle.value.title });
+  return t('admin.pages.puzzle.settings.confirmCheckUnlocks', { puzzle: puzzle.value.title });
 });
 const clearStatesConfirmDescription = computed(() => {
   if (!puzzle.value) return '';
-  return t('admin.pages.puzzle.settings.confirmResetTeamStates', { value0: puzzle.value.title });
+  return t('admin.pages.puzzle.settings.confirmResetTeamStates', { puzzle: puzzle.value.title });
 });
 const deleteConfirmDescription = computed(() => {
   if (!puzzle.value) return '';
@@ -350,7 +350,7 @@ async function runUnlockCheck() {
 
     toast.add({
       title: t('admin.pages.puzzle.settings.unlockEvaluationExecute'),
-      description: t('admin.pages.puzzle.settings.unlockSummary', { value0: data.unlocked }),
+      description: t('admin.pages.puzzle.settings.unlockSummary', { teams: data.unlocked }),
       icon: 'material-symbols:lock-open-right-outline-rounded',
       color: 'success',
     });
@@ -391,7 +391,16 @@ async function clearPuzzleStates() {
 
     toast.add({
       title: t('admin.pages.puzzle.settings.teamStateReset'),
-      description: t('admin.pages.puzzle.settings.resetSummary', { value0: data.result.team_count, value1: data.result.submissions, value2: data.result.hints, value3: data.result.tickets, value4: data.result.triggers, value5: data.backend_kv, value6: data.backend_store, value7: data.unlocked }),
+      description: t('admin.pages.puzzle.settings.resetSummary', {
+        teams: data.result.team_count,
+        submissions: data.result.submissions,
+        hints: data.result.hints,
+        tickets: data.result.tickets,
+        triggers: data.result.triggers,
+        kv: data.backend_kv,
+        storage: data.backend_store,
+        unlockedTeams: data.unlocked,
+      }),
       icon: 'material-symbols:restart-alt-rounded',
       color: 'success',
     });
