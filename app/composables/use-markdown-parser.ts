@@ -7,8 +7,8 @@ export function normalizeCjkMarkdown(markdown: string) {
     .replace(/([」』》）】”’])(\*{1,3}|_{1,3})/g, '$1\u200B$2');
 }
 
-function emptyParagraphMarkers(blankLineCount: number, boundary: boolean) {
-  const paragraphCount = boundary ? Math.floor((blankLineCount + 1) / 2) : Math.ceil((blankLineCount - 1) / 2);
+function emptyParagraphMarkers(blankLineCount: number) {
+  const paragraphCount = Math.ceil((blankLineCount - 1) / 2);
   return Array.from({ length: Math.max(paragraphCount, 0) }, () => '<span data-rb-empty-paragraph>&nbsp;</span>');
 }
 
@@ -27,18 +27,17 @@ export function preserveMarkdownEmptyParagraphs(markdown: string) {
     if (blankLineCount === 0) return;
 
     const previousHasContent = output.length > 0;
-    const boundary = !previousHasContent || !nextHasContent;
-    const markers = emptyParagraphMarkers(blankLineCount, boundary);
+    if (!previousHasContent || !nextHasContent) {
+      blankLineCount = 0;
+      return;
+    }
+    const markers = emptyParagraphMarkers(blankLineCount);
 
     if (previousHasContent) output.push('');
     markers.forEach((marker, index) => {
       output.push(marker);
       if (nextHasContent || index < markers.length - 1) output.push('');
     });
-    if (!markers.length && !previousHasContent && nextHasContent) {
-      output.push(...Array.from({ length: blankLineCount }, () => ''));
-    }
-
     blankLineCount = 0;
   }
 
