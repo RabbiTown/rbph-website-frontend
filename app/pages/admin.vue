@@ -13,22 +13,55 @@ const colorMode = useColorMode();
 const selectedGame = computed(() => game.ref.value);
 const gameSwitchIcon = computed(() => (selectedGame.value ? 'material-symbols:sports-esports-outline-rounded' : 'material-symbols:remove-selection-rounded'));
 const isDarkMode = computed(() => colorMode.value === 'dark');
+const lastAdminTab = useCookie<string | undefined>('rbph_admin_last_tab', { sameSite: 'lax' });
 
-game
-  .updateGameList()
-  .then(x => {
-    if (x.length > 0 && route.name === 'admin') {
-      navigateTo(`/admin/games/${x[0]?.id}`);
-    }
-  })
-  .catch(err => {
-    handleError(err, t('admin.pages.shell.loadGameListFailed'));
-  })
-  .finally(() => {
-    if (route.name === 'admin') {
-      navigateTo('/admin/users');
-    }
-  });
+function adminTabPath(path: string): string | undefined {
+  if (path === '/admin' || path === '/admin/games/create') return;
+  if (path.startsWith('/admin/users')) return '/admin/users';
+  if (path.startsWith('/admin/announcements')) return '/admin/announcements';
+  if (path.startsWith('/admin/logs')) return '/admin/logs';
+  if (path.startsWith('/admin/settings')) return '/admin/settings';
+
+  const match = path.match(/^\/admin\/games\/(\d+)(?:\/(features|puzzles|rounds|teams|announcements))?/);
+  if (!match) return;
+  const [, gameId, section] = match;
+  if (section === 'rounds') return `/admin/games/${gameId}/puzzles`;
+  return `/admin/games/${gameId}${section ? `/${section}` : ''}`;
+}
+
+function rememberedAdminTab(gameIds: Set<number>): string | undefined {
+  const path = adminTabPath(lastAdminTab.value ?? '');
+  if (!path) return;
+  if (path === '/admin/settings' && user.value?.urole !== RbUserRole.Root) return;
+
+  const gameId = path.match(/^\/admin\/games\/(\d+)/)?.[1];
+  if (gameId && !gameIds.has(Number(gameId))) return;
+  return path;
+}
+
+watch(
+  () => route.path,
+  path => {
+    const tab = adminTabPath(path);
+    if (tab) lastAdminTab.value = tab;
+  },
+  { immediate: true },
+);
+
+async function loadGamesAndRedirect() {
+  try {
+    const games = await game.updateGameList();
+    if (route.name !== 'admin') return;
+
+    const remembered = rememberedAdminTab(new Set(games.map(item => item.id)));
+    await navigateTo(remembered ?? (games.length > 0 ? `/admin/games/${games[0]!.id}` : '/admin/users'));
+  } catch (error) {
+    handleError(error, t('admin.pages.shell.loadGameListFailed'));
+    if (route.name === 'admin') await navigateTo('/admin/users');
+  }
+}
+
+loadGamesAndRedirect();
 
 const gameNav = computed(() => {
   const result = [] as DropdownMenuItem[][];

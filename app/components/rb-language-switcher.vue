@@ -6,6 +6,7 @@ type Code = 'en' | 'zh-CN' | 'zh-TW' | 'ja';
 const props = defineProps<{
   sidebar?: boolean;
   collapsed?: boolean;
+  inverted?: boolean;
 }>();
 
 const { locale, locales, setLocale, t } = useI18n();
@@ -68,7 +69,14 @@ const items = computed<DropdownMenuItem[][]>(() => [
         </span>
       </template>
     </button>
-    <u-button v-else color="neutral" variant="ghost" icon="material-symbols:translate-rounded" :aria-label="t('common.language')" />
+    <u-button
+      v-else
+      color="neutral"
+      variant="ghost"
+      icon="material-symbols:translate-rounded"
+      :aria-label="t('common.language')"
+      :class="props.inverted ? 'text-white hover:bg-white/10 hover:text-white data-[state=open]:bg-white/15' : undefined"
+    />
   </u-dropdown-menu>
   <rb-confirm-modal v-model:open="warningOpen" :title="warningTitle" :confirm-label="t('common.switchLanguageConfirm')" confirm-color="warning" confirm-icon="material-symbols:translate-rounded" @confirm="confirmLocale">
     <template #body>

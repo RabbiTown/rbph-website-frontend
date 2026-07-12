@@ -295,7 +295,7 @@ export default defineI18nLocale(() => ({
     emailVerified: 'Email verified',
   },
   maintenance: {
-    title: 'Under maintenance',
+    title: 'MAINTENANCE',
     headTitle: 'Maintenance - RBPH',
     check: 'Check again',
     checkFailed: 'Failed to check maintenance status',

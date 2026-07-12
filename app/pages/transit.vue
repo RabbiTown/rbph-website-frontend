@@ -18,44 +18,48 @@ async function enterGame(game: RbGame) {
   await navigateTo(`/games/${game.id}`);
 }
 
-try {
-  const userReady = userMgr.waitUpdate();
-  const selectedId = import.meta.client ? Number(localStorage.getItem('rbph::select_game')) : NaN;
-  let selectedGame: RbGame | undefined;
+async function initialize() {
+  try {
+    const userReady = userMgr.waitUpdate();
+    const selectedId = Number(localStorage.getItem('rbph::select_game'));
+    let selectedGame: RbGame | undefined;
 
-  if (Number.isInteger(selectedId) && selectedId > 0) {
-    try {
-      const { data } = await api.get<RbGame>(`/games/${selectedId}`);
-      selectedGame = data;
-    } catch (error) {
-      if (getRbErrorCode(error) !== -104) throw error;
-      localStorage.removeItem('rbph::select_game');
+    if (Number.isInteger(selectedId) && selectedId > 0) {
+      try {
+        const { data } = await api.get<RbGame>(`/games/${selectedId}`);
+        selectedGame = data;
+      } catch (error) {
+        if (getRbErrorCode(error) !== -104) throw error;
+        localStorage.removeItem('rbph::select_game');
+      }
     }
-  }
 
-  await userReady;
-  if (selectedGame) {
-    await enterGame(selectedGame);
-  } else {
-    const { data } = await api.get<RbGame[]>('/games/active');
-    games.value = data;
+    await userReady;
+    if (selectedGame) {
+      await enterGame(selectedGame);
+    } else {
+      const { data } = await api.get<RbGame[]>('/games/active');
+      games.value = data;
 
-    if (data.length === 0 && (userMgr.ref.value?.urole ?? RbUserRole.User) >= RbUserRole.Admin) {
-      await navigateTo('/admin');
-    } else if (data.length === 1 && data[0]) {
-      await enterGame(data[0]);
+      if (data.length === 0 && (userMgr.ref.value?.urole ?? RbUserRole.User) >= RbUserRole.Admin) {
+        await navigateTo('/admin');
+      } else if (data.length === 1 && data[0]) {
+        await enterGame(data[0]);
+      }
     }
+  } catch (error) {
+    showError(error instanceof Error ? error : String(error));
+  } finally {
+    loading.value = false;
   }
-} catch (error) {
-  showError(error instanceof Error ? error : String(error));
-} finally {
-  loading.value = false;
 }
+
+onMounted(initialize);
 </script>
 
 <template>
-  <main class="mx-auto flex min-h-screen w-full max-w-5xl items-center px-4 py-10 sm:px-6">
-    <u-icon v-if="loading" name="material-symbols:progress-activity-rounded" class="size-8 animate-spin text-muted" />
+  <main class="mx-auto flex min-h-screen w-full max-w-5xl items-center justify-center px-4 py-10 sm:px-6">
+    <u-icon v-if="loading" name="i-lucide:loader-circle" class="animate-spin" size="60px" />
 
     <section v-else-if="games.length > 1" class="w-full space-y-5">
       <div>
