@@ -1,11 +1,12 @@
-<script setup lang="ts">import TextAlign from '@tiptap/extension-text-align';
+<script setup lang="ts">
+import TextAlign from '@tiptap/extension-text-align';
 import Color from '@tiptap/extension-color';
 import type { ChainedCommands, Editor, JSONContent } from '@tiptap/core';
 import type { EditorSuggestionMenuItem } from '@nuxt/ui';
 import { Fragment, Slice } from '@tiptap/pm/model';
 import { NodeSelection } from '@tiptap/pm/state';
 import { dropPoint } from '@tiptap/pm/transform';
-
+import { twMerge } from 'tailwind-merge';
 
 const { t } = useI18n();
 
@@ -47,13 +48,31 @@ const emit = defineEmits<{
 
 const isSourceMode = computed(() => mode.value === 'source');
 const isPreviewMode = computed(() => mode.value === 'preview');
-const effectiveContentClass = computed(() => [props.contentClass, props.framed && 'min-h-56'].filter(Boolean).join(' '));
+const effectiveContentClass = computed(() => twMerge(props.framed && 'min-h-56', props.contentClass));
 const editorModel = computed(() => normalizeCjkMarkdown(model.value));
 const previewContent = computed<RbContent>(() => ({
   content: model.value,
   content_type: RbContentType.Markdown,
 }));
-const editorExtensions = [RbphAlignBlock, RbphImageBlock, RbphRawHtmlBlock, RbphVueAppBlock, RbphMdcComponentBlock, RbphMdcComponentInline, RbphMathInline, RbphMathBlock, RbphTable, RbphTableRow, RbphTableHeader, RbphTableCell, RbphMdcInline, RbphTextStyle, RbphUnderline, Color, TextAlign.configure({ types: ['heading', 'paragraph', 'align'] })];
+const editorExtensions = [
+  RbphAlignBlock,
+  RbphImageBlock,
+  RbphRawHtmlBlock,
+  RbphVueAppBlock,
+  RbphMdcComponentBlock,
+  RbphMdcComponentInline,
+  RbphMathInline,
+  RbphMathBlock,
+  RbphTable,
+  RbphTableRow,
+  RbphTableHeader,
+  RbphTableCell,
+  RbphMdcInline,
+  RbphTextStyle,
+  RbphUnderline,
+  Color,
+  TextAlign.configure({ types: ['heading', 'paragraph', 'align'] }),
+];
 const editorProps = {
   handleKeyDown: onEditorKeydown,
   handleDOMEvents: {
@@ -722,7 +741,7 @@ defineExpose({ focus });
         :class="[effectiveContentClass]"
         @focus-title="emit('focusTitle')"
       />
-      <div v-else-if="isPreviewMode" key="preview" ref="previewFrame" class="px-4 py-3 sm:px-5 outline-none" :class="[effectiveContentClass, framed && 'text-sm']" :tabindex="props.framed ? 0 : undefined">
+      <div v-else-if="isPreviewMode" key="preview" ref="previewFrame" :class="props.framed ? [effectiveContentClass, 'text-sm px-3 py-2 sm:px-4'] : [effectiveContentClass, 'py-3']" :tabindex="props.framed ? 0 : undefined">
         <rbph-content :content="previewContent" @rendered="releaseRetainedContentHeight()" />
       </div>
     </div>
@@ -735,7 +754,6 @@ defineExpose({ focus });
 }
 
 .rbph-content-editor-framed :deep(.ProseMirror) {
-  min-height: 14rem;
   padding-bottom: 1rem;
 }
 

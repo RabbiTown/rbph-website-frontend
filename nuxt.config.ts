@@ -77,6 +77,7 @@ export default defineNuxtConfig({
         '@tiptap/extension-text-style',
         '@tiptap/extension-underline',
         'katex',
+        'tailwind-merge',
         'valibot',
       ],
     },

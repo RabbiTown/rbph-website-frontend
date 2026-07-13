@@ -11,6 +11,7 @@ const props = defineProps<{
   placeholder?: string;
   disabled?: boolean;
   allowTeamId?: number;
+  allowAnyTeam?: boolean;
 }>();
 
 const model = defineModel<number>();
@@ -26,7 +27,7 @@ const items = computed<UserSelectItem[]>(() =>
   users.value.map(user => ({
     ...user,
     label: `${user.nickname} · ${user.email}`,
-    disabled: Boolean(user.in_team_id && user.in_team_id !== props.allowTeamId),
+    disabled: !props.allowAnyTeam && Boolean(user.in_team_id && user.in_team_id !== props.allowTeamId),
   })),
 );
 
@@ -64,6 +65,12 @@ watch(
 watch(model, id => {
   selectedUser.value = users.value.find(user => user.id === id);
 });
+
+function clearSelection() {
+  model.value = undefined;
+  selectedUser.value = undefined;
+  searchTerm.value = '';
+}
 </script>
 
 <template>
@@ -75,9 +82,11 @@ watch(model, id => {
     label-key="label"
     :placeholder="placeholder || t('components.rbphAdminUserSelect.searchPlaceholder')"
     search-input
+    :clear="{ 'aria-label': t('admin.common.reset') }"
     :loading="loading"
     :disabled="disabled"
     icon="material-symbols:person-search-outline-rounded"
     class="w-full"
+    @clear="clearSelection"
   />
 </template>

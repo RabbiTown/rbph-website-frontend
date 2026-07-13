@@ -1,5 +1,5 @@
-<script setup lang="ts">import type { SelectItem } from '@nuxt/ui';
-
+<script setup lang="ts">
+import type { SelectItem } from '@nuxt/ui';
 
 const { t } = useI18n();
 
@@ -29,6 +29,7 @@ const unlockCheckConfirmOpen = ref(false);
 const clearStatesConfirmOpen = ref(false);
 const clearStatesCheckUnlock = ref(true);
 const immediateReleaseConfirmOpen = ref(false);
+const backendLogsOpen = ref(false);
 const loadingOptions = ref(false);
 const rounds = ref<UnlockRoundOptionData[]>([]);
 const puzzles = ref<UnlockPuzzleOptionData[]>([]);
@@ -499,7 +500,9 @@ watch(dirty, value => {
             <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.pages.puzzle.settings.backendScript') }}</h2>
             <p class="mt-1 text-sm text-muted">{{ t('admin.pages.puzzle.settings.backendAnswerEvaluation') }}</p>
           </div>
-          <u-badge variant="soft" color="neutral">JavaScript</u-badge>
+          <div class="flex shrink-0 items-center gap-2">
+            <u-button color="neutral" variant="soft" icon="material-symbols:receipt-long-outline-rounded" :label="t('admin.pages.puzzle.settings.backendLogs.open')" @click="backendLogsOpen = true" />
+          </div>
         </div>
 
         <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
@@ -564,7 +567,15 @@ watch(dirty, value => {
           <u-separator />
 
           <rb-form-field row narrow-label :label="t('admin.pages.puzzle.settings.resetTeamState')">
-            <u-button color="error" variant="soft" icon="material-symbols:restart-alt-rounded" :label="t('admin.pages.puzzle.settings.resetTeamState')" :disabled="saving || deleting || checkingUnlock || clearingStates" :loading="clearingStates" @click="openClearStatesConfirm" />
+            <u-button
+              color="error"
+              variant="soft"
+              icon="material-symbols:restart-alt-rounded"
+              :label="t('admin.pages.puzzle.settings.resetTeamState')"
+              :disabled="saving || deleting || checkingUnlock || clearingStates"
+              :loading="clearingStates"
+              @click="openClearStatesConfirm"
+            />
             <div class="text-muted mt-1.5">{{ t('admin.pages.puzzle.settings.resetTeamStatesDescription') }}</div>
           </rb-form-field>
 
@@ -608,12 +619,7 @@ watch(dirty, value => {
           @confirm="clearPuzzleStates"
         >
           <template #body>
-            <u-checkbox
-              v-model="clearStatesCheckUnlock"
-              :label="t('admin.pages.puzzle.settings.checkAfterReset')"
-              :description="t('admin.pages.puzzle.settings.checkAfterResetDescription')"
-              :disabled="clearingStates"
-            />
+            <u-checkbox v-model="clearStatesCheckUnlock" :label="t('admin.pages.puzzle.settings.checkAfterReset')" :description="t('admin.pages.puzzle.settings.checkAfterResetDescription')" :disabled="clearingStates" />
           </template>
         </rb-confirm-modal>
 
@@ -638,5 +644,7 @@ watch(dirty, value => {
     </u-form>
 
     <aside class="hidden xl:block" />
+
+    <rbph-puzzle-backend-log v-model:open="backendLogsOpen" :puzzle-id="puzzle.id" :game-id="puzzle.game_id" />
   </div>
 </template>

@@ -40,6 +40,7 @@
     "codemirror": "^6.0.2",
     "katex": "^0.16.22",
     "nuxt": "^4.4.6",
+    "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.0",
     "undici": "^8.3.0",
     "valibot": "^1.4.1",

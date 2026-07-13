@@ -389,7 +389,15 @@ defineExpose({ apply, reset });
                     </u-popover>
 
                     <u-popover :open="phase.featurePopoverOpen" arrow :content="{ side: 'top', align: 'start', sideOffset: 8 }" @update:open="open => setFeaturePopoverOpen(phase, open)">
-                      <u-button type="button" size="sm" color="neutral" variant="soft" icon="material-symbols:add-rounded" :label="t('components.rbphReleasePhaseManager.changeFeature')" :disabled="saving || phase.deleting || phase.released || availableFeatureItems(phase).length === 0" />
+                      <u-button
+                        type="button"
+                        size="sm"
+                        color="neutral"
+                        variant="soft"
+                        icon="material-symbols:add-rounded"
+                        :label="t('components.rbphReleasePhaseManager.changeFeature')"
+                        :disabled="saving || phase.deleting || phase.released || availableFeatureItems(phase).length === 0"
+                      />
                       <template #content>
                         <div class="w-72 space-y-3 p-3">
                           <u-select
@@ -411,7 +419,15 @@ defineExpose({ apply, reset });
                             :disabled="!phase.pendingFeature"
                           />
                           <div class="flex justify-end">
-                            <u-button type="button" size="sm" icon="material-symbols:add-rounded" :label="t('components.rbphReleasePhaseManager.add')" variant="soft" :disabled="!phase.pendingFeature || !phase.pendingState" @click="addFeatureChange(phase)" />
+                            <u-button
+                              type="button"
+                              size="sm"
+                              icon="material-symbols:add-rounded"
+                              :label="t('components.rbphReleasePhaseManager.add')"
+                              variant="soft"
+                              :disabled="!phase.pendingFeature || !phase.pendingState"
+                              @click="addFeatureChange(phase)"
+                            />
                           </div>
                         </div>
                       </template>

@@ -44,6 +44,12 @@ watch(
 watch(model, id => {
   selectedTeam.value = teams.value.find(team => team.id === id);
 });
+
+function clearSelection() {
+  model.value = undefined;
+  selectedTeam.value = undefined;
+  searchTerm.value = '';
+}
 </script>
 
 <template>
@@ -55,9 +61,11 @@ watch(model, id => {
     label-key="name"
     :placeholder="placeholder || t('components.staffTeamSelect.searchPlaceholder')"
     search-input
+    :clear="{ 'aria-label': t('admin.common.reset') }"
     :loading="loading"
     :disabled="disabled"
     icon="material-symbols:groups-2-outline-rounded"
     class="w-full"
+    @clear="clearSelection"
   />
 </template>
