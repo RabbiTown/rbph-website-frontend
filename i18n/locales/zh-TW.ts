@@ -1420,7 +1420,7 @@ export default defineI18nLocale(() => ({
       reconnect: '重新連線',
       buttonAria: '查看或拖曳同步狀態',
       transport: {
-        sharedWorker: 'SharedWorker（{count}）',
+        sharedWorker: 'SharedWorker ({count})',
         directWebSocket: '直連 WebSocket',
         unset: '未指定',
       },

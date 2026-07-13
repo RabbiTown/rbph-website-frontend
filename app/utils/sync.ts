@@ -17,6 +17,7 @@ export enum SyncMessageType {
   // 300 - puzzle
   PuzzleSubmitted = 301,
   PuzzleHintUnlocked = 302,
+  PuzzleBackendEvent = 303,
 
   // 400 - ticket
   TicketUpdated = 401,
@@ -60,6 +61,13 @@ export interface SyncMessageMap {
     content_changed?: boolean;
   };
   [SyncMessageType.PuzzleHintUnlocked]: { sid?: string; user: { id: number; name: string }; puzzle: { id: number; title: string }; hint: { id: number; title: string; cost_id?: number | null; cost_amount: number } };
+  [SyncMessageType.PuzzleBackendEvent]: {
+    puzzle_id: number;
+    event: string;
+    payload: unknown;
+    actor: { id: number; nickname: string };
+    source: { type: 'api' | 'judge' | 'hint_purchase'; function: string };
+  };
   [SyncMessageType.TicketUpdated]: {
     event: 'created' | 'message' | 'closed' | 'assigned' | 'unassigned';
     ticket_id: number;

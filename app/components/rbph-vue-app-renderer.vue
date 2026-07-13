@@ -20,6 +20,7 @@ type RbphVueAppContext = {
     call<T = unknown>(name: string, body?: unknown): Promise<{ code: number; data: T }>;
     get<T = unknown>(name: string, query?: Record<string, unknown>): Promise<{ code: number; data: T }>;
     post<T = unknown>(name: string, body?: unknown): Promise<{ code: number; data: T }>;
+    on<T = unknown>(event: string, callback: (message: RbphBackendEvent<T>) => void): () => void;
   };
   route: {
     gameId?: number;
@@ -41,6 +42,14 @@ type RbphVueAppContext = {
     resolve(path: string): string;
   };
 };
+
+type RbphBackendEvent<T = unknown> = {
+  data: T;
+  actor: { id: number; nickname: string };
+  source: { type: 'api' | 'judge' | 'hint_purchase'; function: string };
+};
+
+type BackendEventListener = (message: RbphBackendEvent) => void;
 
 type RbphVueAppModule = {
   mount?: (el: Element, context: RbphVueAppContext) => unknown;
@@ -71,6 +80,25 @@ const route = useRoute();
 const game = useGame().ref;
 const team = useTeam(false).ref;
 const puzzleState = usePuzzle().ref;
+const backendEventListeners = new Map<string, Set<BackendEventListener>>();
+
+useSync().listen(SyncMessageType.PuzzleBackendEvent, ({ data }) => {
+  const puzzleId = puzzleState.value?.data.id ?? currentNumericRouteParam('puzzle');
+  if (data.puzzle_id !== puzzleId) return;
+
+  const message: RbphBackendEvent = {
+    data: data.payload,
+    actor: data.actor,
+    source: data.source,
+  };
+  for (const listener of [...(backendEventListeners.get(data.event) ?? [])]) {
+    try {
+      listener(message);
+    } catch (err) {
+      console.error(`Puzzle backend event listener failed for ${data.event}`, err);
+    }
+  }
+});
 
 let shadow: ShadowRoot | undefined;
 let mountedCleanup: (() => void) | undefined;
@@ -103,7 +131,27 @@ async function loadManifest(src: string) {
 function cleanup() {
   mountedCleanup?.();
   mountedCleanup = undefined;
+  backendEventListeners.clear();
   if (shadow) shadow.replaceChildren();
+}
+
+function subscribeBackendEvent<T>(event: string, callback: (message: RbphBackendEvent<T>) => void) {
+  const listener: BackendEventListener = message => callback(message as RbphBackendEvent<T>);
+  let listeners = backendEventListeners.get(event);
+  if (!listeners) {
+    listeners = new Set();
+    backendEventListeners.set(event, listeners);
+  }
+  listeners.add(listener);
+
+  let active = true;
+  return () => {
+    if (!active) return;
+    active = false;
+    const current = backendEventListeners.get(event);
+    current?.delete(listener);
+    if (!current?.size) backendEventListeners.delete(event);
+  };
 }
 
 function normalizeUnmount(value: unknown, mod: RbphVueAppModule) {
@@ -151,6 +199,7 @@ function createContext(manifestUrl: string): RbphVueAppContext {
       call: (name, body) => api.post(backendPath(puzzleId, name), body),
       get: (name, query) => api.get(backendPath(puzzleId, name), { query }),
       post: (name, body) => api.post(backendPath(puzzleId, name), body),
+      on: subscribeBackendEvent,
     },
     route: {
       gameId: game.value?.id ?? currentNumericRouteParam('id'),
