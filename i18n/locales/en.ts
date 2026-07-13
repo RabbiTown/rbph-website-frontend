@@ -1,5 +1,11 @@
 export default defineI18nLocale(() => ({
   activityLog: {
+    currencyAdjustedByStaff: (ctx: { named: (key: string) => unknown; type: string }) => {
+      const actor = ctx.named('actor');
+      const detail = ctx.named('change') ?? ctx.named('reason');
+      if (ctx.type === 'vnode') return [actor, ' adjusted currency', ...(detail === undefined || detail === '' ? [] : [' (', detail, ')'])];
+      return `${String(actor ?? '')} adjusted currency${detail === undefined || detail === '' ? '' : ` (${String(detail)})`}`;
+    },
     currencyChangedByPuzzle: (ctx: { named: (key: string) => unknown }) => {
       const puzzle = String(ctx.named('puzzle') ?? '');
       return puzzle ? `Currency changed by “${puzzle}”` : 'Currency changed for a puzzle';
@@ -1248,6 +1254,11 @@ export default defineI18nLocale(() => ({
         deleteTeamRelatedData: 'Delete the team and all associated data.',
         confirmTeamAccess: 'Confirm access changes',
         accessReasonDescription: 'These changes will appear in the team activity log. You may provide a reason for the changes.',
+        confirmTeamChanges: 'Confirm team setting changes',
+        changeReasonDescription: 'Access and currency balance changes are recorded in team activity. You may provide separate reasons.',
+        accessChanges: 'Access changes',
+        currencyBalanceChanges: 'Currency balance changes',
+        currencyReasonPlaceholder: 'Optional reason for these currency balance changes',
         save: 'Save changes',
         reason: 'Reason',
         accessReasonPlaceholder: 'Optional reason for these access changes',
@@ -1395,6 +1406,39 @@ export default defineI18nLocale(() => ({
     },
   },
   components: {
+    teamAccessMenu: {
+      edit: 'Edit access',
+      adjustCurrency: 'Adjust currency',
+      history: 'Management history',
+      historyTitle: 'Management history for “{team}”',
+      historyLoadFailed: 'Failed to load team management history',
+      title: 'Edit access for “{team}”',
+      description: 'Set feature access for this team. Changes are recorded in team activity.',
+      save: 'Save access',
+      saved: 'Team access updated',
+      loadFailed: 'Failed to load team access',
+      saveFailed: 'Failed to update team access',
+      directMessageBanned: 'Direct messages are banned for this team, so the current conversation cannot be replied to.',
+      puzzleTicketBanned: 'Puzzle tickets are banned for this team, so the current conversation cannot be replied to.',
+      currencyTitle: 'Adjust currency for “{team}”',
+      currencyDescription: 'Add or deduct visible team currency. The change is recorded in team activity.',
+      currencyConfirm: 'Confirm adjustment',
+      currencyLabel: 'Currency',
+      currencyOperation: 'Operation',
+      currencyAdd: 'Add',
+      currencyDeduct: 'Deduct',
+      currencyAmount: 'Amount',
+      currencyCurrent: 'Current balance',
+      currencyEmpty: 'This team has no adjustable currency',
+      currencySelectRequired: 'Select a currency',
+      currencyAmountInvalid: 'The adjustment amount must be greater than zero',
+      currencyAboveMax: 'The resulting balance cannot exceed the currency limit',
+      currencyReasonPlaceholder: 'Optional reason for this currency adjustment',
+      currencyLoadFailed: 'Failed to load team currency',
+      currencySaveFailed: 'Failed to adjust team currency',
+      currencySaved: 'Team currency adjusted',
+      currencyChangedAboveMax: 'The balance changed and has been refreshed. The adjustment would exceed the limit.',
+    },
     unlockConditionPreview: {
       numericReference: '#{value}',
       namedReference: '“{value}”',

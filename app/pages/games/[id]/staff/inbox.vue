@@ -19,6 +19,8 @@ const threadHistoryGapIndex = ref(1);
 const submitLoading = ref(false);
 const assigneeLoading = ref(false);
 const assigneeConfirmOpen = ref(false);
+const teamAccessMenu = ref<{ openEditor: () => void }>();
+const currentTeamFeatureBanned = ref(false);
 const sendConflictOpen = ref(false);
 const sendConflictAssignee = ref<TicketAggreInfoUser>();
 const sendConflictAction = ref<'send' | 'close'>();
@@ -104,6 +106,7 @@ async function loadThread(ticketId = selectedId.value, silent = false, force = f
   if (!ticketId) return;
   if (!force && ticketId === selectedId.value && (threadLoading.value || thread.value?.ticket?.id === ticketId)) return;
   selectedId.value = ticketId;
+  currentTeamFeatureBanned.value = false;
   if (!silent) threadLoading.value = true;
   try {
     const { data } = await api.get<TicketThread>(ticketEndpoint(ticketId));
@@ -553,9 +556,16 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
                   </template>
                 </u-popover>
 
-                <u-badge size="md" color="primary" variant="soft" icon="material-symbols:groups-2-outline-rounded" class="h-6 max-w-full">
-                  <span class="min-w-0 truncate">{{ thread.ticket.team?.name }}</span>
-                </u-badge>
+                <rbph-team-access-menu
+                  v-if="thread.ticket.team"
+                  ref="teamAccessMenu"
+                  :game-id="gameId"
+                  :team-id="thread.ticket.team.id"
+                  :team-name="thread.ticket.team.name"
+                  :status-feature="thread.ticket.puzzle ? 'puzzle_ticket' : 'direct_message'"
+                  size="md"
+                  @status-change="currentTeamFeatureBanned = $event"
+                />
               </div>
             </div>
           </div>
@@ -574,6 +584,26 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
             @unlock="unlockMessage"
             @load-history="loadThreadHistory"
           />
+
+          <u-alert
+            v-if="currentTeamFeatureBanned"
+            class="mb-3"
+            color="error"
+            variant="subtle"
+            orientation="horizontal"
+            icon="material-symbols:warning-outline-rounded"
+            :title="thread.ticket.puzzle ? t('components.teamAccessMenu.puzzleTicketBanned') : t('components.teamAccessMenu.directMessageBanned')"
+          >
+            <template #actions>
+              <u-button
+                color="error"
+                variant="soft"
+                icon="material-symbols:admin-panel-settings-outline-rounded"
+                :label="t('components.teamAccessMenu.edit')"
+                @click="teamAccessMenu?.openEditor()"
+              />
+            </template>
+          </u-alert>
 
           <rbph-message-edit
             v-model:draft="draft"

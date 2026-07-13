@@ -33,6 +33,7 @@ const deleteOpen = ref(false);
 const deleteConfirmName = ref('');
 const reasonOpen = ref(false);
 const accessChangeReason = ref('');
+const currencyChangeReason = ref('');
 const currencyDrafts = reactive<Record<number, CurrencyDraft>>({});
 
 const draft = reactive({
@@ -127,6 +128,16 @@ const accessChanges = computed<AccessChangePreview[]>(() => {
   }
   return changes;
 });
+const currencyBalanceChanges = computed(() => {
+  const current = team.value;
+  if (!current) return [];
+  return current.currency.flatMap(currency => {
+    const value = currencyDrafts[currency.id];
+    const before = currency.current_amount ?? currency.amount;
+    if (!value || value.amount === before) return [];
+    return [{ currency, before, after: value.amount, delta: value.amount - before }];
+  });
+});
 
 function syncDrafts(next: AdminTeamDetail) {
   draft.name = next.name;
@@ -186,13 +197,14 @@ async function saveTeam(reasonConfirmed = false) {
     toast.add({ title: t('admin.pages.team.teamNamePasswordCannotEmpty'), icon: 'material-symbols:error-outline-rounded', color: 'error' });
     return;
   }
-  if (accessChanges.value.length > 0 && !reasonConfirmed) {
+  if ((accessChanges.value.length > 0 || currencyBalanceChanges.value.length > 0) && !reasonConfirmed) {
     accessChangeReason.value = '';
+    currencyChangeReason.value = '';
     reasonOpen.value = true;
     return;
   }
 
-  const changedCurrencies = current.currency.filter(currencyDirty).map(currency => ({ id: currency.id, ...currencyDrafts[currency.id] }));
+  const changedCurrencies = current.currency.filter(currencyDirty);
   let next = current;
   saving.value = true;
   try {
@@ -214,7 +226,15 @@ async function saveTeam(reasonConfirmed = false) {
     }
 
     for (const currency of changedCurrencies) {
-      const { data } = await api.patch<{ team: AdminTeamDetail }>(`/admin/games/${gameId.value}/teams/${teamId.value}/currencies/${currency.id}`, { amount: currency.amount, growth: currency.growth, hidden: currency.hidden }, { errorHints });
+      const value = currencyDrafts[currency.id];
+      const body: { amount?: number; growth?: number; hidden?: boolean; reason?: string } = {};
+      if (value.amount !== (currency.current_amount ?? currency.amount)) {
+        body.amount = value.amount;
+        body.reason = currencyChangeReason.value.trim() || undefined;
+      }
+      if (value.growth !== currency.team_growth) body.growth = value.growth;
+      if (value.hidden !== Boolean(currency.hidden)) body.hidden = value.hidden;
+      const { data } = await api.patch<{ team: AdminTeamDetail }>(`/admin/games/${gameId.value}/teams/${teamId.value}/currencies/${currency.id}`, body, { errorHints });
       next = data.team;
     }
 
@@ -436,7 +456,7 @@ onBeforeUnmount(() => dirtyToast.clear());
               </div>
               <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_10rem]">
                 <rb-form-field :label="t('admin.pages.team.currentBalance')" :dirty="currencyDrafts[currency.id]?.amount !== (currency.current_amount ?? currency.amount)" :reset="() => (currencyDrafts[currency.id].amount = currency.current_amount ?? currency.amount)">
-                  <rb-input-number v-model="currencyDrafts[currency.id].amount" :prec="currency.prec" :min="0" :max="currency.max_amount" orientation="vertical" class="w-full" :disabled="saving" />
+                  <rb-input-number v-model="currencyDrafts[currency.id].amount" :prec="currency.prec" :max="currency.max_amount" orientation="vertical" class="w-full" :disabled="saving" />
                 </rb-form-field>
                 <rb-form-field :label="t('admin.common.growthPerMinute')" :dirty="currencyDrafts[currency.id]?.growth !== currency.team_growth" :reset="() => (currencyDrafts[currency.id].growth = currency.team_growth)">
                   <div class="flex min-w-0 items-center gap-2">
@@ -476,22 +496,41 @@ onBeforeUnmount(() => dirtyToast.clear());
 
     <rb-confirm-modal
       v-model:open="reasonOpen"
-      :title="t('admin.pages.team.confirmTeamAccess')"
-      :description="t('admin.pages.team.accessReasonDescription')"
+      :title="t('admin.pages.team.confirmTeamChanges')"
+      :description="t('admin.pages.team.changeReasonDescription')"
       :confirm-label="t('admin.pages.team.save')"
       confirm-icon="material-symbols:save-outline-rounded"
       :busy="saving"
       @confirm="saveTeam(true)"
     >
       <template #body>
-        <div class="flex flex-wrap gap-2">
-          <u-badge v-for="change in accessChanges" :key="change.key" :color="change.color" variant="soft" :icon="change.icon">
-            {{ change.label }}
-          </u-badge>
+        <div v-if="accessChanges.length" class="space-y-3">
+          <div class="font-medium text-highlighted">{{ t('admin.pages.team.accessChanges') }}</div>
+          <div class="flex flex-wrap gap-2">
+            <u-badge v-for="change in accessChanges" :key="change.key" :color="change.color" variant="soft" :icon="change.icon">
+              {{ change.label }}
+            </u-badge>
+          </div>
+          <rb-form-field :label="t('admin.pages.team.reason')">
+            <u-textarea v-model="accessChangeReason" class="w-full" :rows="3" :maxlength="500" :disabled="saving" :placeholder="t('admin.pages.team.accessReasonPlaceholder')" />
+          </rb-form-field>
         </div>
-        <rb-form-field :label="t('admin.pages.team.reason')" class="mt-4">
-          <u-textarea v-model="accessChangeReason" class="w-full" :rows="4" :maxlength="500" :disabled="saving" :placeholder="t('admin.pages.team.accessReasonPlaceholder')" />
-        </rb-form-field>
+        <u-separator v-if="accessChanges.length && currencyBalanceChanges.length" class="my-4" />
+        <div v-if="currencyBalanceChanges.length" class="space-y-3">
+          <div class="font-medium text-highlighted">{{ t('admin.pages.team.currencyBalanceChanges') }}</div>
+          <div class="space-y-2">
+            <div v-for="change in currencyBalanceChanges" :key="change.currency.id" class="flex flex-wrap items-center gap-2 rounded-md bg-elevated/60 px-3 py-2 text-sm ring ring-default">
+              <span class="font-medium text-highlighted">{{ change.currency.name }}</span>
+              <span class="text-muted">{{ intPrecString(change.before, change.currency.prec) }}</span>
+              <u-icon name="material-symbols:arrow-forward-rounded" class="text-muted" />
+              <span class="font-medium text-highlighted">{{ intPrecString(change.after, change.currency.prec) }}</span>
+              <u-badge :color="change.delta < 0 ? 'warning' : 'success'" variant="soft">{{ intPrecString(change.delta, change.currency.prec, true, ' ') }}</u-badge>
+            </div>
+          </div>
+          <rb-form-field :label="t('admin.pages.team.reason')">
+            <u-textarea v-model="currencyChangeReason" class="w-full" :rows="3" :maxlength="500" :disabled="saving" :placeholder="t('admin.pages.team.currencyReasonPlaceholder')" />
+          </rb-form-field>
+        </div>
       </template>
     </rb-confirm-modal>
 

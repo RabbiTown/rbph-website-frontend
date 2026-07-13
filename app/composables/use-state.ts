@@ -208,6 +208,20 @@ export async function resetTeamState() {
 export function usePuzzle() {
   const puzzle = useState<RbPuzzleShowData | undefined>('puzzle');
 
+  async function updateContents() {
+    const id = puzzle.value?.data.id;
+    if (!id) throw 'Invalid puzzle id';
+
+    try {
+      const { data } = await useApi().get<{ contents: RbContentBlock[] }>(`/puzzles/${id}/contents`);
+      if (puzzle.value?.data.id === id) {
+        puzzle.value.data.contents = data.contents;
+      }
+    } catch (error) {
+      showError(error instanceof Error ? error : String(error));
+    }
+  }
+
   async function updateState(new_id: string | undefined = undefined) {
     const id = new_id ? parseInt(new_id) : puzzle.value?.data.id || NaN;
     if (isNaN(id)) throw 'Invalid puzzle id';
@@ -243,7 +257,7 @@ export function usePuzzle() {
     }
   }
 
-  return { ref: puzzle, updateState, updateStateByGameRef };
+  return { ref: puzzle, updateContents, updateState, updateStateByGameRef };
 }
 
 export async function resetStates() {

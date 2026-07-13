@@ -185,6 +185,15 @@ function logView(log: AdminLogData) {
         title: t('activityLog.currencyChanged', { actor, reason: activityCurrencyReasonTitle(log, t) }),
         details: activityCurrencyDetails(log),
       };
+    case 'currency.staff_adjusted': {
+      const reason = typeof log.data.reason === 'string' ? log.data.reason.trim() : '';
+      return {
+        icon: 'material-symbols:account-balance-wallet-outline-rounded',
+        color: log.delta_amount && log.delta_amount < 0 ? ('warning' as const) : ('success' as const),
+        title: t('activityLog.currencyAdjustedByStaff', { actor, reason }),
+        details: reason ? [t('activity.reasonDetail', { reason })] : [],
+      };
+    }
     case 'ticket.opened':
       return { icon: 'material-symbols:near-me-outline-rounded', color: 'success' as const, title: t('activityLog.openedTicket', { actor, puzzle, ticketId }), details: [] };
     case 'ticket.closed':
@@ -366,7 +375,13 @@ useHead({
                   <div class="min-w-0">
                     <div class="wrap-break-word text-sm font-medium text-highlighted">
                       <u-badge v-if="isStaffActivityLog(log)" size="sm" color="warning" variant="soft" class="mr-1 align-middle">{{ t('admin.common.staff') }}</u-badge>
-                      <span>{{ logView(log).title }}</span>
+                      <i18n-t v-if="log.type === 'currency.staff_adjusted'" keypath="activityLog.currencyAdjustedByStaff" tag="span">
+                        <template #actor>{{ activityUserLabel(log.data.user, log.user_id) || t('admin.common.staff') }}</template>
+                        <template #change>
+                          <span :class="Number(log.delta_amount ?? log.data.delta ?? 0) < 0 ? 'text-warning' : 'text-success'">{{ formatActivityLogCurrency(log) }}</span>
+                        </template>
+                      </i18n-t>
+                      <span v-else>{{ logView(log).title }}</span>
                     </div>
                     <div class="mt-1 flex flex-wrap items-center gap-1.5">
                       <code class="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-toned">{{ log.type }}</code>

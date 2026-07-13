@@ -1,5 +1,11 @@
 export default defineI18nLocale(() => ({
   activityLog: {
+    currencyAdjustedByStaff: (ctx: { named: (key: string) => unknown; type: string }) => {
+      const actor = ctx.named('actor');
+      const detail = ctx.named('change') ?? ctx.named('reason');
+      if (ctx.type === 'vnode') return [actor, ' 調整了貨幣', ...(detail === undefined || detail === '' ? [] : ['（', detail, '）'])];
+      return `${String(actor ?? '')} 調整了貨幣${detail === undefined || detail === '' ? '' : `（${String(detail)}）`}`;
+    },
     currencyChangedByPuzzle: (ctx: { named: (key: string) => unknown }) => {
       const puzzle = String(ctx.named('puzzle') ?? '');
       return puzzle ? `「${puzzle}」變動了貨幣` : '題目變動了貨幣';
@@ -1216,6 +1222,11 @@ export default defineI18nLocale(() => ({
         deleteTeamRelatedData: '刪除隊伍與所有相關資料。',
         confirmTeamAccess: '確認隊伍權限變更',
         accessReasonDescription: '這些變更會記錄在隊伍動態中。您可選填變更原因。',
+        confirmTeamChanges: '確認隊伍設定變更',
+        changeReasonDescription: '權限和貨幣餘額變更會記錄在隊伍動態中，可分別提供修改原因。',
+        accessChanges: '權限變更',
+        currencyBalanceChanges: '貨幣餘額變更',
+        currencyReasonPlaceholder: '選填，說明本次貨幣餘額變更的原因',
         save: '儲存變更',
         reason: '原因',
         accessReasonPlaceholder: '選填，說明本次權限變更的原因',
@@ -1363,6 +1374,39 @@ export default defineI18nLocale(() => ({
     },
   },
   components: {
+    teamAccessMenu: {
+      edit: '修改權限',
+      adjustCurrency: '調整貨幣',
+      history: '管理記錄',
+      historyTitle: '隊伍「{team}」的管理記錄',
+      historyLoadFailed: '取得隊伍管理記錄失敗',
+      title: '修改隊伍「{team}」的權限',
+      description: '設定該隊伍的功能權限。變更會記錄在隊伍動態中。',
+      save: '儲存權限',
+      saved: '隊伍權限已更新',
+      loadFailed: '取得隊伍權限失敗',
+      saveFailed: '修改隊伍權限失敗',
+      directMessageBanned: '該隊伍站內信已被封禁，不能回覆目前會話。',
+      puzzleTicketBanned: '該隊伍人工提示已被封禁，不能回覆目前會話。',
+      currencyTitle: '調整隊伍「{team}」的貨幣',
+      currencyDescription: '增加或扣除該隊伍的可見貨幣，變更會記錄在隊伍動態中。',
+      currencyConfirm: '確認調整',
+      currencyLabel: '貨幣',
+      currencyOperation: '操作',
+      currencyAdd: '增加',
+      currencyDeduct: '扣除',
+      currencyAmount: '數量',
+      currencyCurrent: '目前餘額',
+      currencyEmpty: '該隊伍沒有可調整的貨幣',
+      currencySelectRequired: '請選擇貨幣',
+      currencyAmountInvalid: '調整數量必須大於零',
+      currencyAboveMax: '調整後餘額不能超過貨幣上限',
+      currencyReasonPlaceholder: '選填，說明本次貨幣調整的原因',
+      currencyLoadFailed: '取得隊伍貨幣失敗',
+      currencySaveFailed: '調整隊伍貨幣失敗',
+      currencySaved: '隊伍貨幣已調整',
+      currencyChangedAboveMax: '餘額已變更並重新整理，調整後將超過上限。',
+    },
     unlockConditionPreview: {
       numericReference: '#{value}',
       namedReference: '「{value}」',
@@ -1751,6 +1795,6 @@ export default defineI18nLocale(() => ({
     rbphVueAppRenderer: {
       loadFailed: 'Vue SFC 元件載入失敗。',
       loadFailedError: 'Vue SFC 元件載入失敗',
-    }
+    },
   },
 }));

@@ -462,9 +462,12 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
             </template>
           </u-popover>
 
-          <u-badge size="sm" color="primary" variant="soft" icon="material-symbols:groups-2-outline-rounded">
-            {{ ticket.team?.name }}
-          </u-badge>
+          <rbph-team-access-menu
+            v-if="ticket.team && ticket.game_id && pageData?.perm.can_host"
+            :game-id="ticket.game_id"
+            :team-id="ticket.team.id"
+            :team-name="ticket.team.name"
+          />
         </div>
       </div>
 

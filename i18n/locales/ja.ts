@@ -1,5 +1,11 @@
 export default defineI18nLocale(() => ({
   activityLog: {
+    currencyAdjustedByStaff: (ctx: { named: (key: string) => unknown; type: string }) => {
+      const actor = ctx.named('actor');
+      const detail = ctx.named('change') ?? ctx.named('reason');
+      if (ctx.type === 'vnode') return [actor, 'が通貨を調整しました', ...(detail === undefined || detail === '' ? [] : ['（', detail, '）'])];
+      return `${String(actor ?? '')}が通貨を調整しました${detail === undefined || detail === '' ? '' : `（${String(detail)}）`}`;
+    },
     currencyChangedByPuzzle: (ctx: { named: (key: string) => unknown }) => {
       const puzzle = String(ctx.named('puzzle') ?? '');
       return puzzle ? `「${puzzle}」によって通貨が変動しました` : '問題によって通貨が変動しました';
@@ -1244,6 +1250,11 @@ export default defineI18nLocale(() => ({
         deleteTeamRelatedData: 'チームと関連データをすべて削除します。',
         confirmTeamAccess: 'アクセス変更の確認',
         accessReasonDescription: '変更はチームアクティビティに記録されます。理由は任意で入力できます。',
+        confirmTeamChanges: 'チーム設定の変更を確認',
+        changeReasonDescription: '権限と通貨残高の変更はチームアクティビティに記録されます。それぞれ理由を入力できます。',
+        accessChanges: '権限の変更',
+        currencyBalanceChanges: '通貨残高の変更',
+        currencyReasonPlaceholder: '任意：今回の通貨残高変更理由',
         save: '変更を保存',
         reason: '理由',
         accessReasonPlaceholder: '変更理由（任意）',
@@ -1391,6 +1402,39 @@ export default defineI18nLocale(() => ({
     },
   },
   components: {
+    teamAccessMenu: {
+      edit: '権限を変更',
+      adjustCurrency: '通貨を調整',
+      history: '管理履歴',
+      historyTitle: 'チーム「{team}」の管理履歴',
+      historyLoadFailed: 'チーム管理履歴の取得に失敗しました',
+      title: 'チーム「{team}」の権限を変更',
+      description: 'このチームの機能権限を設定します。変更内容はチームアクティビティに記録されます。',
+      save: '権限を保存',
+      saved: 'チーム権限を更新しました',
+      loadFailed: 'チーム権限を取得できませんでした',
+      saveFailed: 'チーム権限を更新できませんでした',
+      directMessageBanned: 'このチームのメッセージ機能は利用停止中のため、現在の会話には返信できません。',
+      puzzleTicketBanned: 'このチームのスタッフヒント機能は利用停止中のため、現在の会話には返信できません。',
+      currencyTitle: 'チーム「{team}」の通貨を調整',
+      currencyDescription: 'チームに表示される通貨を追加または差し引きます。変更はチームアクティビティに記録されます。',
+      currencyConfirm: '調整を確定',
+      currencyLabel: '通貨',
+      currencyOperation: '操作',
+      currencyAdd: '追加',
+      currencyDeduct: '差し引く',
+      currencyAmount: '数量',
+      currencyCurrent: '現在の残高',
+      currencyEmpty: '調整可能な通貨がありません',
+      currencySelectRequired: '通貨を選択してください',
+      currencyAmountInvalid: '調整数量は0より大きくしてください',
+      currencyAboveMax: '調整後の残高は通貨上限を超えられません',
+      currencyReasonPlaceholder: '任意：今回の通貨調整理由',
+      currencyLoadFailed: 'チーム通貨を取得できませんでした',
+      currencySaveFailed: 'チーム通貨を調整できませんでした',
+      currencySaved: 'チーム通貨を調整しました',
+      currencyChangedAboveMax: '残高が変更されたため更新しました。調整後の残高が上限を超えます。',
+    },
     unlockConditionPreview: {
       numericReference: '#{value}',
       namedReference: '「{value}」',

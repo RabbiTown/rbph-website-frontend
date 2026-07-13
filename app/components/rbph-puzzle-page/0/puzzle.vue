@@ -48,7 +48,7 @@ function onSelfSubmitSuccess(resp: RbJudgeResponse, answer: string) {
     useGame().updateRoundState();
   }
   if (resp.content_changed) {
-    usePuzzle().updateState();
+    usePuzzle().updateContents();
   }
 }
 
@@ -71,7 +71,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
     }
   }
   if (!isSelfEcho && data.content_changed) {
-    usePuzzle().updateState();
+    usePuzzle().updateContents();
   }
 });
 </script>

@@ -47,6 +47,34 @@ async function updateData(id: string | undefined = undefined, clearExisting = tr
   }
 }
 
+async function updateContents() {
+  const id = round.value?.data.id;
+  if (!id) return;
+
+  try {
+    const { data } = await api.get<{ contents: RbContentBlock[] }>(`/rounds/${id}/contents`);
+    if (round.value?.data.id === id) {
+      round.value.data.contents = data.contents;
+    }
+  } catch (error) {
+    showError(error instanceof Error ? error : String(error));
+  }
+}
+
+async function updateRoundState() {
+  const id = round.value?.data.id;
+  if (!id) return;
+
+  try {
+    const { data } = await api.get<RbRoundUserData>(`/rounds/${id}`);
+    if (round.value?.data.id === id) {
+      round.value.state = data.state;
+    }
+  } catch (error) {
+    showError(error instanceof Error ? error : String(error));
+  }
+}
+
 watch(
   roundId,
   async newId => {
@@ -85,8 +113,11 @@ function onSelfSubmitSuccess(resp: RbJudgeResponse, answer: string) {
   if (resp.unlocks && resp.unlocks.length > 0) {
     useGame().updateRoundState();
   }
-  if (shouldRefreshAfterPuzzleSubmit(resp.result.action, resp.unlocks, round.value?.data.id, resp.content_changed)) {
-    updateData(undefined, false);
+  if (resp.content_changed) {
+    updateContents();
+  }
+  if (hasPuzzleUnlockInRound(resp.unlocks, round.value?.data.id)) {
+    updateRoundState();
   }
 }
 
@@ -106,8 +137,11 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
     }
     onSubmitSuccess(data.action);
   }
-  if (!isSelfEcho && shouldRefreshAfterPuzzleSubmit(data.action, data.unlocks, round.value?.data.id, data.content_changed)) {
-    updateData(undefined, false);
+  if (!isSelfEcho && data.content_changed) {
+    updateContents();
+  }
+  if (!isSelfEcho && (data.content_changed || hasPuzzleUnlockInRound(data.unlocks, round.value?.data.id))) {
+    updateRoundState();
   }
 });
 </script>

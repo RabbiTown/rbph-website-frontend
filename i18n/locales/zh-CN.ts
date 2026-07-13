@@ -1,5 +1,11 @@
 export default defineI18nLocale(() => ({
   activityLog: {
+    currencyAdjustedByStaff: (ctx: { named: (key: string) => unknown; type: string }) => {
+      const actor = ctx.named('actor');
+      const detail = ctx.named('change') ?? ctx.named('reason');
+      if (ctx.type === 'vnode') return [actor, ' 调整了货币', ...(detail === undefined || detail === '' ? [] : ['（', detail, '）'])];
+      return `${String(actor ?? '')} 调整了货币${detail === undefined || detail === '' ? '' : `（${String(detail)}）`}`;
+    },
     currencyChangedByPuzzle: (ctx: { named: (key: string) => unknown }) => {
       const puzzle = String(ctx.named('puzzle') ?? '');
       return puzzle ? `「${puzzle}」变动了货币` : '题目变动了货币';
@@ -1217,6 +1223,11 @@ export default defineI18nLocale(() => ({
         deleteTeamRelatedData: '删除队伍及其关联数据。',
         confirmTeamAccess: '确认队伍权限变更',
         accessReasonDescription: '这些变更将记录在队伍动态中，可为本次变更提供一条原因。',
+        confirmTeamChanges: '确认队伍设置变更',
+        changeReasonDescription: '权限和货币余额变更将记录在队伍动态中，可分别提供修改原因。',
+        accessChanges: '权限变更',
+        currencyBalanceChanges: '货币余额变更',
+        currencyReasonPlaceholder: '选填，说明本次货币余额变更的原因',
         save: '保存变更',
         reason: '原因',
         accessReasonPlaceholder: '选填，说明本次权限变更的原因',
@@ -1364,6 +1375,39 @@ export default defineI18nLocale(() => ({
     },
   },
   components: {
+    teamAccessMenu: {
+      edit: '修改权限',
+      adjustCurrency: '调整货币',
+      history: '管理记录',
+      historyTitle: '队伍「{team}」的管理记录',
+      historyLoadFailed: '获取队伍管理记录失败',
+      title: '修改队伍「{team}」的权限',
+      description: '设置该队伍的功能权限。变更会记录在队伍动态中。',
+      save: '保存权限',
+      saved: '队伍权限已更新',
+      loadFailed: '获取队伍权限失败',
+      saveFailed: '修改队伍权限失败',
+      directMessageBanned: '该队伍站内信已被封禁，不能回复当前会话。',
+      puzzleTicketBanned: '该队伍人工提示已被封禁，不能回复当前会话。',
+      currencyTitle: '调整队伍「{team}」的货币',
+      currencyDescription: '增加或扣除该队伍的可见货币，变更会记录在队伍动态中。',
+      currencyConfirm: '确认调整',
+      currencyLabel: '货币',
+      currencyOperation: '操作',
+      currencyAdd: '增加',
+      currencyDeduct: '扣除',
+      currencyAmount: '数量',
+      currencyCurrent: '当前余额',
+      currencyEmpty: '该队伍没有可调整的货币',
+      currencySelectRequired: '请选择货币',
+      currencyAmountInvalid: '调整数量必须大于零',
+      currencyAboveMax: '调整后余额不能超过货币上限',
+      currencyReasonPlaceholder: '选填，说明本次货币调整的原因',
+      currencyLoadFailed: '获取队伍货币失败',
+      currencySaveFailed: '调整队伍货币失败',
+      currencySaved: '队伍货币已调整',
+      currencyChangedAboveMax: '余额已变化并已刷新，调整后将超过上限。',
+    },
     unlockConditionPreview: {
       numericReference: '#{value}',
       namedReference: '「{value}」',

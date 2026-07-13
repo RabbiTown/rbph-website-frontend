@@ -113,9 +113,7 @@ export function applyPuzzleSubmitState(current: RbPuzzleTeamData, patch: PuzzleS
   return next;
 }
 
-export function shouldRefreshAfterPuzzleSubmit(action: RbJudgeAction, unlocks?: { round_id: number }[], currentRoundId?: number, contentChanged = false): boolean {
-  if (contentChanged) return true;
-  if (action === RbJudgeAction.StartGame || action === RbJudgeAction.FinishGame) return true;
+export function hasPuzzleUnlockInRound(unlocks?: { round_id: number }[], currentRoundId?: number): boolean {
   return Boolean(currentRoundId !== undefined && unlocks?.some(puzzle => puzzle.round_id === currentRoundId));
 }
 
@@ -399,6 +397,44 @@ export interface AdminTeamDetail extends Omit<RbTeam, 'state'> {
   finish_at?: string | null;
   features: AdminTeamFeatureData[];
   currency: AdminTeamCurrency[];
+}
+
+export interface StaffTeamAccessData {
+  team_id: number;
+  is_banned: boolean;
+  is_locked: boolean;
+  features: RbTeamFeatureData[];
+}
+
+export interface StaffTeamAccessCapabilities {
+  team_ban: boolean;
+  team_lock: boolean;
+  features: RbTeamFeature[];
+}
+
+export interface StaffTeamAccessResponse {
+  access: StaffTeamAccessData;
+  editable: StaffTeamAccessCapabilities;
+}
+
+export interface StaffTeamAccessUpdateRequest {
+  is_banned?: boolean;
+  is_locked?: boolean;
+  features?: RbTeamFeatureData[];
+  reason?: string;
+}
+
+export interface StaffTeamCurrencyListResponse {
+  currencies: RbTeamCurrency[];
+}
+
+export interface StaffTeamCurrencyAdjustResponse {
+  currency: RbTeamCurrency;
+}
+
+export interface StaffTeamCurrencyAdjustRequest {
+  delta: number;
+  reason?: string;
 }
 
 export interface AdminTeamCurrency extends RbTeamCurrency {

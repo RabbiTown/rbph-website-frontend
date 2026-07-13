@@ -25,6 +25,7 @@ type CurrencyActivityRow = { kind: 'activity'; id: number; activity: RbTeamActiv
 
 const pageSize = 20;
 const api = useApi();
+const UBadge = resolveComponent('UBadge');
 const game = useGame().ref;
 const currency = useCurrency().getAllCurrent();
 const { t } = useI18n();
@@ -219,8 +220,17 @@ function activityView(activity: RbTeamActivity) {
         icon: 'material-symbols:account-balance-wallet-outline-rounded',
         color: activity.delta_amount && activity.delta_amount < 0 ? ('warning' as const) : ('success' as const),
         title: activityCurrencyReasonTitle(activity, t),
-        details: [t('activityLog.currencyDetail', { change: currencyText, balance: activityCurrencyAfter(activity) })],
+        details: [],
       };
+    case 'currency.staff_adjusted': {
+      const reason = typeof data.reason === 'string' ? data.reason.trim() : '';
+      return {
+        icon: 'material-symbols:account-balance-wallet-outline-rounded',
+        color: activity.delta_amount && activity.delta_amount < 0 ? ('warning' as const) : ('success' as const),
+        title: t('activityLog.currencyAdjustedByStaff', { actor, reason }),
+        details: reason ? [t('activity.reasonDetail', { reason })] : [],
+      };
+    }
     case 'ticket.opened':
       return { icon: 'material-symbols:near-me-outline-rounded', color: 'success' as const, title: t('activityLog.openedTicket', { actor, puzzle, ticketId }), details: [] };
     case 'ticket.closed':
@@ -284,7 +294,19 @@ const currencyColumns = computed<TableColumn<CurrencyActivityRow>[]>(() => [
       if (row.original.kind === 'init') return h('div', { class: 'wrap-break-word py-1 text-sm font-medium text-highlighted' }, t('activity.initialGain'));
       const activity = row.original.activity;
       const view = activityView(activity);
-      return h('div', { class: 'min-w-0 py-1' }, [h('div', { class: 'wrap-break-word text-sm font-medium text-highlighted' }, view.title), h('time', { class: 'mt-1 block text-xs text-muted' }, formatDate(activity.ctime_at))]);
+      const reason = typeof activity.data.reason === 'string' ? activity.data.reason.trim() : '';
+      const actor = activityUserLabel(activity.data.user, activity.user_id) || t('activity.staff');
+      const eventTitle = activity.type === 'currency.staff_adjusted' ? t('activityLog.currencyAdjustedByStaff', { actor, reason }) : view.title;
+      const title = [
+        ...(isStaffActivityLog(activity) ? [h(UBadge, { size: 'sm', color: 'warning', variant: 'soft', class: 'mr-1 align-middle mb-0.5' }, () => t('activity.staff'))] : []),
+        h('span', eventTitle),
+      ];
+      const details = activity.type === 'hint.purchased' || activity.type === 'currency.staff_adjusted' ? [] : view.details;
+      return h('div', { class: 'min-w-0 py-1' }, [
+        h('div', { class: 'wrap-break-word text-sm font-medium text-highlighted' }, title),
+        ...details.map(detail => h('div', { class: 'mt-1 wrap-break-word text-sm text-muted' }, detail)),
+        h('time', { class: 'mt-1 block text-xs text-muted' }, formatDate(activity.ctime_at)),
+      ]);
     },
     meta: {
       class: {
@@ -346,7 +368,22 @@ defineExpose({
           <div :class="['flex justify-between gap-3', activityView(activity).details.length === 0 ? 'items-center' : 'items-start']">
             <div class="min-w-0 wrap-break-word text-sm font-medium text-highlighted">
               <u-badge v-if="isStaffActivityLog(activity)" size="sm" color="warning" variant="soft" class="mr-1 align-middle mb-0.5">{{ t('activity.staff') }}</u-badge>
-              <span>{{ activityView(activity).title }}</span>
+              <i18n-t v-if="activity.type === 'currency.staff_adjusted'" keypath="activityLog.currencyAdjustedByStaff" tag="span">
+                <template #actor>{{ activityUserLabel(activity.data.user, activity.user_id) || t('activity.staff') }}</template>
+                <template #change>
+                  <span :class="Number(activity.delta_amount ?? activity.data.delta ?? 0) < 0 ? 'text-warning' : 'text-success'">{{ formatActivityLogCurrency(activity) }}</span>
+                </template>
+              </i18n-t>
+              <span v-else>{{ activityView(activity).title }}</span>
+              <span
+                v-if="['currency.cost', 'currency.added'].includes(activity.type)"
+                :class="[
+                  Number(activity.delta_amount ?? activity.data.delta ?? 0) < 0 ? 'text-warning' : 'text-success',
+                  'ml-1',
+                ]"
+              >
+                {{ formatActivityLogCurrency(activity) }}
+              </span>
               <time class="mt-1 block text-xs font-normal text-muted sm:hidden">{{ formatDate(activity.ctime_at) }}</time>
             </div>
             <time class="hidden shrink-0 text-xs text-muted sm:block">{{ formatDate(activity.ctime_at) }}</time>

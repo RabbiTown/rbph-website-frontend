@@ -41,7 +41,8 @@ export function useCurrency(activate: boolean = true) {
   const syncTime = useSyncTime().currentTimeRef;
 
   function calcCurrent(target: RbTeamCurrency): number {
-    return Math.min(target.amount + Math.floor((syncTime.value - new Date(target.utime_at).getTime()) / 60000) * target.growth, target.max_amount);
+    const calculated = target.amount + Math.floor((syncTime.value - new Date(target.utime_at).getTime()) / 60000) * target.growth;
+    return Math.max(Math.min(target.amount, 0), Math.min(calculated, target.max_amount));
   }
 
   function getCurrent(id: number): ComputedRef<number | undefined> {
