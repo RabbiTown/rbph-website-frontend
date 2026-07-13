@@ -593,6 +593,7 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
             orientation="horizontal"
             icon="material-symbols:warning-outline-rounded"
             :title="thread.ticket.puzzle ? t('components.teamAccessMenu.puzzleTicketBanned') : t('components.teamAccessMenu.directMessageBanned')"
+            :description="t('components.teamAccessMenu.featureBannedDescription')"
           >
             <template #actions>
               <u-button
