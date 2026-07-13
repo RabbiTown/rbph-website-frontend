@@ -19,6 +19,7 @@ async function enterGame(game: RbGame) {
 }
 
 async function initialize() {
+  let redirecting = false;
   try {
     const userReady = userMgr.waitUpdate();
     const selectedId = Number(localStorage.getItem('rbph::select_game'));
@@ -36,21 +37,26 @@ async function initialize() {
 
     await userReady;
     if (selectedGame) {
+      redirecting = true;
       await enterGame(selectedGame);
     } else {
       const { data } = await api.get<RbGame[]>('/games/active');
-      games.value = data;
 
       if (data.length === 0 && (userMgr.ref.value?.urole ?? RbUserRole.User) >= RbUserRole.Admin) {
+        redirecting = true;
         await navigateTo('/admin');
       } else if (data.length === 1 && data[0]) {
+        redirecting = true;
         await enterGame(data[0]);
+      } else {
+        games.value = data;
       }
     }
   } catch (error) {
+    redirecting = false;
     showError(error instanceof Error ? error : String(error));
   } finally {
-    loading.value = false;
+    if (!redirecting) loading.value = false;
   }
 }
 
