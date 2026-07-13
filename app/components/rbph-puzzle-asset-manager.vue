@@ -13,6 +13,7 @@ interface AdminAssetGroupData {
   size: number;
   sha256: string;
   ctime_at: string;
+  public_url?: string | null;
 }
 
 interface AdminAssetFileData {
@@ -23,6 +24,7 @@ interface AdminAssetFileData {
   size: number;
   sha256: string;
   ctime_at: string;
+  public_url?: string | null;
 }
 
 interface AdminAssetGroupItem {
@@ -32,9 +34,21 @@ interface AdminAssetGroupItem {
 
 interface AssetStorageBackendData {
   backend: string;
-  kind: 'local' | 'cos';
+  kind: string;
   label: string;
   recommended: boolean;
+  public_read: boolean;
+  backend_read: boolean;
+  allowed_scopes: AssetScope[];
+  max_file_bytes?: number | null;
+  max_group_bytes?: number | null;
+}
+
+type AssetScope = 'game' | 'puzzle' | 'round';
+
+interface StorageKindMeta {
+  icon: string;
+  description: string;
 }
 
 interface AssetTreeItem {
@@ -68,7 +82,15 @@ const infoOpen = ref(false);
 const uploadChoice = ref<'group' | 'file'>('group');
 const uploadBackend = ref('local');
 const storageBackends = ref<AssetStorageBackendData[]>([
-  { backend: 'local', kind: 'local', label: t('components.rbphPuzzleAssetManager.storage.local.label'), recommended: true },
+  {
+    backend: 'local',
+    kind: 'local',
+    label: t('components.rbphPuzzleAssetManager.storage.local.label'),
+    recommended: true,
+    public_read: true,
+    backend_read: true,
+    allowed_scopes: ['game', 'puzzle', 'round'],
+  },
 ]);
 const infoTarget = ref<AdminAssetGroupItem | null>(null);
 const groups = ref<AdminAssetGroupItem[]>([]);
@@ -93,19 +115,31 @@ const infoDirty = computed(() => Boolean(infoTarget.value && infoState.originalN
 const infoFileTree = computed(() => (infoTarget.value ? buildAssetFileTree(infoTarget.value.files) : []));
 const infoFileTreeKey = computed(() => infoTarget.value?.files.map(file => `${file.id}:${file.relative_path}`).join('|') ?? 'empty');
 const uploadIsZip = computed(() => Boolean(files.value && shouldUploadAsGroup(files.value)));
+const currentAssetScope = computed<AssetScope>(() => (roundId.value ? 'round' : puzzleId.value ? 'puzzle' : 'game'));
 
-const storageKindMeta = {
+const storageKindMeta: Record<string, StorageKindMeta> = {
   local: {
-    label: t('components.rbphPuzzleAssetManager.storage.local.label'),
     icon: 'material-symbols:hard-drive-outline',
     description: t('components.rbphPuzzleAssetManager.storage.local.description'),
   },
   cos: {
-    label: t('components.rbphPuzzleAssetManager.storage.cos.label'),
     icon: 'material-symbols:cloud-outline',
     description: t('components.rbphPuzzleAssetManager.storage.cos.description'),
   },
-} as const;
+  database: {
+    icon: 'material-symbols:database-outline',
+    description: t('components.rbphPuzzleAssetManager.storage.database.description'),
+  },
+};
+
+const unknownStorageKindMeta: StorageKindMeta = {
+  icon: 'material-symbols:storage-rounded',
+  description: '',
+};
+
+function getStorageKindMeta(kind: string) {
+  return storageKindMeta[kind] ?? unknownStorageKindMeta;
+}
 
 function storageLabel(backend: string) {
   return storageBackends.value.find(item => item.backend === backend)?.label ?? backend;
@@ -113,10 +147,17 @@ function storageLabel(backend: string) {
 
 function storageIcon(backend: string) {
   const kind = storageBackends.value.find(item => item.backend === backend)?.kind;
-  return kind ? storageKindMeta[kind].icon : 'material-symbols:storage-rounded';
+  return getStorageKindMeta(kind ?? '').icon;
 }
 
-const selectedStorageBackend = computed(() => storageBackends.value.find(item => item.backend === uploadBackend.value));
+const uploadStorageBackends = computed(() => storageBackends.value.filter(item => !item.allowed_scopes?.length || item.allowed_scopes.includes(currentAssetScope.value)));
+const selectedStorageBackend = computed(() => uploadStorageBackends.value.find(item => item.backend === uploadBackend.value));
+
+function selectDefaultStorageBackend() {
+  const available = uploadStorageBackends.value;
+  if (available.some(item => item.backend === uploadBackend.value)) return;
+  uploadBackend.value = available.find(item => item.recommended)?.backend ?? available[0]?.backend ?? '';
+}
 
 function formatBytes(size: number) {
   if (!size) return '0 B';
@@ -207,11 +248,19 @@ function encodeAssetPath(path: string) {
 }
 
 function fileUrl(item: AdminAssetGroupItem, file: AdminAssetFileData) {
-  return `/assets/${encodeURIComponent(item.group.object_key)}/${encodeAssetPath(file.relative_path)}`;
+  return file.public_url ?? `/assets/${encodeURIComponent(item.group.object_key)}/${encodeAssetPath(file.relative_path)}`;
 }
 
 function groupUrl(item: AdminAssetGroupItem) {
-  return `/assets/${encodeURIComponent(item.group.object_key)}/`;
+  return item.group.public_url ?? `/assets/${encodeURIComponent(item.group.object_key)}/`;
+}
+
+function adminFileUrl(item: AdminAssetGroupItem, file: AdminAssetFileData) {
+  return buildUrl(`/admin/assets/${item.group.id}/files/${file.id}/content`);
+}
+
+function isPublicAsset(item: AdminAssetGroupItem) {
+  return storageBackends.value.find(backend => backend.backend === item.group.backend)?.public_read === true;
 }
 
 function primaryFile(item: AdminAssetGroupItem) {
@@ -251,6 +300,11 @@ function assetOriginalName(item: AdminAssetGroupItem) {
 }
 
 function onAssetDragStart(event: DragEvent, item: AdminAssetGroupItem) {
+  if (!isPublicAsset(item)) {
+    event.preventDefault();
+    return;
+  }
+
   setRbAssetDragData(event, {
     url: assetUrl(item),
     mimeType: assetMimeType(item),
@@ -304,7 +358,7 @@ async function fetchStorageBackends() {
     const { data } = await api.get<{ backends: AssetStorageBackendData[] }>('/admin/assets/storage-backends');
     if (!data.backends.length) return;
     storageBackends.value = data.backends;
-    uploadBackend.value = data.backends.find(item => item.recommended)?.backend ?? data.backends[0]!.backend;
+    uploadBackend.value = uploadStorageBackends.value.find(item => item.recommended)?.backend ?? uploadStorageBackends.value[0]?.backend ?? '';
   } catch (error) {
     handleError(error, t('components.rbphPuzzleAssetManager.loadStorageBackendsFailed'));
   }
@@ -537,7 +591,7 @@ async function deleteAsset(item: AdminAssetGroupItem) {
 
 async function uploadFiles() {
   const value = files.value;
-  if (!value || !gameId.value || !hasScope.value || uploading.value) return;
+  if (!value || !gameId.value || !hasScope.value || !selectedStorageBackend.value || uploading.value) return;
 
   uploading.value = true;
 
@@ -597,6 +651,7 @@ function onUploadModalOpenChange(open: boolean) {
 watch(
   () => [gameId.value, puzzleId.value, roundId.value] as const,
   () => {
+    selectDefaultStorageBackend();
     void refreshAssets();
   },
   { immediate: true },
@@ -632,7 +687,7 @@ onMounted(fetchStorageBackends);
         <u-skeleton v-for="i in 3" :key="i" class="h-16 w-full" />
       </div>
       <div v-else class="space-y-2">
-        <div v-for="item in groups" :key="item.group.id" class="rounded-lg border border-default bg-elevated/60 p-3 transition hover:bg-elevated" draggable="true" @dragstart="onAssetDragStart($event, item)">
+        <div v-for="item in groups" :key="item.group.id" class="rounded-lg border border-default bg-elevated/60 p-3 transition hover:bg-elevated" :draggable="isPublicAsset(item)" @dragstart="onAssetDragStart($event, item)">
           <div class="flex items-start gap-3">
             <div class="min-w-0 flex-1">
               <div class="truncate text-sm font-medium text-highlighted">{{ item.group.original_name }}</div>
@@ -646,8 +701,8 @@ onMounted(fetchStorageBackends);
               </div>
               <div class="mt-1 flex justify-end gap-1">
                 <u-button size="xs" color="neutral" variant="ghost" icon="material-symbols:info-outline-rounded" @click="openAssetInfo(item)" />
-                <u-button size="xs" color="neutral" variant="ghost" icon="material-symbols:content-copy-outline-rounded" @click="copyUrl(assetUrl(item))" />
-                <template v-if="isSingleAsset(item)">
+                <u-button v-if="isPublicAsset(item)" size="xs" color="neutral" variant="ghost" icon="material-symbols:content-copy-outline-rounded" @click="copyUrl(assetUrl(item))" />
+                <template v-if="isPublicAsset(item) && isSingleAsset(item)">
                   <u-button size="xs" color="neutral" variant="ghost" icon="material-symbols:open-in-new-rounded" :href="assetUrl(item)" external target="_blank" />
                 </template>
                 <u-popover arrow :content="{ side: 'top', align: 'end', sideOffset: 8 }">
@@ -750,8 +805,11 @@ onMounted(fetchStorageBackends);
                       </div>
 
                       <div v-else-if="item.file" class="ms-auto flex shrink-0 items-center gap-1">
-                        <u-button size="xs" color="neutral" variant="ghost" icon="material-symbols:content-copy-outline-rounded" @click.stop="copyUrl(fileUrl(infoTarget, item.file))" />
-                        <u-button size="xs" color="neutral" variant="ghost" icon="material-symbols:open-in-new-rounded" :href="fileUrl(infoTarget, item.file)" external target="_blank" @click.stop />
+                        <template v-if="isPublicAsset(infoTarget)">
+                          <u-button size="xs" color="neutral" variant="ghost" icon="material-symbols:content-copy-outline-rounded" @click.stop="copyUrl(fileUrl(infoTarget, item.file))" />
+                          <u-button size="xs" color="neutral" variant="ghost" icon="material-symbols:open-in-new-rounded" :href="fileUrl(infoTarget, item.file)" external target="_blank" @click.stop />
+                        </template>
+                        <u-button v-else size="xs" color="neutral" variant="ghost" icon="material-symbols:download-rounded" :href="adminFileUrl(infoTarget, item.file)" external @click.stop />
                         <u-button size="xs" color="neutral" variant="ghost" icon="material-symbols:edit-outline-rounded" @click.stop="startFileRename(item.file)" />
                         <u-popover arrow :content="{ side: 'top', align: 'end', sideOffset: 8 }">
                           <u-button size="xs" color="error" variant="ghost" icon="material-symbols:delete-outline-rounded" :loading="deletingFileId === item.file.id" @click.stop />
@@ -831,12 +889,12 @@ onMounted(fetchStorageBackends);
             <div class="text-sm font-medium text-highlighted">{{ t('components.rbphPuzzleAssetManager.storageBackend') }}</div>
             <u-field-group class="flex w-full">
               <u-button
-                v-for="backend in storageBackends"
+                v-for="backend in uploadStorageBackends"
                 :key="backend.backend"
                 color="neutral"
                 variant="soft"
                 active-color="primary"
-                :icon="storageKindMeta[backend.kind].icon"
+                :icon="getStorageKindMeta(backend.kind).icon"
                 :label="backend.label"
                 class="flex-1 justify-center"
                 :active="uploadBackend === backend.backend"
@@ -844,7 +902,7 @@ onMounted(fetchStorageBackends);
                 @click="uploadBackend = backend.backend"
               />
             </u-field-group>
-            <p v-if="selectedStorageBackend" class="text-xs text-muted">{{ storageKindMeta[selectedStorageBackend.kind].description }}</p>
+            <p v-if="selectedStorageBackend" class="text-xs text-muted">{{ getStorageKindMeta(selectedStorageBackend.kind).description }}</p>
           </div>
         </div>
       </template>
@@ -852,7 +910,7 @@ onMounted(fetchStorageBackends);
       <template #footer>
         <div class="flex w-full justify-end gap-2">
           <u-button color="neutral" variant="soft" :disabled="uploading" @click="clearUpload"> {{ t('admin.common.cancel') }} </u-button>
-          <u-button color="primary" icon="material-symbols:upload-2-outline-rounded" :loading="uploading" :disabled="uploading || !files" @click="uploadFiles">{{ t('components.rbphPuzzleAssetManager.upload') }}</u-button>
+          <u-button color="primary" icon="material-symbols:upload-2-outline-rounded" :loading="uploading" :disabled="uploading || !files || !selectedStorageBackend" @click="uploadFiles">{{ t('components.rbphPuzzleAssetManager.upload') }}</u-button>
         </div>
       </template>
     </u-modal>
