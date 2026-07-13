@@ -6,62 +6,25 @@ export default defineI18nLocale(() => ({
       if (ctx.type === 'vnode') return [actor, ' 調整了貨幣', ...(detail === undefined || detail === '' ? [] : ['（', detail, '）'])];
       return `${String(actor ?? '')} 調整了貨幣${detail === undefined || detail === '' ? '' : `（${String(detail)}）`}`;
     },
-    currencyChangedByPuzzle: (ctx: { named: (key: string) => unknown }) => {
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      return puzzle ? `「${puzzle}」變動了貨幣` : '題目變動了貨幣';
-    },
+    currencyChangedByPuzzle: '「{puzzle}」變動了貨幣',
     cooldownSeconds: '提交冷卻 {seconds} 秒',
     cooldownUntil: '提交冷卻至 {time}',
     submissionDetail: '提交結果：{result}{consequences}{feedback}',
     consequenceGroup: '（{text}）',
-    submissionPenalty: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor} 提交答案錯誤懲罰` : '提交答案錯誤懲罰';
-    },
-    currencyDetail: (ctx: { named: (key: string) => unknown }) => {
-      const change = String(ctx.named('change') ?? '');
-      const balance = String(ctx.named('balance') ?? '');
-      return `變動：${change}${balance ? `；餘額：${balance}` : ''}`;
-    },
-    teamCreated: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const team = String(ctx.named('team') ?? '');
-      const target = team ? `「${team}」` : '';
-      return actor ? `${actor} 建立了隊伍${target}` : `建立了隊伍${target}`;
-    },
-    teamUpdated: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor} 更新了隊伍資訊` : '更新了隊伍資訊';
-    },
-    teamDisbanded: (ctx: { named: (key: string) => unknown }) => {
-      const team = String(ctx.named('team') ?? '');
-      const teamId = String(ctx.named('teamId') ?? '');
-      return `解散了${team ? `隊伍「${team}」` : teamId ? `隊伍 #${teamId}` : '隊伍'}`;
-    },
+    submissionPenalty: '{actor} 提交答案錯誤懲罰',
+    teamCreated: '{actor} 建立了隊伍「{team}」',
+    teamUpdated: '{actor} 更新了隊伍資訊',
+    teamDisbanded: '解散了隊伍 #{teamId}',
     teamAccessChanged: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
       const value = ctx.named('changes');
       const changes = Array.isArray(value) && value.length ? value.map(String).join('、') : '調整了隊伍權限';
       return actor ? `${actor} ${changes}` : changes;
     },
-    memberJoined: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor} 加入了隊伍` : '加入了隊伍';
-    },
-    memberLeft: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor} 離開了隊伍` : '離開了隊伍';
-    },
-    memberKicked: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const target = String(ctx.named('target') ?? '');
-      return actor ? (target ? `${actor} 移除了成員 ${target}` : `${actor} 移除了成員`) : target ? `移除了成員 ${target}` : '移除了成員';
-    },
-    memberPromoted: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const target = String(ctx.named('target') ?? '');
-      return actor ? (target ? `${actor} 將 ${target} 設定為隊長` : `${actor} 變更了隊長`) : target ? `將 ${target} 設定為隊長` : '變更了隊長';
-    },
+    memberJoined: '{actor} 加入了隊伍',
+    memberLeft: '{actor} 離開了隊伍',
+    memberKicked: '{actor} 移除了成員 {target}',
+    memberPromoted: '{actor} 將 {target} 設定為隊長',
     submittedAnswer: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
       const puzzle = String(ctx.named('puzzle') ?? '') || '題目';
@@ -70,70 +33,24 @@ export default defineI18nLocale(() => ({
       const target = puzzle === '題目' ? puzzle : `「${puzzle}」`;
       return actor ? `${actor} 向${target}提交了答案${suffix}` : `向${target}提交了答案${suffix}`;
     },
-    solvedPuzzle: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const target = puzzle ? `「${puzzle}」` : '題目';
-      return actor ? `${actor} 解出了${target}` : `解出了${target}`;
-    },
-    openedPuzzle: (ctx: { named: (key: string) => unknown }) => {
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      return `開放了題目${puzzle ? `「${puzzle}」` : '題目'}`;
-    },
-    startedGame: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor} 開始了比賽` : '開始了比賽';
-    },
-    unlockedHint: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const hint = String(ctx.named('hint') ?? '');
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const puzzleTarget = puzzle ? `「${puzzle}」` : '題目';
-      const hintTarget = hint ? `「${hint}」` : '提示';
-      return actor ? `${actor} 在${puzzleTarget}解鎖了提示${hintTarget}` : `在${puzzleTarget}解鎖了提示${hintTarget}`;
-    },
-    spentHint: (ctx: { named: (key: string) => unknown }) => `已花費 ${String(ctx.named('amount') ?? '')} 解鎖提示`,
-    wrongSubmissionPenalty: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const target = puzzle ? `「${puzzle}」` : '題目';
-      return actor ? `${actor} 在${target}提交答案錯誤懲罰` : `在${target}提交答案錯誤懲罰`;
-    },
-    currencyChange: (ctx: { named: (key: string) => unknown }) => `變動：${String(ctx.named('change') ?? '')}`,
-    openedTicket: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const ticketId = String(ctx.named('ticketId') ?? '');
-      const ticket = puzzle && ticketId ? `「${puzzle}#${ticketId}」` : ticketId ? `#${ticketId}` : '';
-      return actor ? `${actor} 開啟了人工提示${ticket}` : `開啟了人工提示${ticket}`;
-    },
-    closedTicket: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const ticketId = String(ctx.named('ticketId') ?? '');
-      const ticket = puzzle && ticketId ? `「${puzzle}#${ticketId}」` : ticketId ? `#${ticketId}` : '';
-      return actor ? `${actor} 關閉了人工提示${ticket}` : `關閉了人工提示${ticket}`;
-    },
-    purchasedTicketMessage: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const ticketId = String(ctx.named('ticketId') ?? '');
-      const ticket = puzzle && ticketId ? `「${puzzle}#${ticketId}」` : ticketId ? `#${ticketId}` : '';
-      return actor ? `${actor} 在人工提示${ticket}中購買了付費消息` : `在人工提示${ticket}中購買了付費消息`;
-    },
-    currencyChanged: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const reason = String(ctx.named('reason') ?? '').trim() || '變動了貨幣';
-      return actor ? `${actor} ${reason}` : reason;
-    },
+    solvedPuzzle: '{actor} 解出了「{puzzle}」',
+    openedPuzzle: '開放了題目「{puzzle}」',
+    startedGame: '{actor} 開始了比賽',
+    unlockedHint: '{actor} 在「{puzzle}」解鎖了提示「{hint}」',
+    spentHint: '已花費 {amount} 解鎖提示',
+    wrongSubmissionPenalty: '{actor} 在「{puzzle}」提交答案錯誤懲罰',
+    currencyChange: '變動：{change}',
+    openedTicket: '{actor} 開啟了人工提示「{puzzle}#{ticketId}」',
+    closedTicket: '{actor} 關閉了人工提示「{puzzle}#{ticketId}」',
+    purchasedTicketMessage: '{actor} 在人工提示「{puzzle}#{ticketId}」中購買了付費消息',
     events: {
-      loggedIn: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('actor') ?? '').trim()} 登入`.trim(),
-      loggedOut: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('actor') ?? '').trim()} 登出`.trim(),
-      registrationRequested: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('actor') ?? '').trim()} 請求註冊帳號`.trim(),
-      registered: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('actor') ?? '').trim()} 註冊帳號`.trim(),
-      accountVerified: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('actor') ?? '').trim()} 完成帳號驗證`.trim(),
-      systemSettingsUpdated: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('actor') ?? '').trim()} 修改了系統設定`.trim(),
-      profileUpdated: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('actor') ?? '').trim()} 更新了個人資料`.trim(),
+      loggedIn: '{actor} 登入',
+      loggedOut: '{actor} 登出',
+      registrationRequested: '請求註冊帳號',
+      registered: '{actor} 註冊帳號',
+      accountVerified: '{actor} 完成帳號驗證',
+      systemSettingsUpdated: '{actor} 修改了系統設定',
+      profileUpdated: '{actor} 更新了個人資料',
       unknown: (ctx: { named: (key: string) => unknown }) => {
         const actor = String(ctx.named('actor') ?? '').trim();
         return `${actor ? `${actor} ` : ''}觸發了事件 ${String(ctx.named('event') ?? '')}`;
@@ -1183,7 +1100,10 @@ export default defineI18nLocale(() => ({
           lock: '鎖定隊伍',
           unlock: '解鎖隊伍',
         },
-        featureAction: (ctx: { named: (key: string) => unknown }) => `${ctx.named('enabled') ? '啟用' : '停用'}${String(ctx.named('feature') ?? '')}`,
+        featureAction: {
+          enable: '啟用{feature}',
+          disable: '停用{feature}',
+        },
         loadTeamDetailsFailed: '取得隊伍詳細資料失敗',
         teamNamePasswordCannotEmpty: '請填寫隊伍名稱與密碼',
         teamSettingsSaved: '隊伍設定已儲存',

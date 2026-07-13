@@ -116,7 +116,7 @@ function logView(log: AdminLogData) {
     case 'auth.logout':
       return { icon: 'material-symbols:logout-rounded', color: 'neutral' as const, title: t('activityLog.events.loggedOut', { actor }), details: [] };
     case 'auth.register_requested':
-      return { icon: 'material-symbols:how-to-reg-outline-rounded', color: 'primary' as const, title: t('activityLog.events.registrationRequested', { actor }), details: data.email ? [t('activityLog.details.email', { email: data.email })] : [] };
+      return { icon: 'material-symbols:how-to-reg-outline-rounded', color: 'primary' as const, title: t('activityLog.events.registrationRequested'), details: data.email ? [t('activityLog.details.email', { email: data.email })] : [] };
     case 'auth.registered':
       return { icon: 'material-symbols:person-add-outline-rounded', color: 'success' as const, title: t('activityLog.events.registered', { actor }), details: [] };
     case 'auth.verified':
@@ -148,11 +148,11 @@ function logView(log: AdminLogData) {
     case 'team.member.left':
       return { icon: 'material-symbols:logout-rounded', color: 'neutral' as const, title: t('activityLog.memberLeft', { actor }), details: [] };
     case 'team.member.kicked':
-      return { icon: 'material-symbols:person-remove-outline-rounded', color: 'warning' as const, title: t('activityLog.memberKicked', { actor, target: targetUser }), details: [] };
+      return { icon: 'material-symbols:person-remove-outline-rounded', color: 'warning' as const, title: t('activityLog.memberKicked', { actor: actor || t('activity.teamManagement'), target: targetUser }), details: [] };
     case 'team.member.promoted':
-      return { icon: 'material-symbols:award-star-outline-rounded', color: 'primary' as const, title: t('activityLog.memberPromoted', { actor, target: targetUser }), details: [] };
+      return { icon: 'material-symbols:award-star-outline-rounded', color: 'primary' as const, title: t('activityLog.memberPromoted', { actor: actor || t('activity.teamManagement'), target: targetUser }), details: [] };
     case 'team.disbanded':
-      return { icon: 'material-symbols:group-remove-outline-rounded', color: 'warning' as const, title: t('activityLog.teamDisbanded', { team: teamName, teamId: data.team?.id ?? log.team_id ?? '' }), details: [] };
+      return { icon: 'material-symbols:group-remove-outline-rounded', color: 'warning' as const, title: t('activityLog.teamDisbanded', { teamId: data.team?.id ?? log.team_id ?? '' }), details: [] };
     case 'submission.judged':
     case 'submission.backend_added':
       return {
@@ -182,7 +182,7 @@ function logView(log: AdminLogData) {
       return {
         icon: 'material-symbols:account-balance-wallet-outline-rounded',
         color: log.delta_amount && log.delta_amount < 0 ? ('warning' as const) : ('success' as const),
-        title: t('activityLog.currencyChanged', { actor, reason: activityCurrencyReasonTitle(log, t) }),
+        title: activityCurrencyReasonTitle(log, t),
         details: activityCurrencyDetails(log),
       };
     case 'currency.staff_adjusted': {

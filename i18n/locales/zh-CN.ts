@@ -6,62 +6,25 @@ export default defineI18nLocale(() => ({
       if (ctx.type === 'vnode') return [actor, ' 调整了货币', ...(detail === undefined || detail === '' ? [] : ['（', detail, '）'])];
       return `${String(actor ?? '')} 调整了货币${detail === undefined || detail === '' ? '' : `（${String(detail)}）`}`;
     },
-    currencyChangedByPuzzle: (ctx: { named: (key: string) => unknown }) => {
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      return puzzle ? `「${puzzle}」变动了货币` : '题目变动了货币';
-    },
+    currencyChangedByPuzzle: '「{puzzle}」变动了货币',
     cooldownSeconds: '提交冷却 {seconds} 秒',
     cooldownUntil: '提交冷却至 {time}',
     submissionDetail: '提交结果：{result}{consequences}{feedback}',
     consequenceGroup: '（{text}）',
-    submissionPenalty: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor} 提交答案错误惩罚` : '提交答案错误惩罚';
-    },
-    currencyDetail: (ctx: { named: (key: string) => unknown }) => {
-      const change = String(ctx.named('change') ?? '');
-      const balance = String(ctx.named('balance') ?? '');
-      return `变动：${change}${balance ? `；余额：${balance}` : ''}`;
-    },
-    teamCreated: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const team = String(ctx.named('team') ?? '');
-      const target = team ? `「${team}」` : '';
-      return actor ? `${actor} 创建了队伍${target}` : `创建了队伍${target}`;
-    },
-    teamUpdated: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor} 更新了队伍信息` : '更新了队伍信息';
-    },
-    teamDisbanded: (ctx: { named: (key: string) => unknown }) => {
-      const team = String(ctx.named('team') ?? '');
-      const teamId = String(ctx.named('teamId') ?? '');
-      return `解散了${team ? `队伍「${team}」` : teamId ? `队伍 #${teamId}` : '队伍'}`;
-    },
+    submissionPenalty: '{actor} 提交答案错误惩罚',
+    teamCreated: '{actor} 创建了队伍「{team}」',
+    teamUpdated: '{actor} 更新了队伍信息',
+    teamDisbanded: '解散了队伍 #{teamId}',
     teamAccessChanged: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
       const value = ctx.named('changes');
       const changes = Array.isArray(value) && value.length ? value.map(String).join('、') : '调整了队伍权限';
       return actor ? `${actor} ${changes}` : changes;
     },
-    memberJoined: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor} 加入了队伍` : '加入了队伍';
-    },
-    memberLeft: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor} 离开了队伍` : '离开了队伍';
-    },
-    memberKicked: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const target = String(ctx.named('target') ?? '');
-      return actor ? (target ? `${actor} 移除了成员 ${target}` : `${actor} 移除了成员`) : target ? `移除了成员 ${target}` : '移除了成员';
-    },
-    memberPromoted: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const target = String(ctx.named('target') ?? '');
-      return actor ? (target ? `${actor} 将 ${target} 设置为队长` : `${actor} 变更了队长`) : target ? `将 ${target} 设置为队长` : '变更了队长';
-    },
+    memberJoined: '{actor} 加入了队伍',
+    memberLeft: '{actor} 离开了队伍',
+    memberKicked: '{actor} 移除了成员 {target}',
+    memberPromoted: '{actor} 将 {target} 设置为队长',
     submittedAnswer: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
       const puzzle = String(ctx.named('puzzle') ?? '') || '题目';
@@ -70,70 +33,24 @@ export default defineI18nLocale(() => ({
       const target = puzzle === '题目' ? puzzle : `「${puzzle}」`;
       return actor ? `${actor} 向${target}提交了答案${suffix}` : `向${target}提交了答案${suffix}`;
     },
-    solvedPuzzle: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const target = puzzle ? `「${puzzle}」` : '题目';
-      return actor ? `${actor} 解出了${target}` : `解出了${target}`;
-    },
-    openedPuzzle: (ctx: { named: (key: string) => unknown }) => {
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      return `开放了题目${puzzle ? `「${puzzle}」` : '题目'}`;
-    },
-    startedGame: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor} 开始了比赛` : '开始了比赛';
-    },
-    unlockedHint: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const hint = String(ctx.named('hint') ?? '');
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const puzzleTarget = puzzle ? `「${puzzle}」` : '题目';
-      const hintTarget = hint ? `「${hint}」` : '提示';
-      return actor ? `${actor} 在${puzzleTarget}解锁了提示${hintTarget}` : `在${puzzleTarget}解锁了提示${hintTarget}`;
-    },
-    spentHint: (ctx: { named: (key: string) => unknown }) => `已花费 ${String(ctx.named('amount') ?? '')} 解锁提示`,
-    wrongSubmissionPenalty: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const target = puzzle ? `「${puzzle}」` : '题目';
-      return actor ? `${actor} 在${target}提交答案错误惩罚` : `在${target}提交答案错误惩罚`;
-    },
-    currencyChange: (ctx: { named: (key: string) => unknown }) => `变动：${String(ctx.named('change') ?? '')}`,
-    openedTicket: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const ticketId = String(ctx.named('ticketId') ?? '');
-      const ticket = puzzle && ticketId ? `「${puzzle}#${ticketId}」` : ticketId ? `#${ticketId}` : '';
-      return actor ? `${actor} 开启了人工提示${ticket}` : `开启了人工提示${ticket}`;
-    },
-    closedTicket: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const ticketId = String(ctx.named('ticketId') ?? '');
-      const ticket = puzzle && ticketId ? `「${puzzle}#${ticketId}」` : ticketId ? `#${ticketId}` : '';
-      return actor ? `${actor} 关闭了人工提示${ticket}` : `关闭了人工提示${ticket}`;
-    },
-    purchasedTicketMessage: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const ticketId = String(ctx.named('ticketId') ?? '');
-      const ticket = puzzle && ticketId ? `「${puzzle}#${ticketId}」` : ticketId ? `#${ticketId}` : '';
-      return actor ? `${actor} 在人工提示${ticket}中购买了付费消息` : `在人工提示${ticket}中购买了付费消息`;
-    },
-    currencyChanged: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const reason = String(ctx.named('reason') ?? '').trim() || '变动了货币';
-      return actor ? `${actor} ${reason}` : reason;
-    },
+    solvedPuzzle: '{actor} 解出了「{puzzle}」',
+    openedPuzzle: '开放了题目「{puzzle}」',
+    startedGame: '{actor} 开始了比赛',
+    unlockedHint: '{actor} 在「{puzzle}」解锁了提示「{hint}」',
+    spentHint: '已花费 {amount} 解锁提示',
+    wrongSubmissionPenalty: '{actor} 在「{puzzle}」提交答案错误惩罚',
+    currencyChange: '变动：{change}',
+    openedTicket: '{actor} 开启了人工提示「{puzzle}#{ticketId}」',
+    closedTicket: '{actor} 关闭了人工提示「{puzzle}#{ticketId}」',
+    purchasedTicketMessage: '{actor} 在人工提示「{puzzle}#{ticketId}」中购买了付费消息',
     events: {
-      loggedIn: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('actor') ?? '').trim()} 登录`.trim(),
-      loggedOut: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('actor') ?? '').trim()} 退出登录`.trim(),
-      registrationRequested: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('actor') ?? '').trim()} 请求注册账号`.trim(),
-      registered: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('actor') ?? '').trim()} 注册账号`.trim(),
-      accountVerified: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('actor') ?? '').trim()} 完成账号验证`.trim(),
-      systemSettingsUpdated: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('actor') ?? '').trim()} 修改了系统设置`.trim(),
-      profileUpdated: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('actor') ?? '').trim()} 更新了个人资料`.trim(),
+      loggedIn: '{actor} 登录',
+      loggedOut: '{actor} 退出登录',
+      registrationRequested: '请求注册账号',
+      registered: '{actor} 注册账号',
+      accountVerified: '{actor} 完成账号验证',
+      systemSettingsUpdated: '{actor} 修改了系统设置',
+      profileUpdated: '{actor} 更新了个人资料',
       unknown: (ctx: { named: (key: string) => unknown }) => {
         const actor = String(ctx.named('actor') ?? '').trim();
         const event = String(ctx.named('event') ?? '');
@@ -1184,7 +1101,10 @@ export default defineI18nLocale(() => ({
           lock: '锁定队伍',
           unlock: '解锁队伍',
         },
-        featureAction: (ctx: { named: (key: string) => unknown }) => `${ctx.named('enabled') ? '解封' : '封禁'}${String(ctx.named('feature') ?? '')}`,
+        featureAction: {
+          enable: '解封{feature}',
+          disable: '封禁{feature}',
+        },
         loadTeamDetailsFailed: '获取队伍详情失败',
         teamNamePasswordCannotEmpty: '队伍名称和密码不能为空',
         teamSettingsSaved: '队伍设置已保存',

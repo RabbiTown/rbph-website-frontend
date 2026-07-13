@@ -120,7 +120,7 @@ const accessChanges = computed<AccessChangePreview[]>(() => {
     if (enabled !== feature.enabled) {
       changes.push({
         key: feature.feature,
-        label: t('admin.pages.team.featureAction', { enabled, feature: featureMeta[feature.feature].label }),
+        label: t(`admin.pages.team.featureAction.${enabled ? 'enable' : 'disable'}`, { feature: featureMeta[feature.feature].label }),
         icon: enabled ? 'material-symbols:check-rounded' : 'material-symbols:block-outline',
         color: enabled ? 'primary' : 'error',
       });

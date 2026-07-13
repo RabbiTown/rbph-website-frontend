@@ -6,38 +6,15 @@ export default defineI18nLocale(() => ({
       if (ctx.type === 'vnode') return [actor, 'が通貨を調整しました', ...(detail === undefined || detail === '' ? [] : ['（', detail, '）'])];
       return `${String(actor ?? '')}が通貨を調整しました${detail === undefined || detail === '' ? '' : `（${String(detail)}）`}`;
     },
-    currencyChangedByPuzzle: (ctx: { named: (key: string) => unknown }) => {
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      return puzzle ? `「${puzzle}」によって通貨が変動しました` : '問題によって通貨が変動しました';
-    },
+    currencyChangedByPuzzle: '「{puzzle}」によって通貨が変動しました',
     cooldownSeconds: '解答送信のクールダウン：{seconds}秒',
     cooldownUntil: '{time}まで解答を送信できません',
     submissionDetail: '判定結果：{result}{consequences}{feedback}',
     consequenceGroup: '（{text}）',
-    submissionPenalty: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor}が誤答ペナルティを受けました` : '誤答ペナルティ';
-    },
-    currencyDetail: (ctx: { named: (key: string) => unknown }) => {
-      const change = String(ctx.named('change') ?? '');
-      const balance = String(ctx.named('balance') ?? '');
-      return `変動：${change}${balance ? `、残高：${balance}` : ''}`;
-    },
-    teamCreated: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const team = String(ctx.named('team') ?? '');
-      const target = team ? `「${team}」` : 'チーム';
-      return actor ? `${actor}が${target}を作成しました` : `${target}を作成しました`;
-    },
-    teamUpdated: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor}がチーム情報を更新しました` : 'チーム情報を更新しました';
-    },
-    teamDisbanded: (ctx: { named: (key: string) => unknown }) => {
-      const team = String(ctx.named('team') ?? '');
-      const teamId = String(ctx.named('teamId') ?? '');
-      return team ? `チーム「${team}」を解散しました` : teamId ? `チーム#${teamId}を解散しました` : 'チームを解散しました';
-    },
+    submissionPenalty: '{actor}が誤答ペナルティを受けました',
+    teamCreated: '{actor}がチーム「{team}」を作成しました',
+    teamUpdated: '{actor}がチーム情報を更新しました',
+    teamDisbanded: 'チーム#{teamId}を解散しました',
     teamAccessChanged: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
       const value = ctx.named('changes');
@@ -45,24 +22,10 @@ export default defineI18nLocale(() => ({
       const action = changes ? `権限を変更しました：${changes}` : 'チーム権限を変更しました';
       return actor ? `${actor}が${action}` : action;
     },
-    memberJoined: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor}がチームに参加しました` : 'チームに参加しました';
-    },
-    memberLeft: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor}がチームを脱退しました` : 'チームを脱退しました';
-    },
-    memberKicked: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const target = String(ctx.named('target') ?? '');
-      return actor ? (target ? `${actor}が${target}をチームから外しました` : `${actor}がメンバーを外しました`) : target ? `${target}をチームから外しました` : 'メンバーを外しました';
-    },
-    memberPromoted: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const target = String(ctx.named('target') ?? '');
-      return actor ? (target ? `${actor}が${target}をリーダーに任命しました` : `${actor}がリーダーを変更しました`) : target ? `${target}をリーダーに任命しました` : 'リーダーを変更しました';
-    },
+    memberJoined: '{actor}がチームに参加しました',
+    memberLeft: '{actor}がチームを脱退しました',
+    memberKicked: '{actor}が{target}をチームから外しました',
+    memberPromoted: '{actor}が{target}をリーダーに任命しました',
     submittedAnswer: (ctx: { named: (key: string) => unknown }) => {
       const actor = String(ctx.named('actor') ?? '').trim();
       const puzzle = String(ctx.named('puzzle') ?? '');
@@ -71,94 +34,24 @@ export default defineI18nLocale(() => ({
       const target = puzzle ? `「${puzzle}」` : '問題';
       return actor ? `${actor}が${target}に解答を送信しました${suffix}` : `${target}に解答を送信しました${suffix}`;
     },
-    solvedPuzzle: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const target = puzzle ? `「${puzzle}」` : '問題';
-      return actor ? `${actor}が${target}をクリアしました` : `${target}をクリアしました`;
-    },
-    openedPuzzle: (ctx: { named: (key: string) => unknown }) => {
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      return puzzle ? `問題「${puzzle}」を公開しました` : '問題を公開しました';
-    },
-    startedGame: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      return actor ? `${actor}がゲームを開始しました` : 'ゲームを開始しました';
-    },
-    unlockedHint: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const hint = String(ctx.named('hint') ?? '');
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const hintTarget = hint ? `ヒント「${hint}」` : 'ヒント';
-      const puzzleTarget = puzzle ? `問題「${puzzle}」の` : '';
-      return actor ? `${actor}が${puzzleTarget}${hintTarget}をアンロックしました` : `${puzzleTarget}${hintTarget}をアンロックしました`;
-    },
-    spentHint: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('amount') ?? '')}を消費してヒントをアンロックしました`,
-    wrongSubmissionPenalty: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const target = puzzle ? `「${puzzle}」で` : '';
-      return actor ? `${actor}が${target}誤答ペナルティを受けました` : `${target}誤答ペナルティ`;
-    },
-    currencyChange: (ctx: { named: (key: string) => unknown }) => `変動：${String(ctx.named('change') ?? '')}`,
-    openedTicket: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const ticketId = String(ctx.named('ticketId') ?? '');
-      const ticket = ticketId ? `#${ticketId}` : '';
-      const target = puzzle ? `「${puzzle}」のスタッフヒント${ticket}` : `スタッフヒント${ticket}`;
-      return actor ? `${actor}が${target}を開始しました` : `${target}を開始しました`;
-    },
-    closedTicket: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const ticketId = String(ctx.named('ticketId') ?? '');
-      const ticket = ticketId ? `#${ticketId}` : '';
-      const target = puzzle ? `「${puzzle}」のスタッフヒント${ticket}` : `スタッフヒント${ticket}`;
-      return actor ? `${actor}が${target}を終了しました` : `${target}を終了しました`;
-    },
-    purchasedTicketMessage: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const puzzle = String(ctx.named('puzzle') ?? '');
-      const ticketId = String(ctx.named('ticketId') ?? '');
-      const ticket = ticketId ? `#${ticketId}` : '';
-      const target = puzzle ? `「${puzzle}」のスタッフヒント${ticket}` : `スタッフヒント${ticket}`;
-      return actor ? `${actor}が${target}の有料メッセージを購入しました` : `${target}の有料メッセージを購入しました`;
-    },
-    currencyChanged: (ctx: { named: (key: string) => unknown }) => {
-      const actor = String(ctx.named('actor') ?? '').trim();
-      const reason = String(ctx.named('reason') ?? '').trim() || '通貨を変更しました';
-      return actor ? `${actor}：${reason}` : reason;
-    },
+    solvedPuzzle: '{actor}が「{puzzle}」をクリアしました',
+    openedPuzzle: '問題「{puzzle}」を公開しました',
+    startedGame: '{actor}がゲームを開始しました',
+    unlockedHint: '{actor}が問題「{puzzle}」のヒント「{hint}」をアンロックしました',
+    spentHint: '{amount}を消費してヒントをアンロックしました',
+    wrongSubmissionPenalty: '{actor}が「{puzzle}」で誤答ペナルティを受けました',
+    currencyChange: '変動：{change}',
+    openedTicket: '{actor}がスタッフヒント「{puzzle}#{ticketId}」を開始しました',
+    closedTicket: '{actor}がスタッフヒント「{puzzle}#{ticketId}」を終了しました',
+    purchasedTicketMessage: '{actor}がスタッフヒント「{puzzle}#{ticketId}」の有料メッセージを購入しました',
     events: {
-      loggedIn: (ctx: { named: (key: string) => unknown }) => {
-        const actor = String(ctx.named('actor') ?? '').trim();
-        return actor ? `${actor}がログインしました` : 'ログインしました';
-      },
-      loggedOut: (ctx: { named: (key: string) => unknown }) => {
-        const actor = String(ctx.named('actor') ?? '').trim();
-        return actor ? `${actor}がログアウトしました` : 'ログアウトしました';
-      },
-      registrationRequested: (ctx: { named: (key: string) => unknown }) => {
-        const actor = String(ctx.named('actor') ?? '').trim();
-        return actor ? `${actor}がアカウント登録を申請しました` : 'アカウント登録を申請しました';
-      },
-      registered: (ctx: { named: (key: string) => unknown }) => {
-        const actor = String(ctx.named('actor') ?? '').trim();
-        return actor ? `${actor}がアカウントを登録しました` : 'アカウントを登録しました';
-      },
-      accountVerified: (ctx: { named: (key: string) => unknown }) => {
-        const actor = String(ctx.named('actor') ?? '').trim();
-        return actor ? `${actor}がアカウント認証を完了しました` : 'アカウント認証を完了しました';
-      },
-      systemSettingsUpdated: (ctx: { named: (key: string) => unknown }) => {
-        const actor = String(ctx.named('actor') ?? '').trim();
-        return actor ? `${actor}がシステム設定を更新しました` : 'システム設定を更新しました';
-      },
-      profileUpdated: (ctx: { named: (key: string) => unknown }) => {
-        const actor = String(ctx.named('actor') ?? '').trim();
-        return actor ? `${actor}がプロフィールを更新しました` : 'プロフィールを更新しました';
-      },
+      loggedIn: '{actor}がログインしました',
+      loggedOut: '{actor}がログアウトしました',
+      registrationRequested: 'アカウント登録を申請しました',
+      registered: '{actor}がアカウントを登録しました',
+      accountVerified: '{actor}がアカウント認証を完了しました',
+      systemSettingsUpdated: '{actor}がシステム設定を更新しました',
+      profileUpdated: '{actor}がプロフィールを更新しました',
       unknown: (ctx: { named: (key: string) => unknown }) => {
         const actor = String(ctx.named('actor') ?? '').trim();
         return `${actor ? `${actor}が` : ''}イベント${String(ctx.named('event') ?? '')}を実行しました`;
@@ -1211,7 +1104,10 @@ export default defineI18nLocale(() => ({
           lock: 'チームをロック',
           unlock: 'チームのロックを解除',
         },
-        featureAction: (ctx: { named: (key: string) => unknown }) => `${String(ctx.named('feature') ?? '')}を${ctx.named('enabled') ? '有効化' : '無効化'}`,
+        featureAction: {
+          enable: '{feature}を有効化',
+          disable: '{feature}を無効化',
+        },
         loadTeamDetailsFailed: 'チーム情報を読み込めませんでした',
         teamNamePasswordCannotEmpty: 'チーム名とパスワードを入力してください',
         teamSettingsSaved: 'チーム設定を保存しました',

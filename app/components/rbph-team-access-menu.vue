@@ -229,7 +229,7 @@ const changes = computed(() => {
     const enabled = draft.features[feature];
     result.push({
       key: feature,
-      label: t('admin.pages.team.featureAction', { enabled, feature: featureMeta.value[feature].label }),
+      label: t(`admin.pages.team.featureAction.${enabled ? 'enable' : 'disable'}`, { feature: featureMeta.value[feature].label }),
       icon: enabled ? 'material-symbols:check-rounded' : 'material-symbols:block-outline',
       color: enabled ? 'primary' : 'error',
     });
