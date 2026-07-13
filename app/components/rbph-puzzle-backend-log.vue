@@ -150,15 +150,15 @@ watch(
     <template #body>
       <div class="space-y-4">
         <form class="space-y-3 rounded-md border border-default bg-elevated/50 p-4" @submit.prevent="load(1)">
-          <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(28rem,2fr)]">
             <u-form-field :label="t('admin.pages.puzzle.settings.backendLogs.executionType')">
               <u-select v-model="filters.execution_type" :items="executionTypeItems" class="w-full" />
             </u-form-field>
-            <u-form-field :label="t('admin.pages.puzzle.settings.backendLogs.functionName')">
-              <u-input v-model="filters.function_name" class="w-full font-mono" placeholder="function" />
-            </u-form-field>
             <u-form-field :label="t('admin.pages.puzzle.settings.backendLogs.status')">
               <u-select v-model="filters.ok" :items="statusItems" class="w-full" />
+            </u-form-field>
+            <u-form-field :label="t('admin.pages.puzzle.settings.backendLogs.functionName')">
+              <u-input v-model="filters.function_name" class="w-full font-mono" placeholder="function" />
             </u-form-field>
             <u-form-field :label="t('admin.pages.puzzle.settings.backendLogs.teamId')">
               <rbph-staff-team-select v-model="filters.team_id" :game-id="gameId" :disabled="loading" />
@@ -166,7 +166,7 @@ watch(
             <u-form-field :label="t('admin.pages.puzzle.settings.backendLogs.userId')">
               <rbph-admin-user-select v-model="filters.user_id" :game-id="gameId" allow-any-team :disabled="loading" />
             </u-form-field>
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid gap-2 sm:col-span-2 sm:grid-cols-2 lg:col-span-1">
               <u-form-field :label="t('admin.pages.puzzle.settings.backendLogs.from')">
                 <u-input v-model="filters.from" type="datetime-local" class="w-full" />
               </u-form-field>

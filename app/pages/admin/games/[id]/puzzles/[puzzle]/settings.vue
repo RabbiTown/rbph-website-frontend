@@ -30,6 +30,8 @@ const clearStatesConfirmOpen = ref(false);
 const clearStatesCheckUnlock = ref(true);
 const immediateReleaseConfirmOpen = ref(false);
 const backendLogsOpen = ref(false);
+const backendFunctionsMenuOpen = ref(false);
+const retainedBackendFunctions = ref<string[]>([]);
 const loadingOptions = ref(false);
 const rounds = ref<UnlockRoundOptionData[]>([]);
 const puzzles = ref<UnlockPuzzleOptionData[]>([]);
@@ -37,8 +39,15 @@ const releasePhases = ref<AdminReleasePhaseData[]>([]);
 const scriptEditorHeight = '32rem';
 const scriptEditor = ref<{ focus: () => void }>();
 const isRoundPuzzle = computed(() => round.value?.puzzle === puzzle.value?.id);
+const sourceBackendFunctions = computed(() => parseBackendExportFunctions(state.backend.source));
+const orderedBackendFunctions = computed(() => backendFunctionsMenuOpen.value
+  ? retainedBackendFunctions.value
+  : [...new Set([
+      ...state.backend.functions,
+      ...sourceBackendFunctions.value,
+    ])]);
 const functionItems = computed<SelectItem[]>(() =>
-  parseBackendExportFunctions(state.backend.source).map(name => ({
+  orderedBackendFunctions.value.map(name => ({
     label: name,
     value: name,
     icon: 'material-symbols:function-rounded',
@@ -123,6 +132,32 @@ function resetBackendSource() {
 function resetBackendFunctions() {
   state.backend.functions = [...(backend.value?.functions ?? [])];
 }
+
+function updateBackendFunctionsMenuOpen(open: boolean) {
+  if (open) {
+    retainedBackendFunctions.value = [...new Set([
+      ...state.backend.functions,
+      ...sourceBackendFunctions.value,
+    ])];
+    backendFunctionsMenuOpen.value = true;
+  } else {
+    backendFunctionsMenuOpen.value = false;
+    retainedBackendFunctions.value = [];
+  }
+}
+
+watch(
+  [sourceBackendFunctions, () => [...state.backend.functions]],
+  ([sourceFunctions, selectedFunctions]) => {
+    if (!backendFunctionsMenuOpen.value) return;
+    const retained = new Set(retainedBackendFunctions.value);
+    const appended = [...new Set([...sourceFunctions, ...selectedFunctions])]
+      .filter(name => !retained.has(name));
+    if (appended.length > 0) {
+      retainedBackendFunctions.value = [...retainedBackendFunctions.value, ...appended];
+    }
+  },
+);
 
 function reset() {
   resetReleasePhase();
@@ -522,6 +557,7 @@ watch(dirty, value => {
                 class="w-full sm:min-w-48 font-mono"
                 icon="material-symbols:function-rounded"
                 :disabled="saving"
+                @update:open="updateBackendFunctionsMenuOpen"
               />
             </div>
           </rb-form-field>
