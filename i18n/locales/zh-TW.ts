@@ -985,8 +985,8 @@ export default defineI18nLocale(() => ({
           backendScript: '後端腳本',
           backendAnswerEvaluation: '自定義題目後端，可以用於特殊題目邏輯和答案判定。',
           enableBackend: '啟用後端',
-          exportFunction: '匯出函式',
-          selectExportFunction: '選擇可對外呼叫的匯出函式',
+          publicFunction: '公開函式',
+          selectPublicFunction: '選擇允許玩家端呼叫的函式',
           scriptSource: '腳本原始碼',
           backendScriptSource: '後端腳本原始碼',
           backendLogs: {

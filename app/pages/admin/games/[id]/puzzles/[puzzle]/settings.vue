@@ -545,7 +545,7 @@ watch(dirty, value => {
             <u-switch v-model="state.backend.enabled" class="mt-1.5" :label="t('admin.pages.puzzle.settings.enableBackend')" :disabled="saving" />
           </rb-form-field>
           <u-separator v-if="state.backend.enabled" />
-          <rb-form-field v-if="state.backend.enabled" name="backend_functions" row narrow-label :label="t('admin.pages.puzzle.settings.exportFunction')" :dirty="backendFunctionsDirty" :reset="resetBackendFunctions">
+          <rb-form-field v-if="state.backend.enabled" name="backend_functions" row narrow-label :label="t('admin.pages.puzzle.settings.publicFunction')" :dirty="backendFunctionsDirty" :reset="resetBackendFunctions">
             <div class="w-full min-w-0">
               <u-select-menu
                 v-model="state.backend.functions"
@@ -553,7 +553,7 @@ watch(dirty, value => {
                 value-key="value"
                 multiple
                 search-input
-                :placeholder="t('admin.pages.puzzle.settings.selectExportFunction')"
+                :placeholder="t('admin.pages.puzzle.settings.selectPublicFunction')"
                 class="w-full sm:min-w-48 font-mono"
                 icon="material-symbols:function-rounded"
                 :disabled="saving"

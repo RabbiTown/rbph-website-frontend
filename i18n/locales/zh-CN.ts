@@ -986,8 +986,8 @@ export default defineI18nLocale(() => ({
           backendScript: '后端脚本',
           backendAnswerEvaluation: '自定义题目后端，可以用于特殊题目逻辑和答案判定。',
           enableBackend: '启用后端',
-          exportFunction: '导出函数',
-          selectExportFunction: '选择可对外调用的导出函数',
+          publicFunction: '公开函数',
+          selectPublicFunction: '选择允许玩家端调用的函数',
           scriptSource: '脚本源码',
           backendScriptSource: '后端脚本源码',
           backendLogs: {

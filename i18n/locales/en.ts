@@ -990,8 +990,8 @@ export default defineI18nLocale(() => ({
           backendScript: 'Backend script',
           backendAnswerEvaluation: 'Use a custom puzzle backend for specialized puzzle logic and answer evaluation.',
           enableBackend: 'Enable backend',
-          exportFunction: 'Exported functions',
-          selectExportFunction: 'Select externally callable functions',
+          publicFunction: 'Public functions',
+          selectPublicFunction: 'Select functions callable by the player client',
           scriptSource: 'Script source',
           backendScriptSource: 'Backend script source',
           backendLogs: {

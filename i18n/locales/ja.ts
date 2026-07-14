@@ -989,8 +989,8 @@ export default defineI18nLocale(() => ({
           backendScript: 'バックエンドスクリプト',
           backendAnswerEvaluation: '特殊な問題ロジックや解答の判定にカスタムバックエンドを使用します。',
           enableBackend: 'バックエンドを有効化',
-          exportFunction: 'エクスポート関数',
-          selectExportFunction: '外部から呼び出せる関数を選択',
+          publicFunction: '公開関数',
+          selectPublicFunction: 'プレイヤー側から呼び出せる関数を選択',
           scriptSource: 'ソースコード',
           backendScriptSource: 'バックエンドスクリプト',
           backendLogs: {
