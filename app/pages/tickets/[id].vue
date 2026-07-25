@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SelectItem, TabsItem } from '@nuxt/ui';
+import type { TabsItem } from '@nuxt/ui';
 import type { BreadcrumbItem } from '@nuxt/ui/runtime/components/Breadcrumb.vue.js';
 
 definePageMeta({
@@ -140,6 +140,17 @@ const assigneeActionNormalClass = 'col-start-1 row-start-1 inline-flex items-cen
 const assigneeActionHoverClass = 'col-start-1 row-start-1 inline-flex translate-y-1 items-center justify-center gap-1 px-1.5 opacity-0 transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100';
 
 const draftMessage = ref('');
+const unlockAfterSeconds = ref(0);
+const reqCurrencyId = ref<number | null>(null);
+const reqCurrencyAmount = ref(0);
+const noBidWarningOpen = ref(false);
+const noBidWarningAction = ref<'send' | 'close'>();
+const unlockOffer = computed<MessageUnlockOffer>(() => ({
+  unlockAfterSeconds: unlockAfterSeconds.value,
+  costId: reqCurrencyId.value,
+  costAmount: reqCurrencyAmount.value,
+}));
+
 async function submitMessage(senderType: RbTicketSenderType, forceAssignee = false) {
   if (senderType === RbTicketSenderType.Team && !canSend.value) return;
   if (senderType === RbTicketSenderType.Host && !pageData.value?.perm.can_host) return;
@@ -155,6 +166,7 @@ async function submitMessage(senderType: RbTicketSenderType, forceAssignee = fal
         sender_type: senderType,
         cost_id: senderType === RbTicketSenderType.Host ? reqCurrencyId.value : null,
         cost_amount: senderType === RbTicketSenderType.Host ? reqCurrencyAmount.value : 0,
+        unlock_after_seconds: senderType === RbTicketSenderType.Host ? unlockAfterSeconds.value : 0,
         force_assignee: forceAssignee,
       } satisfies TicketSendRequest;
       const { code, data } = await api.post<TicketSendResponse>(`/tickets/${ticketId}/send`, payload, {
@@ -172,6 +184,12 @@ async function submitMessage(senderType: RbTicketSenderType, forceAssignee = fal
 
       if (code === 0) {
         const hostReply = senderType === RbTicketSenderType.Host;
+        if (hostReply && ticket.value?.game_id) {
+          rememberMessageUnlockOffer(ticket.value.game_id, unlockOffer.value);
+          unlockAfterSeconds.value = 0;
+          reqCurrencyId.value = null;
+          reqCurrencyAmount.value = 0;
+        }
         toast.add({
           title: hostReply ? t('ticket.repliedByStaff') : t('ticket.repliedByTeam'),
           description: hostReply ? t('ticket.repliedByStaffDesc') : t('ticket.repliedByTeamDesc'),
@@ -212,6 +230,12 @@ function submitTeamMessage() {
 }
 
 function submitHostMessage() {
+  const gameId = ticket.value?.game_id;
+  if (ticket.value?.puzzle && gameId && isMessageUnlockOfferEmpty(unlockOffer.value) && !isNoBidWarningDisabled(gameId)) {
+    noBidWarningAction.value = 'send';
+    noBidWarningOpen.value = true;
+    return;
+  }
   return submitMessage(RbTicketSenderType.Host);
 }
 
@@ -248,7 +272,7 @@ async function unassign() {
   }
 }
 
-async function submitClose(forceAssignee = false) {
+async function closeTicket(forceAssignee = false) {
   if (!pageData.value?.perm.can_host) return;
 
   submitLoading.value = true;
@@ -262,10 +286,17 @@ async function submitClose(forceAssignee = false) {
         sender_type: RbTicketSenderType.Host,
         cost_id: reqCurrencyId.value,
         cost_amount: reqCurrencyAmount.value,
+        unlock_after_seconds: unlockAfterSeconds.value,
         force_assignee: forceAssignee,
       } satisfies TicketSendRequest;
       const { data } = await api.post<TicketCloseResponse>(`/tickets/${ticketId}/close`, payload);
       draftMessage.value = '';
+      if (ticket.value?.game_id && payload.content.trim()) {
+        rememberMessageUnlockOffer(ticket.value.game_id, unlockOffer.value);
+      }
+      unlockAfterSeconds.value = 0;
+      reqCurrencyId.value = null;
+      reqCurrencyAmount.value = 0;
 
       toast.add({
         title: t('ticket.closedToast'),
@@ -291,13 +322,34 @@ async function submitClose(forceAssignee = false) {
       const assignee = (error as { data?: { payload?: { assignee?: { nickname: string } } } }).data?.payload?.assignee;
       if (!forceAssignee && assignee && window.confirm(t('ticket.closeConfirm', { name: assignee.nickname }))) {
         submitLoading.value = false;
-        return submitClose(true);
+        return closeTicket(true);
       }
       handleError(error, t('ticket.closeFailed'));
     }
   }
 
   submitLoading.value = false;
+}
+
+function submitClose() {
+  const gameId = ticket.value?.game_id;
+  if (ticket.value?.puzzle && draftMessage.value.trim() && gameId && isMessageUnlockOfferEmpty(unlockOffer.value) && !isNoBidWarningDisabled(gameId)) {
+    noBidWarningAction.value = 'close';
+    noBidWarningOpen.value = true;
+    return;
+  }
+  return closeTicket();
+}
+
+function confirmNoBidWarning(offer: MessageUnlockOffer) {
+  unlockAfterSeconds.value = offer.unlockAfterSeconds;
+  reqCurrencyId.value = offer.costId;
+  reqCurrencyAmount.value = offer.costAmount;
+  const action = noBidWarningAction.value;
+  noBidWarningOpen.value = false;
+  noBidWarningAction.value = undefined;
+  if (action === 'send') return submitMessage(RbTicketSenderType.Host);
+  if (action === 'close') return closeTicket();
 }
 
 async function unlockMessage(message: TicketMessage) {
@@ -326,6 +378,10 @@ async function unlockMessage(message: TicketMessage) {
         ...pageData.value!,
         messages,
       };
+      if (!pageData.value.perm.can_view_locked) {
+        await useCurrency().updateData(true);
+        await updateData(ticket_id.value);
+      }
       toast.add({
         title: t('ticket.unlockedToast'),
         description: t('ticket.unlockedToastDesc'),
@@ -393,15 +449,7 @@ const teamCurrency = computed(() => {
   }
   return result;
 });
-const currencyTypeItems = computed(() => [
-  { label: t('ticket.noUnlock'), value: null, icon: 'material-symbols:lock-open-right-outline-rounded' },
-  ...allowedCurrencyTypes.value.map(id => {
-    return { label: teamCurrency.value[id]?.name ?? `#${id}`, value: id, icon: 'material-symbols:emoji-objects-outline-rounded' } satisfies SelectItem;
-  }),
-]);
-const reqCurrencyId = ref<number | null>(null);
-const reqCurrencyAmount = ref(0);
-const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined : teamCurrency.value[reqCurrencyId.value]));
+const unlockCurrencies = computed(() => allowedCurrencyTypes.value.map(id => teamCurrency.value[id]).filter((currency): currency is RbTeamCurrency & { current: number } => Boolean(currency)));
 </script>
 
 <template>
@@ -488,6 +536,7 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
       class="mt-6"
       @unlock="unlockMessage"
       @load-history="loadHistory"
+      @unlock-due="updateData(ticket_id)"
     />
 
     <u-tabs :items="tabItems" variant="link" :ui="{ list: tabItems.length > 1 ? undefined : 'hidden' }">
@@ -532,11 +581,26 @@ const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined
           @submit-close="submitClose"
         >
           <template #tool>
-            <u-select v-if="currencyTypeItems.length > 0" v-model="reqCurrencyId" :items="currencyTypeItems" variant="soft" size="sm" class="w-40" />
-            <rb-input-number v-if="reqCurrencyId !== null" v-model="reqCurrencyAmount" :prec="reqCurrencyType?.prec ?? 0" orientation="vertical" class="w-24" variant="soft" :step="10" />
+            <rbph-message-unlock-editor
+              v-if="ticket.game_id"
+              v-model:unlock-after-seconds="unlockAfterSeconds"
+              v-model:cost-id="reqCurrencyId"
+              v-model:cost-amount="reqCurrencyAmount"
+              :game-id="ticket.game_id"
+              :currencies="unlockCurrencies"
+              :disabled="submitLoading"
+            />
           </template>
         </rbph-message-edit>
       </template>
     </u-tabs>
+    <rbph-no-bid-confirm-modal
+      v-if="ticket.game_id"
+      v-model:open="noBidWarningOpen"
+      :game-id="ticket.game_id"
+      :currencies="unlockCurrencies"
+      :busy="submitLoading"
+      @confirm="confirmNoBidWarning"
+    />
   </div>
 </template>

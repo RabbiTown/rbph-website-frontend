@@ -21,6 +21,21 @@ const canSend = computed(() => canSendTicket(pageData.value?.perm));
 const messages = computed(() => [...(pageData.value?.messages.filter(isTicketMessage) ?? [])].reverse());
 const historyLoading = ref(false);
 const draftContentType = ref(RbContentType.UnsafeMarkdown);
+const unlockLoading = ref(false);
+const messageCurrency = useCurrency().getAllCurrent();
+const currentTime = useCurrentTimeSec();
+const refreshedUnlocks = new Set<number>();
+
+function unlockRemaining(message: TicketMessage) {
+  if (!message.unlock_at) return 0;
+  return Math.max(0, Date.parse(message.unlock_at) - currentTime.value);
+}
+
+function messageCostText(message: TicketMessage) {
+  if (message.cost_id === null || message.cost_id === undefined) return '';
+  const currency = messageCurrency.value[message.cost_id];
+  return `${currency?.name ?? `#${message.cost_id}`} ${intPrecString(message.cost_amount, currency?.prec ?? 0)}`;
+}
 
 async function updateData(newId: number | undefined = undefined): Promise<boolean> {
   const gameId = newId || game.value?.id;
@@ -90,6 +105,16 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
   if (data.game_id === game.value?.id && data.team_id === useTeam(false).ref.value?.id) loadNewer();
 });
 
+watch(currentTime, () => {
+  const due = messages.value.some(message => {
+    if (!message.unlock_at || message.unlocked || refreshedUnlocks.has(message.id)) return false;
+    if (Date.parse(message.unlock_at) > currentTime.value) return false;
+    refreshedUnlocks.add(message.id);
+    return true;
+  });
+  if (due) updateData();
+});
+
 onMounted(() => {
   useInfiniteScroll(window, loadOlder, {
     distance: 80,
@@ -144,6 +169,31 @@ async function submitMessage() {
   }
 
   submitLoading.value = false;
+}
+
+async function unlockMessage(message: TicketMessage) {
+  if (!pageData.value?.ticket?.id || message.unlocked || message.cost_id === null || message.cost_id === undefined || unlockRemaining(message) > 0) return;
+  unlockLoading.value = true;
+  try {
+    const { data } = await api.post<TicketUnlockResponse>(`/tickets/${pageData.value.ticket.id}/messages/${message.id}/purchase`, undefined, {
+      errorHints: {
+        [-2]: t('ticket.insufficientBalance'),
+        [-1]: t('ticket.unavailableOrPurchased'),
+      },
+    });
+    pageData.value.messages = pageData.value.messages.map(item => (isTicketMessage(item) && item.id === data.id ? { ...item, ...data, unlocked: true } as TicketMessage : item));
+    await useCurrency().updateData(true);
+    toast.add({
+      title: t('ticket.unlockedToast'),
+      description: t('ticket.unlockedToastDesc'),
+      icon: 'material-symbols:lock-open-right-outline-rounded',
+      color: 'success',
+    });
+  } catch (error) {
+    handleError(error, t('ticket.unlockFailed'));
+  } finally {
+    unlockLoading.value = false;
+  }
 }
 
 const sendBlock = computed(() => {
@@ -218,9 +268,33 @@ const sendBlockConsts: Partial<Record<RbTicketSendBlock, SendBlockConst>> = {
             </div>
             <u-icon name="material-symbols:expand-more-rounded" class="-me-1 size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
           </div>
-          <template v-if="msg.content && msg.content_type !== undefined" #content>
+          <template #content>
             <div class="px-4 py-4 border-t dark:border-t-slate-700 border-t-slate-200 text-sm">
-              <rbph-content :content="msg as RbContent" />
+              <rbph-content v-if="msg.content !== undefined && msg.content_type !== undefined" :content="msg as RbContent" />
+              <div v-else class="flex flex-wrap items-center gap-2">
+                <u-badge v-if="unlockRemaining(msg) > 0" size="md" color="warning" variant="soft" icon="material-symbols:timer-outline-rounded">
+                  {{ t('ticket.unlocksIn', { time: formatTime(unlockRemaining(msg)) }) }}
+                </u-badge>
+                <u-badge
+                  v-if="unlockRemaining(msg) > 0 && msg.cost_id !== null && msg.cost_id !== undefined"
+                  size="md"
+                  color="error"
+                  variant="soft"
+                  icon="material-symbols:lock-open-right-outline-rounded"
+                >
+                  {{ t('ticket.unlockCost', { cost: messageCostText(msg) }) }}
+                </u-badge>
+                <u-button
+                  v-else-if="msg.cost_id !== null && msg.cost_id !== undefined"
+                  size="xs"
+                  color="error"
+                  variant="soft"
+                  icon="material-symbols:lock-open-right-outline-rounded"
+                  :loading="unlockLoading"
+                  :label="t('ticket.unlockCost', { cost: messageCostText(msg) })"
+                  @click="unlockMessage(msg)"
+                />
+              </div>
             </div>
           </template>
         </u-collapsible>

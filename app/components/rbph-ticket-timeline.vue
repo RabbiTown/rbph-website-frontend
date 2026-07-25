@@ -27,7 +27,10 @@ const props = withDefaults(
 const emit = defineEmits<{
   unlock: [message: TicketMessage];
   loadHistory: [];
+  unlockDue: [];
 }>();
+const currentTime = useCurrentTimeSec();
+const emittedDue = new Set<number>();
 
 interface TicketTimelineItem extends TimelineItem {
   username: string;
@@ -45,7 +48,7 @@ const actionMeta: Record<RbTicketOperationAction, { icon: string; action: string
 };
 
 const timelineItems = computed<TicketTimelineItem[]>(() => {
-  const items = props.items.map(item => {
+  const items: TicketTimelineItem[] = props.items.map((item): TicketTimelineItem => {
     if (isTicketMessage(item)) {
       return {
         username: item.sender.nickname,
@@ -84,6 +87,28 @@ function costText(message: TicketMessage) {
   return `${currency?.name ?? t('ticket.currencyFallback', { id: message.cost_id })} ${intPrecString(-message.cost_amount, currency?.prec ?? 0, true, ' ')}`;
 }
 
+function unlockRemaining(message: TicketMessage) {
+  if (!message.unlock_at) return 0;
+  return Math.max(0, Date.parse(message.unlock_at) - currentTime.value);
+}
+
+function isCooling(message: TicketMessage) {
+  return unlockRemaining(message) > 0;
+}
+
+watch(currentTime, () => {
+  let due = false;
+  for (const item of props.items) {
+    const message = isTicketMessage(item) ? item : item.message;
+    if (!message?.unlock_at || message.unlocked || emittedDue.has(message.id)) continue;
+    if (Date.parse(message.unlock_at) <= currentTime.value) {
+      emittedDue.add(message.id);
+      due = true;
+    }
+  }
+  if (due) emit('unlockDue');
+});
+
 </script>
 
 <template>
@@ -100,25 +125,56 @@ function costText(message: TicketMessage) {
       {{ item.gap ? '' : formatDate(item.date) }}
     </template>
     <template #description="{ item }">
-      <div v-if="item.message && (item.message.content !== undefined || (item.message.cost_id !== null && item.message.cost_id !== undefined))" class="px-4 py-4 ring ring-default mt-2 rounded-md text-default">
+      <div v-if="item.message && (item.message.content !== undefined || item.message.unlock_at || (item.message.cost_id !== null && item.message.cost_id !== undefined))" class="px-4 py-4 ring ring-default mt-2 rounded-md text-default">
         <rbph-content v-if="item.message.content !== undefined" :content="item.message as RbContent" />
-        <div v-else class="flex items-center gap-2">
-          {{ t('ticket.locked') }}
-          <u-popover v-if="unlockable" arrow>
-            <u-button class="cursor-pointer" size="xs" color="error" variant="soft" icon="material-symbols:lock-outline">{{ t('ticket.unlockCost', { cost: costText(item.message) }) }}</u-button>
+        <div v-else class="flex flex-wrap items-center gap-2">
+          <u-badge v-if="isCooling(item.message)" size="md" color="warning" variant="soft" icon="material-symbols:timer-outline-rounded">
+            {{ t('ticket.unlocksIn', { time: formatTime(unlockRemaining(item.message)) }) }}
+          </u-badge>
+          <u-badge
+            v-if="isCooling(item.message) && item.message.cost_id !== null && item.message.cost_id !== undefined"
+            size="md"
+            color="error"
+            variant="soft"
+            icon="material-symbols:lock-open-right-outline-rounded"
+          >
+            {{ t('ticket.unlockCost', { cost: costText(item.message) }) }}
+          </u-badge>
+          <u-popover v-else-if="unlockable && item.message.cost_id !== null && item.message.cost_id !== undefined" arrow>
+            <u-button class="cursor-pointer" size="xs" color="error" variant="soft" icon="material-symbols:lock-open-right-outline-rounded">{{ t('ticket.unlockCost', { cost: costText(item.message) }) }}</u-button>
             <template #content>
               <div class="py-2 px-4 text-xs">
-                <u-icon name="material-symbols:lock-open-right-outline-rounded" class="align-middle" />
-                <span> {{ t('ticket.unlockMessage') }} </span>
+                <u-icon name="material-symbols:lock-open-right-outline-rounded" class="align-middle me-1" />
+                <span class="mx-1"> {{ t('ticket.unlockMessage') }} </span>
                 <u-button :loading="unlockLoading" class="cursor-pointer" color="success" variant="soft" size="xs" @click="emit('unlock', item.message)">{{ t('ticket.unlock') }}</u-button>
               </div>
             </template>
           </u-popover>
+          <u-badge
+            v-else-if="item.message.cost_id !== null && item.message.cost_id !== undefined"
+            size="md"
+            color="error"
+            variant="soft"
+            icon="material-symbols:lock-open-right-outline-rounded"
+          >
+            {{ t('ticket.unlockCost', { cost: costText(item.message) }) }}
+          </u-badge>
         </div>
-        <div v-if="item.message.cost_id !== null && item.message.cost_id !== undefined" class="flex justify-end">
-          <u-badge v-if="item.message.unlocked" class="mt-2" color="success" variant="soft" icon="material-symbols:lock-open-right-outline-rounded">{{ t('ticket.unlockedCost', { cost: costText(item.message) }) }}</u-badge>
-          <u-popover v-else-if="canViewLocked && unlockable" class="mt-2" arrow>
-            <u-button class="cursor-pointer" size="xs" color="error" variant="soft" icon="material-symbols:lock-outline">{{ t('ticket.notUnlockedCost', { cost: costText(item.message) }) }}</u-button>
+        <div
+          v-if="item.message.content !== undefined && item.message.cost_id !== null && item.message.cost_id !== undefined"
+          class="mt-2 flex flex-wrap justify-end gap-2"
+        >
+          <u-badge v-if="item.message.unlocked" size="md" color="success" variant="soft" icon="material-symbols:lock-open-right-outline-rounded">{{ t('ticket.unlockedCost', { cost: costText(item.message) }) }}</u-badge>
+          <template v-else>
+            <u-badge v-if="isCooling(item.message)" size="md" color="warning" variant="soft" icon="material-symbols:timer-outline-rounded">
+              {{ t('ticket.unlocksIn', { time: formatTime(unlockRemaining(item.message)) }) }}
+            </u-badge>
+            <u-badge v-if="isCooling(item.message)" size="md" color="error" variant="soft" icon="material-symbols:lock-open-right-outline-rounded">
+              {{ t('ticket.unlockCost', { cost: costText(item.message) }) }}
+            </u-badge>
+          </template>
+          <u-popover v-if="!item.message.unlocked && !isCooling(item.message) && canViewLocked && unlockable" arrow>
+            <u-button class="cursor-pointer" size="xs" color="error" variant="soft" icon="material-symbols:lock-open-right-outline-rounded">{{ t('ticket.unlockCost', { cost: costText(item.message) }) }}</u-button>
             <template #content>
               <div class="py-2 px-4 text-xs">
                 <u-icon name="material-symbols:lock-open-right-outline-rounded" class="align-middle" />
@@ -127,7 +183,20 @@ function costText(message: TicketMessage) {
               </div>
             </template>
           </u-popover>
-          <u-badge v-else-if="canViewLocked" class="mt-2" color="error" variant="soft" icon="material-symbols:lock-outline">{{ t('ticket.notUnlockedCost', { cost: costText(item.message) }) }}</u-badge>
+          <u-badge
+            v-else-if="!item.message.unlocked && !isCooling(item.message)"
+            size="md"
+            color="error"
+            variant="soft"
+            icon="material-symbols:lock-open-right-outline-rounded"
+          >
+            {{ t('ticket.unlockCost', { cost: costText(item.message) }) }}
+          </u-badge>
+        </div>
+        <div v-else-if="item.message.content !== undefined && item.message.unlock_at" class="mt-2 flex justify-end">
+          <u-badge size="md" :color="item.message.unlocked ? 'success' : 'warning'" variant="soft" icon="material-symbols:timer-outline-rounded">
+            {{ item.message.unlocked ? formatTime(item.message.unlock_after_seconds * 1000) : t('ticket.unlocksIn', { time: formatTime(unlockRemaining(item.message)) }) }}
+          </u-badge>
         </div>
       </div>
     </template>

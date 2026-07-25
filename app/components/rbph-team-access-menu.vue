@@ -385,7 +385,7 @@ async function saveAccess() {
             </u-field-group>
           </rb-form-field>
           <rb-form-field :label="t('components.teamAccessMenu.currencyAmount')" required>
-            <rb-input-number v-model="currencyAmount" :prec="selectedCurrency.prec" :min="0" :max="selectedCurrency.max_amount" orientation="vertical" class="w-full" :disabled="currencySaving" />
+            <rb-currency-input v-model="currencyAmount" :currency="selectedCurrency" :min="0" orientation="vertical" class="w-full" :disabled="currencySaving" />
           </rb-form-field>
         </div>
 

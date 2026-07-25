@@ -19,6 +19,30 @@ const selectedTeamId = ref<number>();
 const selectedAdminTeam = ref<StaffTeamOption>();
 const selectedTeam = computed(() => (isAdmin.value ? selectedAdminTeam.value : team.value));
 const canOpenTicket = computed(() => pageData.value?.open_block === TicketOpenBlock.Ok);
+const unlockCurrencies = ref<RbTeamCurrency[]>([]);
+const unlockAfterSeconds = ref(0);
+const reqCurrencyId = ref<number | null>(null);
+const reqCurrencyAmount = ref(0);
+const noBidWarningOpen = ref(false);
+const unlockOffer = computed<MessageUnlockOffer>(() => ({
+  unlockAfterSeconds: unlockAfterSeconds.value,
+  costId: reqCurrencyId.value,
+  costAmount: reqCurrencyAmount.value,
+}));
+
+async function loadUnlockCurrencies(teamId?: number) {
+  unlockCurrencies.value = [];
+  unlockAfterSeconds.value = 0;
+  reqCurrencyId.value = null;
+  reqCurrencyAmount.value = 0;
+  if (!teamId || !game.value?.id) return;
+  try {
+    const { data } = await api.get<{ currencies: RbTeamCurrency[] }>(`/games/${game.value.id}/tickets/staff/teams/${teamId}/currencies`);
+    if (selectedTeamId.value === teamId) unlockCurrencies.value = data.currencies;
+  } catch (error) {
+    handleError(error, t('ticket.loadTeamCurrenciesFailed'));
+  }
+}
 
 function deriveTicket(ticket: TicketSummary, targetTeam: Pick<RbTeam, 'id' | 'name' | 'state'> | undefined = team.value): TicketSummary {
   const puzzleData = puzzle.value?.data;
@@ -96,7 +120,7 @@ watch(
       ? {
           id: team.value.id,
           name: team.value.name,
-          state: team.value.state,
+          state: team.value.state ?? RbTeamState.Open,
         }
       : undefined;
     updateData();
@@ -108,6 +132,7 @@ watch([staffView, selectedTeamId], () => {
   if (!isStaff.value) return;
   pageData.value = undefined;
   if (staffView.value === 'staff') staffTickets.value = undefined;
+  if (staffView.value === 'team') loadUnlockCurrencies(selectedTeamId.value);
   updateData();
 });
 
@@ -119,16 +144,26 @@ const submitLoading = ref(false);
 
 const draftMessage = ref('');
 const draftContentType = ref(RbContentType.UnsafeMarkdown);
-async function submitMessage() {
+async function submitMessage(skipNoBidWarning = false) {
+  const staffTarget = isStaff.value && staffView.value === 'team' ? selectedTeam.value : undefined;
+  if (staffTarget && !skipNoBidWarning && isMessageUnlockOfferEmpty(unlockOffer.value) && game.value?.id && !isNoBidWarningDisabled(game.value.id)) {
+    noBidWarningOpen.value = true;
+    return;
+  }
   submitLoading.value = true;
 
   const puzzleId = puzzle.value?.data.id;
   if (puzzleId) {
     try {
       const gameId = puzzle.value?.data.game_id;
-      const staffTarget = isStaff.value && staffView.value === 'team' ? selectedTeam.value : undefined;
       const endpoint = staffTarget ? `/games/${gameId}/tickets/staff/puzzle/${puzzleId}/teams/${staffTarget.id}` : `/puzzles/${puzzleId}/tickets`;
-      const { code, data } = await api.post<TicketOpenResponse>(endpoint, { content: draftMessage.value, content_type: draftContentType.value } satisfies TicketSendRequest, {
+      const { code, data } = await api.post<TicketOpenResponse>(endpoint, {
+        content: draftMessage.value,
+        content_type: draftContentType.value,
+        cost_id: staffTarget ? reqCurrencyId.value : null,
+        cost_amount: staffTarget ? reqCurrencyAmount.value : 0,
+        unlock_after_seconds: staffTarget ? unlockAfterSeconds.value : 0,
+      } satisfies TicketSendRequest, {
         errorHints: {
           [-1]: t('ticket.invalidRequest'),
           [-2]: t('ticket.onlyOne'),
@@ -143,6 +178,12 @@ async function submitMessage() {
       draftMessage.value = '';
 
       if (code === 0) {
+        if (staffTarget && gameId) {
+          rememberMessageUnlockOffer(gameId, unlockOffer.value);
+          unlockAfterSeconds.value = 0;
+          reqCurrencyId.value = null;
+          reqCurrencyAmount.value = 0;
+        }
         toast.add({
           title: staffTarget ? t('ticket.requestedFor', { team: staffTarget.name }) : t('ticket.sentSuccess'),
           description: staffTarget ? t('ticket.requestedForDesc') : t('ticket.sentSuccessDesc'),
@@ -166,6 +207,14 @@ async function submitMessage() {
   }
 
   submitLoading.value = false;
+}
+
+function confirmNoBidWarning(offer: MessageUnlockOffer) {
+  unlockAfterSeconds.value = offer.unlockAfterSeconds;
+  reqCurrencyId.value = offer.costId;
+  reqCurrencyAmount.value = offer.costAmount;
+  noBidWarningOpen.value = false;
+  return submitMessage(true);
 }
 
 const currentTime = useCurrentTimeSec();
@@ -266,11 +315,30 @@ const cooldown = computed(() => {
         :disabled="!pageData || submitLoading"
         :loading="!pageData || submitLoading"
         @submit="submitMessage"
-      />
+      >
+        <template v-if="isStaff && staffView === 'team' && game?.id" #tool>
+          <rbph-message-unlock-editor
+            v-model:unlock-after-seconds="unlockAfterSeconds"
+            v-model:cost-id="reqCurrencyId"
+            v-model:cost-amount="reqCurrencyAmount"
+            :game-id="game.id"
+            :currencies="unlockCurrencies"
+            :disabled="submitLoading"
+          />
+        </template>
+      </rbph-message-edit>
       <rbph-ticket-card v-for="ticket in pageData.tickets" :key="ticket.id" :ticket="ticket" />
     </div>
     <div v-else class="h-full">
       <u-skeleton class="w-full h-full min-h-24" />
     </div>
+    <rbph-no-bid-confirm-modal
+      v-if="game?.id"
+      v-model:open="noBidWarningOpen"
+      :game-id="game.id"
+      :currencies="unlockCurrencies"
+      :busy="submitLoading"
+      @confirm="confirmNoBidWarning"
+    />
   </div>
 </template>

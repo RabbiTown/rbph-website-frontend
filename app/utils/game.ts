@@ -530,12 +530,21 @@ export interface TicketMessage {
   cost_id?: number;
   cost_amount: number;
   unlocked: boolean;
+  unlock_at?: string | null;
+  unlock_after_seconds: number;
 
   content?: string;
   content_type?: RbContentType;
 
   ctime_at: string;
   utime_at: string | null;
+}
+
+export interface TicketAggreInfoUser {
+  id: number;
+  nickname: string;
+  email?: string;
+  avatar?: string;
 }
 
 export interface TicketOperation {
@@ -647,6 +656,8 @@ export interface TicketUnlockResponse {
   cost_id: number | null;
   cost_amount: number;
   unlocked: boolean;
+  unlock_at?: string | null;
+  unlock_after_seconds: number;
   content?: string | null;
   content_type?: RbContentType | null;
   ctime_at: string;
@@ -665,6 +676,7 @@ export interface TicketSendRequest {
   sender_type?: RbTicketSenderType;
   cost_id?: number | null;
   cost_amount?: number;
+  unlock_after_seconds?: number;
   force_assignee?: boolean;
 }
 

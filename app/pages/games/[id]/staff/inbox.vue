@@ -44,13 +44,17 @@ const teamCurrency = computed(() => {
 });
 const threadCurrency = computed(() => teamCurrency.value);
 const allowedCurrencyTypes = computed(() => thread.value?.perm.currency ?? []);
-const currencyTypeItems = computed(() => [
-  { label: t('ticket.noUnlock'), value: null, icon: 'material-symbols:lock-open-right-outline-rounded' },
-  ...allowedCurrencyTypes.value.map(id => ({ label: teamCurrency.value[id]?.name ?? `#${id}`, value: id, icon: 'material-symbols:emoji-objects-outline-rounded' })),
-]);
+const unlockCurrencies = computed(() => allowedCurrencyTypes.value.map(id => teamCurrency.value[id]).filter((currency): currency is RbTeamCurrency & { current: number } => Boolean(currency)));
+const unlockAfterSeconds = ref(0);
 const reqCurrencyId = ref<number | null>(null);
 const reqCurrencyAmount = ref(0);
-const reqCurrencyType = computed(() => (reqCurrencyId.value === null ? undefined : teamCurrency.value[reqCurrencyId.value]));
+const unlockOffer = computed<MessageUnlockOffer>(() => ({
+  unlockAfterSeconds: unlockAfterSeconds.value,
+  costId: reqCurrencyId.value,
+  costAmount: reqCurrencyAmount.value,
+}));
+const noBidWarningOpen = ref(false);
+const noBidWarningAction = ref<'send' | 'close'>();
 const sendConflictDescription = computed(() => {
   if (!sendConflictAssignee.value) return '';
   const action = sendConflictAction.value === 'close' ? t('pages.staffInbox.replyAndClose') : t('pages.staffInbox.continueReply');
@@ -113,6 +117,7 @@ async function loadThread(ticketId = selectedId.value, silent = false, force = f
     thread.value = data;
     threadHistoryGapIndex.value = 1;
     contentType.value = getDefaultTicketContentType(data.perm);
+    unlockAfterSeconds.value = 0;
     reqCurrencyId.value = null;
     reqCurrencyAmount.value = 0;
   } catch (error) {
@@ -171,6 +176,12 @@ async function loadThreadNewer(ticketId: number) {
 
 const dmThreadItems = computed(() => (thread.value?.ticket?.puzzle ? [] : [...(thread.value?.messages ?? [])].reverse()));
 
+function messageCostText(message: TicketMessage) {
+  if (message.cost_id === null || message.cost_id === undefined) return '';
+  const currency = teamCurrency.value[message.cost_id];
+  return `${currency?.name ?? `#${message.cost_id}`} ${intPrecString(message.cost_amount, currency?.prec ?? 0)}`;
+}
+
 watch([gameId, kind, state, waitingFor, assigneeFilter, puzzleId], () => loadTickets(), { immediate: true });
 
 onMounted(() => {
@@ -215,10 +226,15 @@ async function confirmSendConflict() {
   sendConflictAssignee.value = undefined;
 }
 
-async function sendMessage(forceAssignee = false) {
+async function sendMessage(forceAssignee = false, skipNoBidWarning = false) {
   const ticketId = selectedId.value;
   if (!ticketId || !draft.value.trim()) return;
   const puzzle = Boolean(thread.value?.ticket?.puzzle);
+  if (!forceAssignee && !skipNoBidWarning && puzzle && isMessageUnlockOfferEmpty(unlockOffer.value) && !isNoBidWarningDisabled(gameId.value)) {
+    noBidWarningAction.value = 'send';
+    noBidWarningOpen.value = true;
+    return;
+  }
   submitLoading.value = true;
   try {
     const { data } = await api.post<TicketSendResponse>(
@@ -227,13 +243,18 @@ async function sendMessage(forceAssignee = false) {
         content: draft.value,
         content_type: contentType.value,
         sender_type: RbTicketSenderType.Host,
-        cost_id: puzzle ? reqCurrencyId.value : null,
-        cost_amount: puzzle ? reqCurrencyAmount.value : 0,
+        cost_id: reqCurrencyId.value,
+        cost_amount: reqCurrencyAmount.value,
+        unlock_after_seconds: unlockAfterSeconds.value,
         force_assignee: forceAssignee,
       } satisfies TicketSendRequest,
       { errorHints: { [-7]: t('ticket.claimConflict') } },
     );
+    rememberMessageUnlockOffer(gameId.value, unlockOffer.value);
     draft.value = '';
+    unlockAfterSeconds.value = 0;
+    reqCurrencyId.value = null;
+    reqCurrencyAmount.value = 0;
     if (thread.value) {
       if (data.ticket) thread.value.ticket = data.ticket;
       thread.value.messages = mergeTicketThreadItems(thread.value.messages, [data.msg]);
@@ -251,9 +272,15 @@ async function sendMessage(forceAssignee = false) {
   }
 }
 
-async function closeWithMessage(forceAssignee = false) {
+async function closeWithMessage(forceAssignee = false, skipNoBidWarning = false) {
   const ticketId = selectedId.value;
-  if (!ticketId || !thread.value?.ticket.puzzle || thread.value.ticket.state !== RbTicketState.Open) return;
+  const ticket = thread.value?.ticket;
+  if (!ticketId || !ticket?.puzzle || ticket.state !== RbTicketState.Open) return;
+  if (!forceAssignee && !skipNoBidWarning && draft.value.trim() && isMessageUnlockOfferEmpty(unlockOffer.value) && !isNoBidWarningDisabled(gameId.value)) {
+    noBidWarningAction.value = 'close';
+    noBidWarningOpen.value = true;
+    return;
+  }
 
   submitLoading.value = true;
   try {
@@ -265,11 +292,16 @@ async function closeWithMessage(forceAssignee = false) {
         sender_type: RbTicketSenderType.Host,
         cost_id: reqCurrencyId.value,
         cost_amount: reqCurrencyAmount.value,
+        unlock_after_seconds: unlockAfterSeconds.value,
         force_assignee: forceAssignee,
       } satisfies TicketSendRequest,
       { errorHints: { [-7]: t('ticket.claimConflict') } },
     );
+    if (draft.value.trim()) rememberMessageUnlockOffer(gameId.value, unlockOffer.value);
     draft.value = '';
+    unlockAfterSeconds.value = 0;
+    reqCurrencyId.value = null;
+    reqCurrencyAmount.value = 0;
     if (thread.value) {
       thread.value = {
         ...data.thread,
@@ -290,6 +322,17 @@ async function closeWithMessage(forceAssignee = false) {
   } finally {
     submitLoading.value = false;
   }
+}
+
+async function confirmNoBidWarning(offer: MessageUnlockOffer) {
+  unlockAfterSeconds.value = offer.unlockAfterSeconds;
+  reqCurrencyId.value = offer.costId;
+  reqCurrencyAmount.value = offer.costAmount;
+  const action = noBidWarningAction.value;
+  noBidWarningOpen.value = false;
+  noBidWarningAction.value = undefined;
+  if (action === 'send') await sendMessage(false, true);
+  else if (action === 'close') await closeWithMessage(false, true);
 }
 
 async function assignSelf(force = false) {
@@ -327,8 +370,27 @@ async function unassign() {
 }
 
 const dmTeam = ref<number>();
+const dmTeamInfo = ref<StaffTeamOption>();
 const dmDraft = ref('');
 const dmOpen = ref(false);
+const dmCurrencies = ref<RbTeamCurrency[]>([]);
+const dmUnlockAfterSeconds = ref(0);
+const dmCurrencyId = ref<number | null>(null);
+const dmCurrencyAmount = ref(0);
+
+watch(dmTeam, async teamId => {
+  dmCurrencies.value = [];
+  dmUnlockAfterSeconds.value = 0;
+  dmCurrencyId.value = null;
+  dmCurrencyAmount.value = 0;
+  if (!teamId) return;
+  try {
+    const { data } = await api.get<{ currencies: RbTeamCurrency[] }>(`/games/${gameId.value}/tickets/staff/teams/${teamId}/currencies`);
+    if (dmTeam.value === teamId) dmCurrencies.value = data.currencies;
+  } catch (error) {
+    handleError(error, t('ticket.loadTeamCurrenciesFailed'));
+  }
+});
 
 async function openDm() {
   dmOpen.value = true;
@@ -343,6 +405,9 @@ async function sendDm() {
       {
         content: dmDraft.value,
         content_type: RbContentType.UnsafeMarkdown,
+        cost_id: dmCurrencyId.value,
+        cost_amount: dmCurrencyAmount.value,
+        unlock_after_seconds: dmUnlockAfterSeconds.value,
       },
       {
         errorHints: {
@@ -350,7 +415,15 @@ async function sendDm() {
         },
       },
     );
+    rememberMessageUnlockOffer(gameId.value, {
+      unlockAfterSeconds: dmUnlockAfterSeconds.value,
+      costId: dmCurrencyId.value,
+      costAmount: dmCurrencyAmount.value,
+    });
     dmDraft.value = '';
+    dmUnlockAfterSeconds.value = 0;
+    dmCurrencyId.value = null;
+    dmCurrencyAmount.value = 0;
     dmOpen.value = false;
     kind.value = 'dm';
     state.value = 'all';
@@ -583,6 +656,7 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
             class="mb-6"
             @unlock="unlockMessage"
             @load-history="loadThreadHistory"
+            @unlock-due="loadThread(thread.ticket.id, true, true)"
           />
 
           <u-alert
@@ -617,9 +691,15 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
             @submit="sendMessage()"
             @submit-close="closeWithMessage()"
           >
-            <template v-if="thread.ticket.puzzle" #tool>
-              <u-select v-if="currencyTypeItems.length > 0" v-model="reqCurrencyId" :items="currencyTypeItems" variant="soft" size="sm" class="w-40" />
-              <rb-input-number v-if="reqCurrencyId !== null" v-model="reqCurrencyAmount" :prec="reqCurrencyType?.prec ?? 0" orientation="vertical" class="w-24" variant="soft" :step="10" />
+            <template #tool>
+              <rbph-message-unlock-editor
+                v-model:unlock-after-seconds="unlockAfterSeconds"
+                v-model:cost-id="reqCurrencyId"
+                v-model:cost-amount="reqCurrencyAmount"
+                :game-id="gameId"
+                :currencies="unlockCurrencies"
+                :disabled="submitLoading"
+              />
             </template>
           </rbph-message-edit>
 
@@ -634,6 +714,14 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
                   <span>{{ formatDate(item.ctime_at) }}</span>
                 </div>
                 <rbph-content v-if="item.content !== undefined && item.content_type !== undefined" :content="item as RbContent" />
+                <div v-if="item.unlock_at || (item.cost_id !== null && item.cost_id !== undefined)" class="mt-2 flex flex-wrap justify-end gap-1">
+                  <u-badge v-if="item.unlock_at" color="warning" variant="soft" icon="material-symbols:timer-outline-rounded">
+                    {{ t('ticket.unlockAt', { time: formatDate(item.unlock_at) }) }}
+                  </u-badge>
+                  <u-badge v-if="item.cost_id !== null && item.cost_id !== undefined" :color="item.unlocked ? 'success' : 'error'" variant="soft" :icon="item.unlocked ? 'material-symbols:lock-open-right-outline-rounded' : 'material-symbols:lock-outline'">
+                    {{ t(item.unlocked ? 'ticket.unlockedCost' : 'ticket.notUnlockedCost', { cost: messageCostText(item) }) }}
+                  </u-badge>
+                </div>
               </div>
             </div>
             <div v-if="threadHistoryLoading" class="flex justify-center py-3"><u-icon name="material-symbols:progress-activity" class="size-5 animate-spin text-muted" /></div>
@@ -646,8 +734,19 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
     <u-modal v-model:open="dmOpen" :title="t('pages.staffInbox.sendTeamDmTitle')" :description="t('pages.staffInbox.sendTeamDmDesc')">
       <template #body>
         <div class="space-y-4">
-          <rbph-staff-team-select v-model="dmTeam" :game-id="gameId" :placeholder="t('pages.staffInbox.searchTeam')" />
-          <rbph-message-edit v-model:draft="dmDraft" v-model:content-type="contentType" :placeholder="t('pages.staffInbox.dmPlaceholder')" :content-types="[RbContentType.UnsafeMarkdown]" :loading="submitLoading" :disabled="!dmTeam || submitLoading" @submit="sendDm" />
+          <rbph-staff-team-select v-model="dmTeam" v-model:team="dmTeamInfo" :game-id="gameId" :placeholder="t('pages.staffInbox.searchTeam')" />
+          <rbph-message-edit v-model:draft="dmDraft" v-model:content-type="contentType" :placeholder="t('pages.staffInbox.dmPlaceholder')" :content-types="[RbContentType.UnsafeMarkdown]" :loading="submitLoading" :disabled="!dmTeam || submitLoading" @submit="sendDm">
+            <template #tool>
+              <rbph-message-unlock-editor
+                v-model:unlock-after-seconds="dmUnlockAfterSeconds"
+                v-model:cost-id="dmCurrencyId"
+                v-model:cost-amount="dmCurrencyAmount"
+                :game-id="gameId"
+                :currencies="dmCurrencies"
+                :disabled="!dmTeam || submitLoading"
+              />
+            </template>
+          </rbph-message-edit>
         </div>
       </template>
     </u-modal>
@@ -661,6 +760,13 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
       confirm-icon="material-symbols:send-outline-rounded"
       :busy="submitLoading"
       @confirm="confirmSendConflict"
+    />
+    <rbph-no-bid-confirm-modal
+      v-model:open="noBidWarningOpen"
+      :game-id="gameId"
+      :currencies="unlockCurrencies"
+      :busy="submitLoading"
+      @confirm="confirmNoBidWarning"
     />
   </div>
 </template>

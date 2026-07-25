@@ -69,7 +69,7 @@ const navItems = computed(() => {
   } else if (!team.value) {
     result.push({
       value: 'game-profile',
-      label: t('nav.joinGame'),
+      label: t('nav.register'),
       icon: 'material-symbols:how-to-reg-outline-rounded',
       to: `/games/${game.value.id}/profile`,
       active: route.path.startsWith(`/games/${game.value.id}/profile`),
