@@ -665,7 +665,7 @@ export default defineI18nLocale(() => ({
       invalidTeamId: 'Invalid team ID.',
       wrongTeamPassword: 'Incorrect password.',
       teamFull: 'The team is full.',
-      teamLockedContact: 'The team is locked. Contact staff.',
+      teamBannedContact: 'The team is banned. Contact staff.',
       alreadyInTeam: 'You are already in a team.',
       invalidCredentials: 'Invalid credentials.',
       restrictionDetails: 'See {activity} for details.',

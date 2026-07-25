@@ -645,6 +645,7 @@ defineExpose({ focus });
           base: props.framed ? [effectiveContentClass, 'text-sm px-3 py-2 sm:px-4'] : [effectiveContentClass, 'py-3'],
         }"
         :on-selection-update="refreshEditorSelection"
+        @update:model-value="syncEditorMarkdown"
       >
         <template #default="{ editor }">
           <span v-if="trackEditor(editor)" />

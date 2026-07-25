@@ -212,10 +212,11 @@ async function editSubmit(event: FormSubmitEvent<EditSchema>) {
   submitLoading.value = true;
 
   try {
+    const name = teamLocked.value ? undefined : event.data.name;
     const { code } = await api.patch(
       `/games/${game.value?.id}/teams/self`,
       {
-        name: event.data.name,
+        name,
         pass: event.data.pass,
         bio: event.data.bio,
       },
@@ -395,7 +396,7 @@ async function joinSubmit(event: FormSubmitEvent<JoinSchema>) {
           [-4]: t('pages.profile.wrongTeamPassword'),
           [-5]: t('pages.profile.teamFormationUnavailable'),
           [-3]: t('pages.profile.teamFull'),
-          [-2]: t('pages.profile.teamLockedContact'),
+          [-2]: t('pages.profile.teamBannedContact'),
           [-1]: t('pages.profile.alreadyInTeam'),
         },
       },
@@ -603,8 +604,8 @@ watch(user, () => syncUserState(), { immediate: true });
                   <u-input v-model="editState.id" class="w-full sm:w-96" disabled type="number" />
                 </rb-form-field>
                 <u-separator />
-                <rb-form-field name="name" row narrow-label :label="t('pages.profile.teamName')" icon="material-symbols:group-outline-rounded" :dirty="editState.name !== team?.ref.value?.name" :reset="() => (editState.name = team?.ref.value?.name ?? '')">
-                  <u-input v-model="editState.name" class="w-full sm:w-96" :maxlength="40" :disabled="!isCaptain">
+                <rb-form-field name="name" row narrow-label :label="t('pages.profile.teamName')" icon="material-symbols:group-outline-rounded" :dirty="!teamLocked && editState.name !== team?.ref.value?.name" :reset="() => (editState.name = team?.ref.value?.name ?? '')">
+                  <u-input v-model="editState.name" class="w-full sm:w-96" :maxlength="40" :disabled="!isCaptain || teamLocked">
                     <template #trailing>
                       <div class="text-xs text-muted tabular-nums" role="status">{{ editState.name.length }}/40</div>
                     </template>
@@ -626,13 +627,9 @@ watch(user, () => syncUserState(), { immediate: true });
                   <u-button type="submit" :loading="submitLoading" class="min-w-36 justify-center cursor-pointer" :disabled="!isCaptain">
                     {{ isCaptain ? t('pages.profile.saveTeamInfo') : t('pages.profile.saveTeamInfoBlocked') }}
                   </u-button>
-                  <u-tooltip v-if="teamData.is_locked" :text="member?.is_captain ? t('pages.profile.teamLockedHintDisband') : t('pages.profile.teamLockedHintLeave')">
-                    <span class="inline-flex">
-                      <u-button disabled class="min-w-32 justify-center" variant="outline" color="error">
-                        {{ member?.is_captain ? t('pages.profile.disbandTeam') : t('pages.profile.leaveTeam') }}
-                      </u-button>
-                    </span>
-                  </u-tooltip>
+                  <u-button v-if="teamData.is_locked" disabled class="justify-center" variant="outline" color="error">
+                    {{ member?.is_captain ? t('pages.profile.teamLockedHintDisband') : t('pages.profile.teamLockedHintLeave') }}
+                  </u-button>
                   <u-popover v-else arrow>
                     <u-button :loading="submitLoading" class="min-w-32 justify-center cursor-pointer" variant="outline" color="error">
                       {{ member?.is_captain ? t('pages.profile.disbandTeam') : t('pages.profile.leaveTeam') }}

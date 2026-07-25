@@ -137,7 +137,14 @@ watch([staffView, selectedTeamId], () => {
 });
 
 useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
-  if (data.puzzle_id === puzzle.value?.data.id) updateData();
+  if (data.game_id !== puzzle.value?.data.game_id) return;
+  if (isStaff.value && staffView.value === 'staff') {
+    if (data.puzzle_id === puzzle.value?.data.id) updateData();
+    return;
+  }
+
+  const teamId = isStaff.value ? selectedTeamId.value : team.value?.id;
+  if (data.team_id === teamId && data.puzzle_id !== null && data.puzzle_id !== undefined) updateData();
 });
 
 const submitLoading = ref(false);

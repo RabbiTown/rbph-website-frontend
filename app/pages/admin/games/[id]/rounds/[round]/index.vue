@@ -14,6 +14,10 @@ const dirty = computed(() => headerDirty.value || blocks.dirty.value);
 async function apply() {
   if (!dirty.value || blocks.saving.value) return;
   if (headerDirty.value && !await applyHeader()) return;
+  if (!blocks.dirty.value) {
+    dirtyToast.clear();
+    return;
+  }
   try {
     await blocks.save();
     dirtyToast.clear();

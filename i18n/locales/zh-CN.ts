@@ -660,7 +660,7 @@ export default defineI18nLocale(() => ({
       invalidTeamId: '队伍 ID 无效。',
       wrongTeamPassword: '输入密码错误。',
       teamFull: '队伍已满。',
-      teamLockedContact: '队伍已锁定，请联系工作人员。',
+      teamBannedContact: '队伍已封禁，请联系工作人员。',
       alreadyInTeam: '你已经有一个队伍了。',
       invalidCredentials: '提交的凭据无效。',
       restrictionDetails: '具体原因可在{activity}中查看。',

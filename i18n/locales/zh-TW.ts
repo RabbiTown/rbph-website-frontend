@@ -659,7 +659,7 @@ export default defineI18nLocale(() => ({
       invalidTeamId: '隊伍 ID 無效。',
       wrongTeamPassword: '輸入密碼錯誤。',
       teamFull: '隊伍已滿。',
-      teamLockedContact: '隊伍已鎖定，請聯繫工作人員。',
+      teamBannedContact: '隊伍已封禁，請聯繫工作人員。',
       alreadyInTeam: '你已經有一個隊伍了。',
       invalidCredentials: '提交的認證資訊無效。',
       restrictionDetails: '具體原因可在{activity}中查看。',
