@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useLocale } from 'reka-ui';
+
 type DurationSegment = 'hour' | 'minute' | 'second';
 
 const props = withDefaults(
@@ -7,16 +9,21 @@ const props = withDefaults(
     disabled?: boolean;
     icon?: string;
     ariaLabel?: string;
+    variant?: 'soft' | 'subtle';
+    locale?: string;
   }>(),
   {
     maxSeconds: 24 * 60 * 60,
     disabled: false,
     icon: undefined,
     ariaLabel: undefined,
+    variant: 'soft',
+    locale: undefined,
   },
 );
 
 const model = defineModel<number>({ default: 0 });
+const locale = useLocale(toRef(props, 'locale'));
 const root = ref<HTMLElement>();
 const activeSegment = ref<DurationSegment>();
 const inputBuffer = ref('');
@@ -37,8 +44,23 @@ const parts = computed(() => {
   };
 });
 
+const numberFormatter = computed(
+  () =>
+    new Intl.NumberFormat(locale.value, {
+      useGrouping: false,
+      minimumIntegerDigits: 2,
+      maximumFractionDigits: 0,
+    }),
+);
+
 const formattedDuration = computed(
   () => `${formatSegment(parts.value.hour)}:${formatSegment(parts.value.minute)}:${formatSegment(parts.value.second)}`,
+);
+
+const variantClass = computed(() =>
+  props.variant === 'subtle'
+    ? 'bg-elevated ring ring-inset ring-accented'
+    : 'bg-elevated/50 hover:bg-elevated focus-visible:bg-elevated',
 );
 
 watch(
@@ -53,7 +75,7 @@ watch(
 onBeforeUnmount(clearInputBuffer);
 
 function formatSegment(value: number) {
-  return String(value).padStart(2, '0');
+  return numberFormatter.value.format(value);
 }
 
 function segmentMaximum(segment: DurationSegment) {
@@ -220,35 +242,38 @@ defineExpose({
     :aria-label="ariaLabel"
     :aria-disabled="disabled"
     :aria-valuetext="formattedDuration"
-    class="group relative inline-flex w-full items-center gap-0.5 rounded-md bg-elevated/50 px-2.5 py-1.5 text-sm/4 text-highlighted select-none transition-colors hover:bg-elevated focus-visible:bg-elevated focus-visible:outline-none"
-    :class="{ 'cursor-not-allowed opacity-75': disabled }"
+    :lang="locale"
+    class="group relative inline-block rounded-md px-2.5 py-1.5 text-sm/4 text-highlighted select-none transition-colors focus-visible:outline-none"
+    :class="[variantClass, { 'cursor-not-allowed opacity-75': disabled }]"
     @focus="onFocus"
     @blur="onBlur"
     @keydown="onKeydown"
   >
-    <u-icon v-if="icon" :name="icon" class="me-1 size-4 shrink-0 text-dimmed" />
-    <span
-      class="min-w-[2ch] cursor-text rounded px-1 text-center font-mono tabular-nums transition-colors"
-      :class="{ 'bg-primary/10 text-primary': activeSegment === 'hour' }"
-      @pointerdown.prevent="activateSegment('hour')"
-    >
-      {{ formatSegment(parts.hour) }}
-    </span>
-    <span class="pointer-events-none text-muted">:</span>
-    <span
-      class="min-w-[2ch] cursor-text rounded px-1 text-center font-mono tabular-nums transition-colors"
-      :class="{ 'bg-primary/10 text-primary': activeSegment === 'minute' }"
-      @pointerdown.prevent="activateSegment('minute')"
-    >
-      {{ formatSegment(parts.minute) }}
-    </span>
-    <span class="pointer-events-none text-muted">:</span>
-    <span
-      class="min-w-[2ch] cursor-text rounded px-1 text-center font-mono tabular-nums transition-colors"
-      :class="{ 'bg-primary/10 text-primary': activeSegment === 'second' }"
-      @pointerdown.prevent="activateSegment('second')"
-    >
-      {{ formatSegment(parts.second) }}
-    </span>
+    <div class="flex items-center gap-0.5">
+      <u-icon v-if="icon" :name="icon" class="me-1 size-4 shrink-0 text-dimmed" />
+      <span
+        class="min-w-[2ch] cursor-text rounded px-1 text-center tabular-nums transition-colors"
+        :class="{ 'bg-primary/10 text-primary': activeSegment === 'hour' }"
+        @pointerdown.prevent="activateSegment('hour')"
+      >
+        {{ formatSegment(parts.hour) }}
+      </span>
+      <span class="pointer-events-none text-muted">:</span>
+      <span
+        class="min-w-[2ch] cursor-text rounded px-1 text-center tabular-nums transition-colors"
+        :class="{ 'bg-primary/10 text-primary': activeSegment === 'minute' }"
+        @pointerdown.prevent="activateSegment('minute')"
+      >
+        {{ formatSegment(parts.minute) }}
+      </span>
+      <span class="pointer-events-none text-muted">:</span>
+      <span
+        class="min-w-[2ch] cursor-text rounded px-1 text-center tabular-nums transition-colors"
+        :class="{ 'bg-primary/10 text-primary': activeSegment === 'second' }"
+        @pointerdown.prevent="activateSegment('second')"
+      >
+        {{ formatSegment(parts.second) }}
+      </span>
+    </div>
   </div>
 </template>

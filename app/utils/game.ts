@@ -685,6 +685,59 @@ export interface StaffTicketListResponse {
   has_more: boolean;
 }
 
+export interface StaffPuzzleHintStatus {
+  id: number;
+  title: string;
+  cooldown: number;
+  cost_id?: number | null;
+  cost_name?: string | null;
+  cost_prec?: number | null;
+  cost_amount: number;
+  available_at: string;
+  unlocked: boolean;
+  unlocked_at?: string | null;
+}
+
+export interface StaffPuzzleTeamStatus {
+  server_time: string;
+  state: RbTeamPuzzleState;
+  unlock_at: string;
+  solve_at?: string | null;
+  cooldown_till?: string | null;
+  cooldown_active: boolean;
+  submission_enabled: boolean;
+  submit_requirements_met: boolean;
+  can_submit: boolean;
+  team_banned: boolean;
+  max_submit?: number | null;
+  submit_count: number;
+  remaining_submit?: number | null;
+  hints: StaffPuzzleHintStatus[];
+}
+
+export interface StaffPuzzleHintContent extends RbContent {
+  id: number;
+  title: string;
+}
+
+export interface StaffPuzzleSubmission {
+  id: number;
+  user_id: number;
+  user_name: string;
+  user_answer: string;
+  norm_answer: string;
+  saction: RbJudgeAction;
+  sresult?: string | null;
+  real_answer?: string | null;
+  ignored: boolean;
+  ctime_at: string;
+}
+
+export interface StaffPuzzleSubmissionPage {
+  data: StaffPuzzleSubmission[];
+  total: number;
+}
+
 export interface StaffTeamOption {
   id: number;
   name: string;

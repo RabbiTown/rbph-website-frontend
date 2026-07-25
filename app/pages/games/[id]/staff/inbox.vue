@@ -639,6 +639,13 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
                   size="md"
                   @status-change="currentTeamFeatureBanned = $event"
                 />
+                <rbph-team-puzzle-status
+                  v-if="thread.ticket.team && thread.ticket.puzzle"
+                  :game-id="gameId"
+                  :team-id="thread.ticket.team.id"
+                  :team-name="thread.ticket.team.name"
+                  :puzzle="thread.ticket.puzzle"
+                />
               </div>
             </div>
           </div>

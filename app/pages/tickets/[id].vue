@@ -516,6 +516,13 @@ const unlockCurrencies = computed(() => allowedCurrencyTypes.value.map(id => tea
             :team-id="ticket.team.id"
             :team-name="ticket.team.name"
           />
+          <rbph-team-puzzle-status
+            v-if="ticket.team && ticket.game_id && ticket.puzzle && pageData?.perm.can_host"
+            :game-id="ticket.game_id"
+            :team-id="ticket.team.id"
+            :team-name="ticket.team.name"
+            :puzzle="ticket.puzzle"
+          />
         </div>
       </div>
 

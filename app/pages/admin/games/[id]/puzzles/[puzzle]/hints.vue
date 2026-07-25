@@ -63,6 +63,7 @@ const dragOverHint = ref<HintDropTarget | null>(null);
 const hintOriginPlaceholderVisible = ref(false);
 let nextDraftId = -1;
 let hintDropEntries: HintDropEntry[] = [];
+const maxCooldownSeconds = 2_147_483_647;
 
 const routeGameId = computed(() => Number(route.params.id));
 const routePuzzleId = computed(() => Number(route.params.puzzle));
@@ -659,16 +660,13 @@ onBeforeUnmount(() => {
                         <rb-form-field row narrow-label class="flex-1" :label="t('admin.pages.puzzle.hints.openTime')">
                           <div class="flex flex-wrap items-center gap-2">
                             <span class="text-sm text-muted">{{ t('admin.pages.puzzle.hints.puzzleUnlock') }}</span>
-                            <u-input-number
+                            <rb-input-duration
                               v-model="hint.cooldown"
-                              :min="0"
-                              :step="10"
-                              :step-snapping="false"
-                              orientation="vertical"
-                              :format-options="{ style: 'unit', unit: 'second' }"
+                              :max-seconds="maxCooldownSeconds"
+                              icon="material-symbols:timer-outline-rounded"
                               variant="subtle"
-                              class="w-40"
                               :disabled="saving || hint.deleting"
+                              :aria-label="t('admin.pages.puzzle.hints.openTime')"
                             />
                           </div>
                         </rb-form-field>
