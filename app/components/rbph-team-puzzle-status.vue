@@ -20,6 +20,9 @@ const submissions = ref<StaffPuzzleSubmissionPage>();
 const submissionsLoading = ref(false);
 const submissionPage = ref(1);
 const onlySuccessfulSubmissions = ref(false);
+const puzzleInfoOpen = ref(false);
+const submissionInfoOpen = ref(false);
+const wideInfoLayout = useMediaQuery('(min-width: 640px)');
 const hintContents = ref<Record<number, StaffPuzzleHintContent | undefined>>({});
 const hintLoading = reactive(new Set<number>());
 const hintFailed = reactive(new Set<number>());
@@ -30,9 +33,7 @@ const Icon = resolveComponent('icon');
 const UBadge = resolveComponent('u-badge');
 const RbTooltip = resolveComponent('rb-tooltip');
 
-const baseEndpoint = computed(
-  () => `/games/${props.gameId}/tickets/staff/puzzle/${props.puzzle.id}/teams/${props.teamId}/status`,
-);
+const baseEndpoint = computed(() => `/games/${props.gameId}/tickets/staff/puzzle/${props.puzzle.id}/teams/${props.teamId}/status`);
 const cooldownRemaining = computed(() => {
   const till = status.value?.cooldown_till;
   return till ? Math.max(Date.parse(till) - currentTime.value, 0) : 0;
@@ -80,21 +81,8 @@ const columns = computed<TableColumn<StaffPuzzleSubmission>[]>(() => [
   },
   {
     accessorKey: 'user_answer',
-    header: () =>
-      h('span', [
-        t('submissions.content'),
-        h(
-          RbTooltip,
-          { text: t('submissions.contentHelp') },
-          () => h(Icon, { name: 'material-symbols:help-outline-rounded', class: 'size-4 align-middle mb-0.5 ms-1 text-secondary cursor-help' }),
-        ),
-      ]),
-    cell: ({ row, getValue }) =>
-      h(
-        RbTooltip,
-        { text: row.original.norm_answer },
-        () => h('span', { class: 'cursor-help' }, getValue<string>()),
-      ),
+    header: () => h('span', [t('submissions.content'), h(RbTooltip, { text: t('submissions.contentHelp') }, () => h(Icon, { name: 'material-symbols:help-outline-rounded', class: 'size-4 align-middle mb-0.5 ms-1 text-secondary cursor-help' }))]),
+    cell: ({ row, getValue }) => h(RbTooltip, { text: row.original.norm_answer }, () => h('span', { class: 'cursor-help' }, getValue<string>())),
     meta: {
       class: {
         td: 'min-w-[15em] md:min-w-none max-w-[15em] wrap-anywhere whitespace-normal',
@@ -108,9 +96,7 @@ const columns = computed<TableColumn<StaffPuzzleSubmission>[]>(() => [
       const action = judgeActions.value[row.original.saction];
       return h('div', { class: 'flex flex-wrap gap-1' }, [
         h(UBadge, { color: action.color, variant: 'soft', icon: action.icon }, () => action.name),
-        ...(row.original.ignored
-          ? [h(UBadge, { color: 'neutral', variant: 'soft' }, () => t('components.teamPuzzleStatus.ignored'))]
-          : []),
+        ...(row.original.ignored ? [h(UBadge, { color: 'neutral', variant: 'soft' }, () => t('components.teamPuzzleStatus.ignored'))] : []),
       ]);
     },
   },
@@ -180,6 +166,17 @@ function updateSubmissionFilter(value: boolean) {
   void loadSubmissions();
 }
 
+function updateInfoOpen(section: 'puzzle' | 'submission', value: boolean) {
+  if (wideInfoLayout.value) {
+    puzzleInfoOpen.value = value;
+    submissionInfoOpen.value = value;
+  } else if (section === 'puzzle') {
+    puzzleInfoOpen.value = value;
+  } else {
+    submissionInfoOpen.value = value;
+  }
+}
+
 async function loadHintContent(hintId: number) {
   if (hintContents.value[hintId] || hintLoading.has(hintId)) return;
   const token = requestToken;
@@ -213,9 +210,7 @@ function hintRemaining(hint: StaffPuzzleHintStatus) {
 function hintStatusLabel(hint: StaffPuzzleHintStatus) {
   if (!hint.enabled) return t('components.teamPuzzleStatus.hintNotEnabled');
   if (!hint.unlocked) return t('components.teamPuzzleStatus.hintNotPurchased');
-  return hint.cost_id !== null && hint.cost_id !== undefined && hint.cost_amount > 0
-    ? t('components.teamPuzzleStatus.hintPurchased')
-    : t('components.teamPuzzleStatus.hintUnlocked');
+  return hint.cost_id !== null && hint.cost_id !== undefined && hint.cost_amount > 0 ? t('components.teamPuzzleStatus.hintPurchased') : t('components.teamPuzzleStatus.hintUnlocked');
 }
 
 function reload() {
@@ -230,128 +225,94 @@ function reload() {
 watch(
   () => [open.value, props.gameId, props.teamId, props.puzzle.id] as const,
   ([isOpen]) => {
-    if (isOpen) reload();
+    if (isOpen) {
+      puzzleInfoOpen.value = false;
+      submissionInfoOpen.value = false;
+      reload();
+    }
   },
 );
+
+watch(wideInfoLayout, value => {
+  if (!value || puzzleInfoOpen.value === submissionInfoOpen.value) return;
+  const nextOpen = puzzleInfoOpen.value || submissionInfoOpen.value;
+  puzzleInfoOpen.value = nextOpen;
+  submissionInfoOpen.value = nextOpen;
+});
 </script>
 
 <template>
-  <u-button
-    type="button"
-    size="xs"
-    color="neutral"
-    variant="soft"
-    icon="material-symbols:extension-outline-rounded"
-    :label="t('components.teamPuzzleStatus.menu')"
-    @click="open = true"
-  />
+  <u-button type="button" size="xs" color="neutral" variant="soft" icon="material-symbols:extension-outline-rounded" :label="t('components.teamPuzzleStatus.menu')" @click="open = true" />
 
-  <u-modal
-    v-model:open="open"
-    :title="t('components.teamPuzzleStatus.title', { team: teamName, puzzle: puzzle.title })"
-    :description="t('components.teamPuzzleStatus.description')"
-    :ui="{ content: 'sm:max-w-4xl' }"
-  >
+  <u-modal v-model:open="open" :title="t('components.teamPuzzleStatus.title', { team: teamName, puzzle: puzzle.title })" :description="t('components.teamPuzzleStatus.description')" :ui="{ content: 'sm:max-w-4xl' }">
     <template #body>
       <div v-if="statusLoading && !status" class="space-y-4">
         <u-skeleton class="h-24 w-full" />
         <u-skeleton class="h-36 w-full" />
         <u-skeleton class="h-48 w-full" />
       </div>
-      <u-empty
-        v-else-if="statusFailed || !status"
-        icon="material-symbols:error-med-outline-rounded"
-        :title="t('components.teamPuzzleStatus.loadFailed')"
-      >
+      <u-empty v-else-if="statusFailed || !status" icon="material-symbols:error-med-outline-rounded" :title="t('components.teamPuzzleStatus.loadFailed')">
         <template #actions>
           <u-button color="neutral" variant="soft" icon="material-symbols:refresh-rounded" :label="t('components.teamPuzzleStatus.retry')" @click="reload" />
         </template>
       </u-empty>
       <div v-else class="space-y-5">
         <section class="grid gap-3 sm:grid-cols-2">
-          <div class="rounded-lg bg-elevated/60 p-4 ring ring-default">
-            <div class="mb-3 flex flex-wrap items-center gap-2">
+          <u-collapsible class="group overflow-hidden rounded-lg bg-elevated/60 ring ring-default" :open="puzzleInfoOpen" :unmount-on-hide="false" @update:open="value => updateInfoOpen('puzzle', value)">
+            <button type="button" class="flex w-full cursor-pointer items-center justify-between gap-2 px-3 py-2 text-start">
               <u-badge :color="puzzleState.color" variant="soft" :icon="puzzleState.icon">{{ puzzleState.label }}</u-badge>
-            </div>
-            <dl class="space-y-2 text-sm">
-              <div class="flex items-start justify-between gap-4">
-                <dt class="text-muted">{{ t('components.teamPuzzleStatus.unlockTime') }}</dt>
-                <dd class="text-right text-highlighted">{{ formatDate(status.unlock_at) }}</dd>
-              </div>
-              <div class="flex items-start justify-between gap-4">
-                <dt class="text-muted">{{ t('components.teamPuzzleStatus.solveTime') }}</dt>
-                <dd class="text-right text-highlighted">
-                  {{ status.solve_at ? formatDate(status.solve_at) : t('components.teamPuzzleStatus.notSolved') }}
-                </dd>
-              </div>
-            </dl>
-          </div>
+              <u-icon name="material-symbols:expand-more-rounded" class="size-4 shrink-0 text-muted transition-transform duration-200 group-data-[state=open]:rotate-180" />
+            </button>
+            <template #content>
+              <dl class="space-y-2 border-t border-default px-4 pt-3 pb-4 text-sm">
+                <div class="flex items-start justify-between gap-4">
+                  <dt class="text-muted">{{ t('components.teamPuzzleStatus.unlockTime') }}</dt>
+                  <dd class="text-right text-highlighted">{{ formatDate(status.unlock_at) }}</dd>
+                </div>
+                <div class="flex items-start justify-between gap-4">
+                  <dt class="text-muted">{{ t('components.teamPuzzleStatus.solveTime') }}</dt>
+                  <dd class="text-right text-highlighted">
+                    {{ status.solve_at ? formatDate(status.solve_at) : t('components.teamPuzzleStatus.notSolved') }}
+                  </dd>
+                </div>
+              </dl>
+            </template>
+          </u-collapsible>
 
-          <div class="rounded-lg bg-elevated/60 p-4 ring ring-default">
-            <div class="mb-3 flex flex-wrap items-center gap-2">
+          <u-collapsible class="group overflow-hidden rounded-lg bg-elevated/60 ring ring-default" :open="submissionInfoOpen" :unmount-on-hide="false" @update:open="value => updateInfoOpen('submission', value)">
+            <button type="button" class="flex w-full cursor-pointer items-center justify-between gap-2 px-3 py-2 text-start">
               <u-badge v-if="submissionState" :color="submissionState.color" variant="soft" :icon="submissionState.icon">
                 {{ submissionState.label }}
               </u-badge>
-            </div>
-            <dl class="space-y-2 text-sm">
-              <div class="flex items-start justify-between gap-4">
-                <dt class="text-muted">{{ t('components.teamPuzzleStatus.incorrectSubmissions') }}</dt>
-                <dd class="text-right text-highlighted">{{ status.submit_count }}</dd>
-              </div>
-              <div class="flex items-start justify-between gap-4">
-                <dt class="text-muted">{{ t('components.teamPuzzleStatus.remainingSubmissions') }}</dt>
-                <dd class="text-right text-highlighted">
-                  {{ status.remaining_submit === null || status.remaining_submit === undefined ? t('components.teamPuzzleStatus.unlimited') : `${status.remaining_submit}/${status.max_submit}` }}
-                </dd>
-              </div>
-              <div v-if="status.cooldown_till" class="flex items-start justify-between gap-4">
-                <dt class="text-muted">{{ t('components.teamPuzzleStatus.cooldownUntil') }}</dt>
-                <dd class="text-right text-highlighted">{{ formatDate(status.cooldown_till) }}</dd>
-              </div>
-            </dl>
-          </div>
+              <u-icon name="material-symbols:expand-more-rounded" class="size-4 shrink-0 text-muted transition-transform duration-200 group-data-[state=open]:rotate-180" />
+            </button>
+            <template #content>
+              <dl class="space-y-2 border-t border-default px-4 pt-3 pb-4 text-sm">
+                <div class="flex items-start justify-between gap-4">
+                  <dt class="text-muted">{{ t('components.teamPuzzleStatus.incorrectSubmissions') }}</dt>
+                  <dd class="text-right text-highlighted">{{ status.submit_count }}</dd>
+                </div>
+                <div class="flex items-start justify-between gap-4">
+                  <dt class="text-muted">{{ t('components.teamPuzzleStatus.remainingSubmissions') }}</dt>
+                  <dd class="text-right text-highlighted">
+                    {{ status.remaining_submit === null || status.remaining_submit === undefined ? t('components.teamPuzzleStatus.unlimited') : `${status.remaining_submit}/${status.max_submit}` }}
+                  </dd>
+                </div>
+              </dl>
+            </template>
+          </u-collapsible>
         </section>
 
         <section>
           <h3 class="mb-2 text-base font-semibold text-highlighted">{{ t('components.teamPuzzleStatus.hints') }}</h3>
           <u-empty v-if="status.hints.length === 0" icon="material-symbols:contact-support-outline-rounded" :title="t('components.teamPuzzleStatus.noHints')" />
           <div v-else class="max-h-80 space-y-2 overflow-y-auto p-1">
-            <u-collapsible
-              v-for="hint in status.hints"
-              :key="hint.id"
-              class="group block overflow-hidden rounded-lg ring ring-default"
-              :unmount-on-hide="false"
-              @update:open="value => value && loadHintContent(hint.id)"
-            >
+            <u-collapsible v-for="hint in status.hints" :key="hint.id" class="group block overflow-hidden rounded-lg ring ring-default" :unmount-on-hide="false" @update:open="value => value && loadHintContent(hint.id)">
               <div class="flex cursor-pointer items-center gap-2 bg-elevated/60 px-4 py-2">
-                <u-icon
-                  :name="hint.unlocked ? 'material-symbols:lock-open-right-outline-rounded' : 'material-symbols:lock-outline'"
-                  :class="hint.unlocked ? 'text-success' : 'text-muted'"
-                  class="size-4 shrink-0"
-                />
+                <u-icon :name="hint.unlocked ? 'material-symbols:lock-open-right-outline-rounded' : 'material-symbols:lock-outline'" :class="hint.unlocked ? 'text-success' : 'text-error'" class="size-4 shrink-0" />
                 <div class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">{{ hint.title }}</div>
-                <u-button
-                  v-if="hint.unlocked"
-                  type="button"
-                  size="xs"
-                  color="success"
-                  variant="soft"
-                  icon="material-symbols:check-rounded"
-                  :label="hintStatusLabel(hint)"
-                  class="pointer-events-none shrink-0"
-                  tabindex="-1"
-                />
-                <u-button
-                  v-else-if="!hint.enabled"
-                  type="button"
-                  size="xs"
-                  color="neutral"
-                  variant="soft"
-                  icon="material-symbols:block-rounded"
-                  :label="hintStatusLabel(hint)"
-                  class="pointer-events-none shrink-0"
-                  tabindex="-1"
-                />
+                <u-button v-if="hint.unlocked" type="button" size="xs" color="success" variant="soft" icon="material-symbols:check-rounded" :label="hintStatusLabel(hint)" class="pointer-events-none shrink-0" tabindex="-1" />
+                <u-button v-else-if="!hint.enabled" type="button" size="xs" color="neutral" variant="soft" icon="material-symbols:block-outline" :label="hintStatusLabel(hint)" class="pointer-events-none shrink-0" tabindex="-1" />
                 <u-button
                   v-else-if="hintRemaining(hint) > 0"
                   type="button"
@@ -363,29 +324,13 @@ watch(
                   class="pointer-events-none shrink-0"
                   tabindex="-1"
                 />
-                <u-button
-                  v-else
-                  type="button"
-                  size="xs"
-                  color="warning"
-                  variant="soft"
-                  icon="material-symbols:emoji-objects-outline-rounded"
-                  :label="hintPrice(hint)"
-                  class="pointer-events-none shrink-0"
-                  tabindex="-1"
-                />
+                <u-button v-else type="button" size="xs" color="warning" variant="soft" icon="material-symbols:emoji-objects-outline-rounded" :label="hintPrice(hint)" class="pointer-events-none shrink-0" tabindex="-1" />
                 <u-icon name="material-symbols:expand-more-rounded" class="size-4 shrink-0 text-muted transition-transform group-data-[state=open]:rotate-180" />
               </div>
               <template #content>
                 <div class="border-t border-default px-4 py-4">
                   <u-skeleton v-if="hintLoading.has(hint.id)" class="h-24 w-full" />
-                  <u-alert
-                    v-else-if="hintFailed.has(hint.id)"
-                    color="error"
-                    variant="subtle"
-                    icon="material-symbols:error-med-outline-rounded"
-                    :title="t('components.teamPuzzleStatus.hintLoadFailed')"
-                  >
+                  <u-alert v-else-if="hintFailed.has(hint.id)" color="error" variant="subtle" icon="material-symbols:error-med-outline-rounded" :title="t('components.teamPuzzleStatus.hintLoadFailed')">
                     <template #actions>
                       <u-button color="error" variant="soft" size="xs" icon="material-symbols:refresh-rounded" :label="t('components.teamPuzzleStatus.retry')" @click="loadHintContent(hint.id)" />
                     </template>
@@ -412,7 +357,9 @@ watch(
                       </div>
                     </dl>
                     <div class="border-t border-default pt-4">
-                      <rbph-content :content="hintContents[hint.id]!" />
+                      <div class="text-sm">
+                        <rbph-content :content="hintContents[hint.id]!" />
+                      </div>
                     </div>
                   </template>
                 </div>
@@ -424,40 +371,18 @@ watch(
         <section>
           <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
             <h3 class="text-base font-semibold text-highlighted">{{ t('components.teamPuzzleStatus.submissions') }}</h3>
-            <u-switch
-              :model-value="onlySuccessfulSubmissions"
-              size="sm"
-              :label="t('components.teamPuzzleStatus.onlySuccessfulSubmissions')"
-              :disabled="submissionsLoading"
-              @update:model-value="updateSubmissionFilter"
-            />
+            <u-switch :model-value="onlySuccessfulSubmissions" size="sm" :label="t('components.teamPuzzleStatus.onlySuccessfulSubmissions')" :disabled="submissionsLoading" @update:model-value="updateSubmissionFilter" />
           </div>
           <div class="max-h-80 overflow-auto rounded-lg ring ring-default">
-            <u-table
-              v-if="submissions?.data.length"
-              :data="submissions.data"
-              :columns="columns"
-              :loading="submissionsLoading"
-              :ui="{ base: 'w-full min-w-[48rem]', td: 'px-4 py-3' }"
-            />
+            <u-table v-if="submissions?.data.length" :data="submissions.data" :columns="columns" :loading="submissionsLoading" :ui="{ base: 'w-full min-w-[48rem]', td: 'px-4 py-3' }" />
             <div v-else-if="submissionsLoading" class="space-y-2 p-4">
               <u-skeleton class="h-10 w-full" />
               <u-skeleton class="h-10 w-full" />
             </div>
-            <u-empty
-              v-else
-              icon="material-symbols:assignment-outline-rounded"
-              :title="onlySuccessfulSubmissions ? t('submissions.noSuccessfulSubmissions') : t('submissions.noSubmissions')"
-            />
+            <u-empty v-else icon="material-symbols:assignment-outline-rounded" :title="onlySuccessfulSubmissions ? t('submissions.noSuccessfulSubmissions') : t('submissions.noSubmissions')" />
           </div>
           <div v-if="submissions && submissions.total > 10" class="mt-3 flex justify-end">
-            <u-pagination
-              :page="submissionPage"
-              :total="submissions.total"
-              :items-per-page="10"
-              :disabled="submissionsLoading"
-              @update:page="loadSubmissions"
-            />
+            <u-pagination :page="submissionPage" :total="submissions.total" :items-per-page="10" :disabled="submissionsLoading" @update:page="loadSubmissions" />
           </div>
         </section>
       </div>
@@ -465,11 +390,7 @@ watch(
 
     <template #footer>
       <div class="flex w-full items-center justify-between gap-2">
-        <u-button
-          :to="gamePuzzleSimpleRoute(gameId, puzzle)"
-          icon="material-symbols:open-in-new-rounded"
-          :label="t('components.teamPuzzleStatus.openPuzzle')"
-        />
+        <u-button :to="gamePuzzleSimpleRoute(gameId, puzzle)" icon="material-symbols:open-in-new-rounded" :label="t('components.teamPuzzleStatus.openPuzzle')" />
         <div class="flex gap-2">
           <u-button color="neutral" variant="soft" icon="material-symbols:refresh-rounded" :label="t('components.teamPuzzleStatus.refresh')" :loading="statusLoading" @click="reload" />
         </div>

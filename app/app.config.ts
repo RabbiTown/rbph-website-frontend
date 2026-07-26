@@ -12,5 +12,10 @@ export default defineAppConfig({
     pagination: {
       slots: { first: 'cursor-pointer', prev: 'cursor-pointer', item: 'cursor-pointer', next: 'cursor-pointer', last: 'cursor-pointer' },
     },
+    collapsible: {
+      slots: {
+        content: 'px-px',
+      },
+    },
   },
 });

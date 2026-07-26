@@ -730,7 +730,7 @@ onBeforeUnmount(() => {
 
                         <u-collapsible v-model:open="hint.advancedOpen">
                           <template #content>
-                            <div class="mt-2 space-y-4 p-px">
+                            <div class="mt-2 space-y-4">
                               <rb-form-field :label="t('admin.pages.puzzle.hints.enableCondition')" :tooltip="t('admin.pages.puzzle.hints.enableConditionDescription')">
                                 <rbph-content-block-visibility-editor v-model="hint.enable_cond" :game-id="currentGameId" :current-puzzle-id="currentPuzzleId" :disabled="saving || hint.deleting" />
                               </rb-form-field>
