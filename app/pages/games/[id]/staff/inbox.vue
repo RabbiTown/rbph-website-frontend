@@ -593,14 +593,10 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
               @click="filtersOpen = !filtersOpen"
             >
               {{ t('pages.staffInbox.filters') }}
-              {{ appliedFilterCount }}
+              <span v-if="appliedFilterCount > 0">{{ appliedFilterCount }}</span>
             </u-button>
           </div>
-          <div
-            class="grid transition-[grid-template-rows,opacity,margin] duration-200 ease-out"
-            :class="filtersOpen ? 'mt-3 grid-rows-[1fr] opacity-100' : 'mt-0 grid-rows-[0fr] opacity-0'"
-            :aria-hidden="!filtersOpen"
-          >
+          <div class="grid transition-[grid-template-rows,opacity,margin] duration-200 ease-out" :class="filtersOpen ? 'mt-3 grid-rows-[1fr] opacity-100' : 'mt-0 grid-rows-[0fr] opacity-0'" :aria-hidden="!filtersOpen">
             <div class="min-h-0 overflow-hidden" :inert="!filtersOpen">
               <div class="grid grid-cols-1 gap-2">
                 <u-select v-model="kind" :items="kindItems" :icon="selectedItemIcon(kindItems, kind)" class="min-w-0 w-full" />

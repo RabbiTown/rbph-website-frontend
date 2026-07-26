@@ -206,10 +206,12 @@ function hintPrice(hint: StaffPuzzleHintStatus) {
 }
 
 function hintRemaining(hint: StaffPuzzleHintStatus) {
+  if (!hint.available_at) return 0;
   return Math.max(Date.parse(hint.available_at) - currentTime.value, 0);
 }
 
 function hintStatusLabel(hint: StaffPuzzleHintStatus) {
+  if (!hint.enabled) return t('components.teamPuzzleStatus.hintNotEnabled');
   if (!hint.unlocked) return t('components.teamPuzzleStatus.hintNotPurchased');
   return hint.cost_id !== null && hint.cost_id !== undefined && hint.cost_amount > 0
     ? t('components.teamPuzzleStatus.hintPurchased')
@@ -340,6 +342,17 @@ watch(
                   tabindex="-1"
                 />
                 <u-button
+                  v-else-if="!hint.enabled"
+                  type="button"
+                  size="xs"
+                  color="neutral"
+                  variant="soft"
+                  icon="material-symbols:block-rounded"
+                  :label="hintStatusLabel(hint)"
+                  class="pointer-events-none shrink-0"
+                  tabindex="-1"
+                />
+                <u-button
                   v-else-if="hintRemaining(hint) > 0"
                   type="button"
                   size="xs"
@@ -389,7 +402,7 @@ watch(
                       </div>
                       <div class="flex items-start justify-between gap-3">
                         <dt class="text-muted">{{ t('components.teamPuzzleStatus.hintAvailableAt') }}</dt>
-                        <dd class="text-right text-highlighted">{{ formatDate(hint.available_at) }}</dd>
+                        <dd class="text-right text-highlighted">{{ hint.available_at ? formatDate(hint.available_at) : t('components.teamPuzzleStatus.hintNotEnabled') }}</dd>
                       </div>
                       <div class="flex items-start justify-between gap-3">
                         <dt class="text-muted">{{ t('components.teamPuzzleStatus.hintUnlockedAt') }}</dt>
@@ -425,7 +438,7 @@ watch(
               :data="submissions.data"
               :columns="columns"
               :loading="submissionsLoading"
-              :ui="{ base: 'min-w-[48rem]', td: 'px-4 py-3' }"
+              :ui="{ base: 'w-full min-w-[48rem]', td: 'px-4 py-3' }"
             />
             <div v-else-if="submissionsLoading" class="space-y-2 p-4">
               <u-skeleton class="h-10 w-full" />
@@ -459,7 +472,6 @@ watch(
         />
         <div class="flex gap-2">
           <u-button color="neutral" variant="soft" icon="material-symbols:refresh-rounded" :label="t('components.teamPuzzleStatus.refresh')" :loading="statusLoading" @click="reload" />
-          <u-button color="neutral" variant="soft" :label="t('components.teamPuzzleStatus.close')" @click="open = false" />
         </div>
       </div>
     </template>

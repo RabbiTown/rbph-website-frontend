@@ -75,7 +75,7 @@ const deletePuzzleName = computed(() => {
 const deletePuzzleNameMatches = computed(() => deletePuzzleNameInput.value === deletePuzzleName.value);
 
 const unlockCondPatch = computed(() => serializeUnlockGate(state.unlock));
-const originalUnlockCond = computed(() => puzzle.value?.unlock_cond ?? 'default');
+const originalUnlockCond = computed(() => puzzle.value?.unlock_cond ?? null);
 const unlockCondDirty = computed(() => Boolean(puzzle.value && unlockCondPatch.value !== originalUnlockCond.value));
 const originalReleaseSelection = computed<number | 'unpublished' | 'immediate'>(() => {
   if (puzzle.value?.immediate_release_at) return 'immediate';
@@ -99,8 +99,8 @@ const backendSourceDirty = computed(() => Boolean(puzzle.value && backendLoaded.
 const backendFunctionsDirty = computed(() => Boolean(puzzle.value && backendLoaded.value && JSON.stringify([...state.backend.functions].sort()) !== JSON.stringify([...(backend.value?.functions ?? [])].sort())));
 const backendDirty = computed(() => backendEnabledDirty.value || backendSourceDirty.value || backendFunctionsDirty.value);
 const dirty = computed(() => releasePhaseDirty.value || unlockCondDirty.value || backendDirty.value);
-const previewText = computed(() => translateUnlockCondition(unlockCondPatch.value || '', t));
-const invalid = computed(() => !unlockCondPatch.value);
+const previewText = computed(() => translateUnlockCondition(unlockCondPatch.value, t));
+const invalid = computed(() => unlockCondPatch.value === '');
 
 function syncFromPuzzle() {
   state.releasePhaseId = originalReleaseSelection.value;

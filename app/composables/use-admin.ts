@@ -20,7 +20,7 @@ export interface AdminPuzzleData {
   penalty: unknown;
   submit_requirements: unknown;
   max_submit?: number | null;
-  unlock_cond: string;
+  unlock_cond: string | null;
   release_phase_id: number | null;
   immediate_release_at: string | null;
   round_id: number;
@@ -76,6 +76,8 @@ export interface AdminHintData {
   content: string;
   content_type: number;
   cooldown: number;
+  enable_cond?: string | null;
+  cooldown_after_enable: boolean;
   cost_id?: number | null;
   cost_amount: number;
   backend_function?: string | null;

@@ -22,7 +22,7 @@ interface AdminPuzzle {
   judge: unknown;
   penalty: unknown;
   max_submit?: number | null;
-  unlock_cond: string;
+  unlock_cond: string | null;
   release_phase_id: number | null;
   immediate_release_at: string | null;
   round_id: number;
@@ -1212,7 +1212,7 @@ async function addPuzzle(roundId: number) {
     judge: [],
     penalty: [],
     max_submit: null,
-    unlock_cond: 'default',
+    unlock_cond: null,
     release_phase_id: null,
     ticket_enabled: true,
     ticket_cooldown: 0,

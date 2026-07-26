@@ -10,7 +10,7 @@ const currency = useCurrency().getAllCurrent();
       <rbph-currency-badges />
     </div>
     <div>
-      <rbph-hints :puzzle-id="puzzle?.data.id" :utime-at="puzzle?.state.utime_at" />
+      <rbph-hints :puzzle-id="puzzle?.data.id" />
     </div>
   </div>
 </template>

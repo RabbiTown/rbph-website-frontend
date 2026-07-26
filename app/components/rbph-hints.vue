@@ -2,10 +2,7 @@
 const { t } = useI18n();
 const props = defineProps<{
   puzzleId?: number;
-  utimeAt?: string;
 }>();
-
-const utimeAtMs = computed(() => new Date(props.utimeAt || '').getTime());
 
 const api = useApi();
 const toast = useToast();
@@ -43,8 +40,8 @@ function clearDueHintTimer() {
 }
 
 function hintUnlockAt(hint: RbHint) {
-  if (!props.utimeAt || Number.isNaN(utimeAtMs.value)) return Infinity;
-  return utimeAtMs.value + hint.cooldown * 1000;
+  const availableAt = new Date(hint.available_at).getTime();
+  return Number.isNaN(availableAt) ? Infinity : availableAt;
 }
 
 function nextLocalUnlockAt() {
@@ -203,6 +200,14 @@ useSync().listen(SyncMessageType.PuzzleHintUnlocked, ({ data }) => {
   if (data.puzzle.id === props.puzzleId) {
     updateData();
   }
+});
+
+useSync().listen(SyncMessageType.PuzzleSubmitted, () => {
+  updateData();
+});
+
+useSync().listen(SyncMessageType.GameReleaseUpdated, () => {
+  updateData();
 });
 
 defineExpose({

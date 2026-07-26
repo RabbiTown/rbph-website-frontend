@@ -48,7 +48,7 @@ const infoTargetId = ref<number>();
 const infoState = reactive({
   name: '',
   contentType: RbContentType.Markdown,
-  visibilityCond: 'default',
+  visibilityCond: null as string | null,
 });
 let dropEntries: BlockDropEntry[] = [];
 
@@ -294,8 +294,8 @@ onBeforeUnmount(clearDragState);
           <button type="button" class="min-w-0 flex-1 text-left" @click="emit('select', block.id)">
             <span class="block truncate text-sm font-medium text-highlighted">{{ block.name }}</span>
             <span class="mt-1 flex min-w-0 flex-wrap items-center gap-1">
-              <u-badge size="xs" variant="soft" :color="block.visibility_cond === 'default' ? 'neutral' : 'warning'" :icon="block.visibility_cond === 'default' ? 'material-symbols:visibility-outline-rounded' : 'material-symbols:rule-rounded'">
-                {{ block.visibility_cond === 'default' ? t('components.rbphContentBlockBrowser.alwaysVisible') : t('components.rbphContentBlockBrowser.conditionallyVisible') }}
+              <u-badge size="xs" variant="soft" :color="block.visibility_cond === null ? 'neutral' : 'warning'" :icon="block.visibility_cond === null ? 'material-symbols:visibility-outline-rounded' : 'material-symbols:rule-rounded'">
+                {{ block.visibility_cond === null ? t('components.rbphContentBlockBrowser.alwaysVisible') : t('components.rbphContentBlockBrowser.conditionallyVisible') }}
               </u-badge>
               <u-badge v-if="block.cdn_backend" size="xs" variant="soft" color="success" icon="material-symbols:cloud-done-outline-rounded"> {{ t('components.rbphContentBlockBrowser.uploaded') }} </u-badge>
             </span>

@@ -11,7 +11,7 @@ export interface AdminContentBlock {
   cdn_relative_path?: string | null;
   cdn_sha256?: string | null;
   cdn_size?: number | null;
-  visibility_cond: string;
+  visibility_cond: string | null;
   ctime_at: string;
   utime_at: string;
 }

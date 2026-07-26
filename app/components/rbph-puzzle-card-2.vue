@@ -6,7 +6,7 @@ interface AdminPuzzleCardData {
   slug?: string | null;
   title: string;
   ptype: number;
-  unlock_cond: string;
+  unlock_cond: string | null;
   release_phase_id: number | null;
   immediate_release_at: string | null;
 }

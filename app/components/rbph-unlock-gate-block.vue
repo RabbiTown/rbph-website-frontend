@@ -1,5 +1,5 @@
-<script setup lang="ts">import type { SelectItem } from '@nuxt/ui';
-
+<script setup lang="ts">
+import type { SelectItem } from '@nuxt/ui';
 
 const { t } = useI18n();
 
@@ -17,9 +17,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{ change: [] }>();
 
-const gateTypeItems = [
+const gateTypeItems = computed<SelectItem[][]>(() => [
   [
-    { label: t('components.rbphUnlockGateBlock.gateType.default'), value: 'default', icon: 'material-symbols:lock-open-right-outline-rounded' },
+    ...((props.depth ?? 0) === 0 ? [{ label: t('components.rbphUnlockGateBlock.gateType.default'), value: 'default', icon: 'material-symbols:lock-open-right-outline-rounded' }] : []),
     { label: t('components.rbphUnlockGateBlock.gateType.gameStarted'), value: 'game-started', icon: 'material-symbols:flag-outline-rounded' },
     { label: t('components.rbphUnlockGateBlock.gateType.puzzleSolved'), value: 'solved', icon: 'material-symbols:extension-outline-rounded' },
     { label: t('admin.common.trigger'), value: 'triggered', icon: 'material-symbols:bolt-outline-rounded' },
@@ -32,8 +32,12 @@ const gateTypeItems = [
     { label: t('components.rbphUnlockGateBlock.gateType.or'), value: 'or', icon: 'material-symbols:join-full-rounded' },
     { label: t('components.rbphUnlockGateBlock.gateType.not'), value: 'not', icon: 'material-symbols:close-rounded' },
   ],
+  [
+    { label: t('components.rbphUnlockGateBlock.gateType.true'), value: 'true', icon: 'material-symbols:check-circle-outline-rounded' },
+    { label: t('components.rbphUnlockGateBlock.gateType.false'), value: 'false', icon: 'material-symbols:block-outline' },
+  ],
   [{ label: t('components.rbphUnlockGateBlock.gateType.source'), value: 'source', icon: 'material-symbols:code-rounded' }],
-] satisfies SelectItem[][];
+]);
 
 const compareOpItems = [
   { label: t('components.rbphUnlockGateBlock.comparison.greaterThanOrEqual'), value: 'ge', icon: 'tabler:math-equal-greater' },
@@ -52,7 +56,7 @@ function selectedIcon(items: SelectItem[], value: string | number | null | undef
 
 function setType(type: string) {
   if (type === 'source') {
-    node.value = { type: 'source', source: serializeUnlockGate(node.value) || 'default' };
+    node.value = { type: 'source', source: serializeUnlockGate(node.value) || '(true)' };
   } else {
     node.value = defaultUnlockGate(type as UnlockGateType, props.puzzles, props.rounds);
   }

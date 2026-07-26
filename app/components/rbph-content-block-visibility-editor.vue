@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const model = defineModel<string>({ required: true });
+const model = defineModel<string | null>({ required: true });
 const props = defineProps<{
   gameId: number;
   currentPuzzleId?: number;

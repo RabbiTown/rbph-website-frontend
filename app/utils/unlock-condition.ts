@@ -3,7 +3,7 @@ import { isSimpleAtom, parseUnlockCondition, serializeSexpr, type Sexpr } from '
 export type UnlockCompareOp = 'gt' | 'ge' | 'lt' | 'le' | 'eq' | 'ne';
 export type UnlockSetType = 'puzzles' | 'puzzle-range' | 'round';
 export type UnlockValueType = 'number' | 'solved-count';
-export type UnlockGateType = 'default' | 'source' | 'and' | 'or' | 'not' | 'solved' | 'triggered' | 'all-solved' | 'any-solved' | 'game-started' | 'cmp';
+export type UnlockGateType = 'default' | 'true' | 'false' | 'source' | 'and' | 'or' | 'not' | 'solved' | 'triggered' | 'all-solved' | 'any-solved' | 'game-started' | 'cmp';
 
 export interface UnlockPuzzleOptionData {
   id: number;
@@ -33,6 +33,7 @@ export type UnlockValueNode =
 
 export type UnlockGateNode =
   | { type: 'default' }
+  | { type: 'true' | 'false' }
   | { type: 'source'; source: string }
   | { type: 'and' | 'or'; children: UnlockGateNode[] }
   | { type: 'not'; child: UnlockGateNode }
@@ -71,8 +72,11 @@ export function defaultUnlockGate(type: UnlockGateType = 'game-started', puzzles
   switch (type) {
     case 'default':
       return { type: 'default' };
+    case 'true':
+    case 'false':
+      return { type };
     case 'source':
-      return { type: 'source', source: 'default' };
+      return { type: 'source', source: '(true)' };
     case 'and':
     case 'or':
       return { type, children: [defaultUnlockGate('game-started', puzzles, rounds)] };
@@ -125,8 +129,9 @@ export function serializeUnlockValue(node: UnlockValueNode): Sexpr | undefined {
   return set ? ['solved-count', set] : undefined;
 }
 
-export function serializeUnlockGate(node: UnlockGateNode): string {
-  if (node.type === 'default') return 'default';
+function serializeUnlockGateNode(node: UnlockGateNode, nested = false): string {
+  if (node.type === 'default') return nested ? '(true)' : '';
+  if (node.type === 'true' || node.type === 'false') return `(${node.type})`;
   if (node.type === 'source') return node.source.trim();
   if (node.type === 'game-started') return '(game-started)';
   if (node.type === 'solved') {
@@ -143,16 +148,21 @@ export function serializeUnlockGate(node: UnlockGateNode): string {
     return set ? serializeSexpr([node.type, set]) : '';
   }
   if (node.type === 'and' || node.type === 'or') {
-    const children = node.children.map(serializeUnlockGate).filter(Boolean);
+    const children = node.children.map(child => serializeUnlockGateNode(child, true)).filter(Boolean);
     return children.length > 0 ? `(${node.type} ${children.join(' ')})` : '';
   }
   if (node.type === 'not') {
-    const child = serializeUnlockGate(node.child);
+    const child = serializeUnlockGateNode(node.child, true);
     return child ? serializeSexpr(['not', parseUnlockCondition(child) ?? child]) : '';
   }
   const lhs = serializeUnlockValue(node.lhs);
   const rhs = serializeUnlockValue(node.rhs);
   return lhs && rhs ? serializeSexpr([node.op, lhs, rhs]) : '';
+}
+
+export function serializeUnlockGate(node: UnlockGateNode): string | null {
+  if (node.type === 'default') return null;
+  return serializeUnlockGateNode(node);
 }
 
 function asList(expr: Sexpr | undefined): Sexpr[] | undefined {
@@ -191,14 +201,15 @@ function parseUnlockValue(expr: Sexpr | undefined): UnlockValueNode | undefined 
   return undefined;
 }
 
-export function parseUnlockGate(value: string): UnlockGateNode {
-  if (value === 'default') return { type: 'default' };
+export function parseUnlockGate(value: string | null | undefined): UnlockGateNode {
+  if (value == null) return { type: 'default' };
 
   const expr = parseUnlockCondition(value);
   const list = asList(expr);
   if (!list || typeof list[0] !== 'string') return { type: 'source', source: value };
 
   const [op, ...args] = list;
+  if ((op === 'true' || op === 'false') && args.length === 0) return { type: op };
   if (op === 'game-started' && args.length === 0) return { type: 'game-started' };
   if (op === 'solved' && args.length === 1) return { type: 'solved', ref: stringArg(args[0]) };
   if (op === 'triggered' && args.length === 2) return { type: 'triggered', ref: stringArg(args[0]), key: stringArg(args[1]) };

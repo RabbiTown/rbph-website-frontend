@@ -76,7 +76,7 @@ async function createRoundPuzzle() {
       judge: [],
       penalty: [],
       max_submit: null,
-      unlock_cond: 'default',
+      unlock_cond: null,
       release_phase_id: null,
       ticket_enabled: true,
       ticket_cooldown: 0,

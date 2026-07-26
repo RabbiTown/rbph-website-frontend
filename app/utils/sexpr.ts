@@ -92,6 +92,8 @@ function translateSexpr(expr: Sexpr, t: Translate): string | undefined {
   if (!Array.isArray(expr) || typeof expr[0] !== 'string') return undefined;
 
   const [op, ...args] = expr;
+  if (op === 'true' && args.length === 0) return t('components.unlockConditionPreview.true');
+  if (op === 'false' && args.length === 0) return t('components.unlockConditionPreview.false');
   if (op === 'game-started' && args.length === 0) return t('components.unlockConditionPreview.gameStarted');
 
   if (op === 'solved' && args.length === 1) {
@@ -118,8 +120,8 @@ function translateSexpr(expr: Sexpr, t: Translate): string | undefined {
   return undefined;
 }
 
-export function translateUnlockCondition(value: string, t: Translate) {
-  if (value === 'default') return t('components.unlockConditionPreview.default');
+export function translateUnlockCondition(value: string | null | undefined, t: Translate) {
+  if (value == null) return t('components.unlockConditionPreview.default');
 
   const parsed = parseUnlockCondition(value);
   return parsed ? (translateSexpr(parsed, t) ?? value) : value;

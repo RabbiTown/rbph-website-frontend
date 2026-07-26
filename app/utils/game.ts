@@ -275,6 +275,7 @@ export interface RbHint {
   title?: string | null;
   title_hidden: boolean;
   cooldown: number;
+  available_at: string;
   cost_id?: number | null;
   cost_amount: number;
 }
@@ -693,7 +694,8 @@ export interface StaffPuzzleHintStatus {
   cost_name?: string | null;
   cost_prec?: number | null;
   cost_amount: number;
-  available_at: string;
+  enabled: boolean;
+  available_at?: string | null;
   unlocked: boolean;
   unlocked_at?: string | null;
 }
