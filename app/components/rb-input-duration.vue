@@ -25,6 +25,7 @@ const props = withDefaults(
 const model = defineModel<number>({ default: 0 });
 const locale = useLocale(toRef(props, 'locale'));
 const root = ref<HTMLElement>();
+const keyboardInput = ref<HTMLInputElement>();
 const activeSegment = ref<DurationSegment>();
 const inputBuffer = ref('');
 let inputBufferTimer: ReturnType<typeof setTimeout> | undefined;
@@ -124,15 +125,19 @@ function scheduleInputBufferReset() {
   }, 1000);
 }
 
-function focusSegment(segment: DurationSegment) {
+function focusSegment(segment: DurationSegment, openKeyboard = false) {
   clearInputBuffer();
   activeSegment.value = segment;
-  root.value?.focus();
+  if (openKeyboard) {
+    keyboardInput.value?.focus({ preventScroll: true });
+  } else {
+    root.value?.focus();
+  }
 }
 
 function activateSegment(segment: DurationSegment) {
   if (props.disabled) return;
-  focusSegment(segment);
+  focusSegment(segment, true);
 }
 
 function moveToNextSegment(segment: DurationSegment) {
@@ -182,9 +187,21 @@ function onFocus() {
   if (!activeSegment.value) activeSegment.value = 'hour';
 }
 
-function onBlur() {
+function onBlur(event: FocusEvent) {
+  if (event.relatedTarget instanceof Node && root.value?.contains(event.relatedTarget)) return;
   activeSegment.value = undefined;
   clearInputBuffer();
+}
+
+function onKeyboardInput(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const digits = input.value.replace(/\D/g, '');
+  input.value = '';
+  if (props.disabled) return;
+
+  for (const digit of digits) {
+    enterDigit(activeSegment.value ?? 'hour', digit);
+  }
 }
 
 function onKeydown(event: KeyboardEvent) {
@@ -249,6 +266,20 @@ defineExpose({
     @blur="onBlur"
     @keydown="onKeydown"
   >
+    <input
+      ref="keyboardInput"
+      type="text"
+      inputmode="numeric"
+      pattern="[0-9]*"
+      autocomplete="off"
+      tabindex="-1"
+      class="pointer-events-none absolute start-0 top-0 size-px opacity-0"
+      :disabled="disabled"
+      :aria-label="ariaLabel"
+      @focus="onFocus"
+      @blur="onBlur"
+      @input="onKeyboardInput"
+    >
     <div class="flex items-center gap-0.5">
       <u-icon v-if="icon" :name="icon" class="me-1 size-4 shrink-0 text-dimmed" />
       <span

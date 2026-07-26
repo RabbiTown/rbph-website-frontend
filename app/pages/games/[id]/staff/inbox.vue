@@ -20,6 +20,7 @@ const submitLoading = ref(false);
 const assigneeLoading = ref(false);
 const assigneeConfirmOpen = ref(false);
 const teamAccessMenu = ref<{ openEditor: () => void }>();
+const messageEditor = ref<{ focus: () => void }>();
 const currentTeamFeatureBanned = ref(false);
 const sendConflictOpen = ref(false);
 const sendConflictAssignee = ref<TicketAggreInfoUser>();
@@ -65,15 +66,84 @@ const kind = ref((route.query.kind as string) || 'all');
 const state = ref('open');
 const waitingFor = ref('all');
 const assigneeFilter = ref('all');
+const filtersOpen = ref(false);
+const filtersReady = ref(!import.meta.client);
+const appliedFilterCount = computed(() => [kind.value, state.value, waitingFor.value, assigneeFilter.value].filter(value => value !== 'all').length);
+const kindItems = computed(() => [
+  { label: t('pages.staffInbox.allTypes'), value: 'all', icon: 'material-symbols:category-outline-rounded' },
+  { label: t('pages.puzzlePage.tickets'), value: 'puzzle', icon: 'material-symbols:near-me-outline-rounded' },
+  { label: t('message.title'), value: 'dm', icon: 'material-symbols:mail-outline-rounded' },
+]);
+const stateItems = computed(() => [
+  { label: t('pages.staffInbox.allStates'), value: 'all', icon: 'material-symbols:radio-button-partial-rounded' },
+  { label: t('ticket.open'), value: 'open', icon: 'material-symbols:add-circle-outline-rounded' },
+  { label: t('ticket.closedState'), value: 'closed', icon: 'material-symbols:check-circle-outline-rounded' },
+]);
+const waitingItems = computed(() => [
+  { label: t('pages.staffInbox.allMessages'), value: 'all', icon: 'material-symbols:forum-outline-rounded' },
+  { label: t('pages.staffInbox.waitingStaff'), value: 'staff', icon: 'material-symbols:mark-chat-unread-outline-rounded' },
+  { label: t('pages.staffInbox.waitingTeam'), value: 'team', icon: 'material-symbols:groups-2-outline-rounded' },
+]);
+const assigneeItems = computed(() => [
+  { label: t('pages.staffInbox.allAssignees'), value: 'all', icon: 'material-symbols:group-outline-rounded' },
+  { label: t('pages.staffInbox.handledByMe'), value: 'me', icon: 'material-symbols:person-check-outline-rounded' },
+  { label: t('pages.staffInbox.unassigned'), value: 'none', icon: 'material-symbols:person-off-outline-rounded' },
+]);
 const puzzleId = computed(() => {
   const value = Number(route.query.puzzle_id);
   return Number.isFinite(value) && value > 0 ? value : undefined;
 });
 
+function selectedItemIcon(items: { value: string; icon: string }[], value: string) {
+  return items.find(item => item.value === value)?.icon;
+}
+
+type StoredFilters = {
+  kind: string;
+  state: string;
+  waitingFor: string;
+  assignee: string;
+};
+
+function filtersStorageKey() {
+  return `rbph::staff-inbox-filters:v1:${gameId.value}`;
+}
+
+function storedFilterValue(value: unknown, allowed: string[], fallback: string) {
+  return typeof value === 'string' && allowed.includes(value) ? value : fallback;
+}
+
+function restoreFilters() {
+  if (!import.meta.client || !gameId.value) return;
+  try {
+    const saved = JSON.parse(localStorage.getItem(filtersStorageKey()) ?? 'null') as Partial<StoredFilters> | null;
+    const routeKind = route.query.kind;
+    kind.value = storedFilterValue(typeof routeKind === 'string' ? routeKind : saved?.kind, ['all', 'puzzle', 'dm'], 'all');
+    state.value = storedFilterValue(saved?.state, ['all', 'open', 'closed'], 'open');
+    waitingFor.value = storedFilterValue(saved?.waitingFor, ['all', 'staff', 'team'], 'all');
+    assigneeFilter.value = storedFilterValue(saved?.assignee, ['all', 'me', 'none'], 'all');
+  } catch {
+    localStorage.removeItem(filtersStorageKey());
+  }
+}
+
+function saveFilters() {
+  if (!import.meta.client || !gameId.value) return;
+  localStorage.setItem(
+    filtersStorageKey(),
+    JSON.stringify({
+      kind: kind.value,
+      state: state.value,
+      waitingFor: waitingFor.value,
+      assignee: assigneeFilter.value,
+    } satisfies StoredFilters),
+  );
+}
+
 useHead({ titleTemplate: computed(() => buildTitleParts([{ text: t('pages.staffInbox.title') }, { text: useGame().ref.value?.title, sep: ' - ' }])) });
 
 async function loadTickets(_silent = false, append = false) {
-  if (!gameId.value || (append && (!listHasMore.value || listLoading.value))) return;
+  if (!filtersReady.value || !gameId.value || (append && (!listHasMore.value || listLoading.value))) return;
   listLoading.value = true;
   try {
     const { data } = await api.get<StaffTicketListResponse>(`/games/${gameId.value}/tickets/staff`, {
@@ -109,6 +179,7 @@ function ticketEndpoint(ticketId: number) {
 async function loadThread(ticketId = selectedId.value, silent = false, force = false) {
   if (!ticketId) return;
   if (!force && ticketId === selectedId.value && (threadLoading.value || thread.value?.ticket?.id === ticketId)) return;
+  let loaded = false;
   selectedId.value = ticketId;
   currentTeamFeatureBanned.value = false;
   if (!silent) threadLoading.value = true;
@@ -120,10 +191,15 @@ async function loadThread(ticketId = selectedId.value, silent = false, force = f
     unlockAfterSeconds.value = 0;
     reqCurrencyId.value = null;
     reqCurrencyAmount.value = 0;
+    loaded = true;
   } catch (error) {
     handleError(error, t('pages.staffInbox.loadThreadFailed'));
   } finally {
     if (!silent) threadLoading.value = false;
+  }
+  if (loaded && !silent && import.meta.client && window.matchMedia('(min-width: 640px)').matches) {
+    await nextTick();
+    messageEditor.value?.focus();
   }
 }
 
@@ -182,9 +258,12 @@ function messageCostText(message: TicketMessage) {
   return `${currency?.name ?? `#${message.cost_id}`} ${intPrecString(message.cost_amount, currency?.prec ?? 0)}`;
 }
 
-watch([gameId, kind, state, waitingFor, assigneeFilter, puzzleId], () => loadTickets(), { immediate: true });
+watch([filtersReady, gameId, kind, state, waitingFor, assigneeFilter, puzzleId], () => loadTickets(), { immediate: true });
+watch([kind, state, waitingFor, assigneeFilter], saveFilters);
 
 onMounted(() => {
+  restoreFilters();
+  filtersReady.value = true;
   useInfiniteScroll(listScroll, () => loadTickets(true, true), {
     distance: 80,
     canLoadMore: () => listHasMore.value && !listLoading.value,
@@ -206,9 +285,7 @@ function conflictAssignee(error: unknown): TicketAggreInfoUser | undefined {
 }
 
 function ticketDisplayTitle(ticket: TicketSummary) {
-  return ticket.puzzle
-    ? t('pages.staffInbox.puzzleTicketIdentifier', { puzzle: ticket.puzzle.title, id: ticket.id })
-    : t('pages.staffInbox.messageIdentifier', { id: ticket.id });
+  return ticket.puzzle ? t('pages.staffInbox.puzzleTicketIdentifier', { puzzle: ticket.puzzle.title, id: ticket.id }) : t('pages.staffInbox.messageIdentifier', { id: ticket.id });
 }
 
 function openSendConflict(action: 'send' | 'close', assignee: TicketAggreInfoUser) {
@@ -498,48 +575,43 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
 
     <div class="grid min-h-[calc(100vh-10rem)] items-start gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
       <aside class="w-full lg:sticky lg:top-20">
-        <u-card variant="subtle" :ui="{ body: 'flex min-h-0 flex-col gap-3 p-2 sm:p-2 lg:max-h-[calc(100vh-6rem)]' }">
-          <div class="flex items-center gap-2 font-semibold text-highlighted">
-            <u-icon name="material-symbols:inbox-outline-rounded" />
-            {{ t('pages.staffInbox.sessionSelect') }}
+        <u-card variant="subtle" :ui="{ body: 'flex min-h-0 flex-col p-2 sm:p-2 lg:max-h-[calc(100vh-6rem)]' }">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex min-w-0 items-center gap-2 font-semibold text-highlighted">
+              <u-icon name="material-symbols:inbox-outline-rounded" />
+              <span class="truncate">{{ t('pages.staffInbox.sessionSelect') }}</span>
+            </div>
+            <u-button
+              type="button"
+              size="xs"
+              :color="appliedFilterCount > 0 ? 'primary' : 'neutral'"
+              variant="link"
+              icon="material-symbols:filter-alt-outline-rounded"
+              trailing-icon="material-symbols:expand-more-rounded"
+              :ui="{ trailingIcon: ['transition-transform duration-200', { 'rotate-180': filtersOpen }] }"
+              :aria-expanded="filtersOpen"
+              @click="filtersOpen = !filtersOpen"
+            >
+              {{ t('pages.staffInbox.filters') }}
+              {{ appliedFilterCount }}
+            </u-button>
           </div>
-          <u-separator />
-          <div class="grid grid-cols-2 gap-3 lg:grid-cols-1">
-            <u-select
-              v-model="kind"
-              :items="[
-                { label: t('pages.staffInbox.allTypes'), value: 'all' },
-                { label: t('pages.puzzlePage.tickets'), value: 'puzzle' },
-                { label: t('message.title'), value: 'dm' },
-              ]"
-            />
-            <u-select
-              v-model="state"
-              :items="[
-                { label: t('pages.staffInbox.allStates'), value: 'all' },
-                { label: t('ticket.open'), value: 'open' },
-                { label: t('ticket.closedState'), value: 'closed' },
-              ]"
-            />
-            <u-select
-              v-model="waitingFor"
-              :items="[
-                { label: t('pages.staffInbox.allMessages'), value: 'all' },
-                { label: t('pages.staffInbox.waitingStaff'), value: 'staff' },
-                { label: t('pages.staffInbox.waitingTeam'), value: 'team' },
-              ]"
-            />
-            <u-select
-              v-model="assigneeFilter"
-              :items="[
-                { label: t('pages.staffInbox.allAssignees'), value: 'all' },
-                { label: t('pages.staffInbox.handledByMe'), value: 'me' },
-                { label: t('pages.staffInbox.unassigned'), value: 'none' },
-              ]"
-            />
+          <div
+            class="grid transition-[grid-template-rows,opacity,margin] duration-200 ease-out"
+            :class="filtersOpen ? 'mt-3 grid-rows-[1fr] opacity-100' : 'mt-0 grid-rows-[0fr] opacity-0'"
+            :aria-hidden="!filtersOpen"
+          >
+            <div class="min-h-0 overflow-hidden" :inert="!filtersOpen">
+              <div class="grid grid-cols-1 gap-2">
+                <u-select v-model="kind" :items="kindItems" :icon="selectedItemIcon(kindItems, kind)" class="min-w-0 w-full" />
+                <u-select v-model="state" :items="stateItems" :icon="selectedItemIcon(stateItems, state)" class="min-w-0 w-full" />
+                <u-select v-model="waitingFor" :items="waitingItems" :icon="selectedItemIcon(waitingItems, waitingFor)" class="min-w-0 w-full" />
+                <u-select v-model="assigneeFilter" :items="assigneeItems" :icon="selectedItemIcon(assigneeItems, assigneeFilter)" class="min-w-0 w-full" />
+              </div>
+            </div>
           </div>
-          <u-separator />
-          <div ref="listScroll" class="min-h-0 flex-1 overflow-y-auto">
+          <u-separator class="mt-3" />
+          <div ref="listScroll" class="mt-3 min-h-0 flex-1 overflow-y-auto">
             <div v-if="listLoading && tickets.length === 0" class="p-3"><u-skeleton class="h-20" /></div>
             <u-card
               v-for="ticket in tickets"
@@ -639,13 +711,7 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
                   size="md"
                   @status-change="currentTeamFeatureBanned = $event"
                 />
-                <rbph-team-puzzle-status
-                  v-if="thread.ticket.team && thread.ticket.puzzle"
-                  :game-id="gameId"
-                  :team-id="thread.ticket.team.id"
-                  :team-name="thread.ticket.team.name"
-                  :puzzle="thread.ticket.puzzle"
-                />
+                <rbph-team-puzzle-status v-if="thread.ticket.team && thread.ticket.puzzle" :game-id="gameId" :team-id="thread.ticket.team.id" :team-name="thread.ticket.team.name" :puzzle="thread.ticket.puzzle" />
               </div>
             </div>
           </div>
@@ -677,36 +743,25 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
             :description="t('components.teamAccessMenu.featureBannedDescription')"
           >
             <template #actions>
-              <u-button
-                color="error"
-                variant="soft"
-                icon="material-symbols:admin-panel-settings-outline-rounded"
-                :label="t('components.teamAccessMenu.edit')"
-                @click="teamAccessMenu?.openEditor()"
-              />
+              <u-button color="error" variant="soft" icon="material-symbols:admin-panel-settings-outline-rounded" :label="t('components.teamAccessMenu.edit')" @click="teamAccessMenu?.openEditor()" />
             </template>
           </u-alert>
 
           <rbph-message-edit
+            ref="messageEditor"
             v-model:draft="draft"
             v-model:content-type="contentType"
             :placeholder="t('pages.staffInbox.replyCurrent')"
             :content-types="thread.perm.content_type"
             :loading="submitLoading"
             :disabled="submitLoading"
+            :autofocus="false"
             :can-close="Boolean(thread.ticket.puzzle) && thread.ticket.state === RbTicketState.Open"
             @submit="sendMessage()"
             @submit-close="closeWithMessage()"
           >
             <template #tool>
-              <rbph-message-unlock-editor
-                v-model:unlock-after-seconds="unlockAfterSeconds"
-                v-model:cost-id="reqCurrencyId"
-                v-model:cost-amount="reqCurrencyAmount"
-                :game-id="gameId"
-                :currencies="unlockCurrencies"
-                :disabled="submitLoading"
-              />
+              <rbph-message-unlock-editor v-model:unlock-after-seconds="unlockAfterSeconds" v-model:cost-id="reqCurrencyId" v-model:cost-amount="reqCurrencyAmount" :game-id="gameId" :currencies="unlockCurrencies" :disabled="submitLoading" />
             </template>
           </rbph-message-edit>
 
@@ -725,7 +780,12 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
                   <u-badge v-if="item.unlock_at" color="warning" variant="soft" icon="material-symbols:timer-outline-rounded">
                     {{ t('ticket.unlockAt', { time: formatDate(item.unlock_at) }) }}
                   </u-badge>
-                  <u-badge v-if="item.cost_id !== null && item.cost_id !== undefined" :color="item.unlocked ? 'success' : 'error'" variant="soft" :icon="item.unlocked ? 'material-symbols:lock-open-right-outline-rounded' : 'material-symbols:lock-outline'">
+                  <u-badge
+                    v-if="item.cost_id !== null && item.cost_id !== undefined"
+                    :color="item.unlocked ? 'success' : 'error'"
+                    variant="soft"
+                    :icon="item.unlocked ? 'material-symbols:lock-open-right-outline-rounded' : 'material-symbols:lock-outline'"
+                  >
                     {{ t(item.unlocked ? 'ticket.unlockedCost' : 'ticket.notUnlockedCost', { cost: messageCostText(item) }) }}
                   </u-badge>
                 </div>
@@ -742,16 +802,17 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
       <template #body>
         <div class="space-y-4">
           <rbph-staff-team-select v-model="dmTeam" v-model:team="dmTeamInfo" :game-id="gameId" :placeholder="t('pages.staffInbox.searchTeam')" />
-          <rbph-message-edit v-model:draft="dmDraft" v-model:content-type="contentType" :placeholder="t('pages.staffInbox.dmPlaceholder')" :content-types="[RbContentType.UnsafeMarkdown]" :loading="submitLoading" :disabled="!dmTeam || submitLoading" @submit="sendDm">
+          <rbph-message-edit
+            v-model:draft="dmDraft"
+            v-model:content-type="contentType"
+            :placeholder="t('pages.staffInbox.dmPlaceholder')"
+            :content-types="[RbContentType.UnsafeMarkdown]"
+            :loading="submitLoading"
+            :disabled="!dmTeam || submitLoading"
+            @submit="sendDm"
+          >
             <template #tool>
-              <rbph-message-unlock-editor
-                v-model:unlock-after-seconds="dmUnlockAfterSeconds"
-                v-model:cost-id="dmCurrencyId"
-                v-model:cost-amount="dmCurrencyAmount"
-                :game-id="gameId"
-                :currencies="dmCurrencies"
-                :disabled="!dmTeam || submitLoading"
-              />
+              <rbph-message-unlock-editor v-model:unlock-after-seconds="dmUnlockAfterSeconds" v-model:cost-id="dmCurrencyId" v-model:cost-amount="dmCurrencyAmount" :game-id="gameId" :currencies="dmCurrencies" :disabled="!dmTeam || submitLoading" />
             </template>
           </rbph-message-edit>
         </div>
@@ -768,12 +829,6 @@ useSync().listen(SyncMessageType.TicketUpdated, ({ data }) => {
       :busy="submitLoading"
       @confirm="confirmSendConflict"
     />
-    <rbph-no-bid-confirm-modal
-      v-model:open="noBidWarningOpen"
-      :game-id="gameId"
-      :currencies="unlockCurrencies"
-      :busy="submitLoading"
-      @confirm="confirmNoBidWarning"
-    />
+    <rbph-no-bid-confirm-modal v-model:open="noBidWarningOpen" :game-id="gameId" :currencies="unlockCurrencies" :busy="submitLoading" @confirm="confirmNoBidWarning" />
   </div>
 </template>

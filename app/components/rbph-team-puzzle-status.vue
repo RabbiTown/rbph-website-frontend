@@ -321,11 +321,11 @@ watch(
               :unmount-on-hide="false"
               @update:open="value => value && loadHintContent(hint.id)"
             >
-              <div class="flex cursor-pointer items-center gap-2 bg-elevated/60 px-4 py-3">
+              <div class="flex cursor-pointer items-center gap-2 bg-elevated/60 px-4 py-2">
                 <u-icon
                   :name="hint.unlocked ? 'material-symbols:lock-open-right-outline-rounded' : 'material-symbols:lock-outline'"
                   :class="hint.unlocked ? 'text-success' : 'text-muted'"
-                  class="size-5 shrink-0"
+                  class="size-4 shrink-0"
                 />
                 <div class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">{{ hint.title }}</div>
                 <u-button
@@ -361,7 +361,7 @@ watch(
                   class="pointer-events-none shrink-0"
                   tabindex="-1"
                 />
-                <u-icon name="material-symbols:expand-more-rounded" class="size-5 shrink-0 text-muted transition-transform group-data-[state=open]:rotate-180" />
+                <u-icon name="material-symbols:expand-more-rounded" class="size-4 shrink-0 text-muted transition-transform group-data-[state=open]:rotate-180" />
               </div>
               <template #content>
                 <div class="border-t border-default px-4 py-4">
@@ -425,6 +425,7 @@ watch(
               :data="submissions.data"
               :columns="columns"
               :loading="submissionsLoading"
+              :ui="{ base: 'min-w-[48rem]', td: 'px-4 py-3' }"
             />
             <div v-else-if="submissionsLoading" class="space-y-2 p-4">
               <u-skeleton class="h-10 w-full" />
