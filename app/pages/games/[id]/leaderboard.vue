@@ -16,6 +16,7 @@ useHead({
 
 const api = useApi();
 const team = useTeam();
+const systemStatus = useSystemStatus();
 
 const pageData = ref<LeaderBoardInfo>();
 
@@ -119,6 +120,7 @@ const columns = computed<TableColumn<LeaderBoardTeamInfo>[]>(() => [
 
 const pageSize = 50;
 const loadingMore = ref(false);
+const refreshIntervalText = computed(() => formatTime((systemStatus.ref.value?.leaderboard_refresh_interval_seconds ?? 5) * 1000));
 
 async function updateData(newId: number | undefined = undefined): Promise<boolean> {
   const gameId = newId || game.value?.id;
@@ -172,6 +174,8 @@ const updateTime = ref(Date.now());
 let timer: number | null = null;
 
 onMounted(() => {
+  systemStatus.refresh();
+
   useInfiniteScroll(window, loadMore, {
     distance: 50,
     canLoadMore: () => Boolean(pageData.value?.has_more) && !loadingMore.value,
@@ -195,9 +199,15 @@ onUnmounted(() => {
     <div class="py-6">
       <div class="flex items-baseline justify-between md:flex-row flex-col">
         <div class="text-3xl font-bold">{{ t('pages.leaderboard.title') }}</div>
-        <div class="mt-2 text-secondary ms-0.5 text-xs">
-          <u-icon name="material-symbols:schedule-outline-rounded" class="align-middle mb-0.5" />
-          {{ t('pages.leaderboard.updatedAt', { time: formatDate(updateTime) }) }}
+        <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-secondary ms-0.5 text-xs">
+          <span>
+            <u-icon name="material-symbols:schedule-outline-rounded" class="align-middle mb-0.5" />
+            {{ t('pages.leaderboard.updatedAt', { time: formatDate(updateTime) }) }}
+          </span>
+          <span>
+            <u-icon name="material-symbols:cycle-rounded" class="align-middle mb-0.5" />
+            {{ t('pages.leaderboard.refreshInterval', { time: refreshIntervalText }) }}
+          </span>
         </div>
       </div>
     </div>

@@ -8,6 +8,7 @@ interface AdminSystemSettings {
   captcha_registration_required: boolean;
   max_sessions: number;
   max_websocket_connections: number;
+  leaderboard_refresh_interval_seconds: number;
   maintenance_enabled: boolean;
   maintenance_message: string;
   updated_by?: number | null;
@@ -42,6 +43,7 @@ const draft = reactive({
   captcha_registration_required: false,
   max_sessions: 3,
   max_websocket_connections: 5,
+  leaderboard_refresh_interval_seconds: 5,
   maintenance_enabled: false,
   maintenance_message: '',
 });
@@ -56,11 +58,12 @@ const dirty = computed(() => {
       draft.captcha_registration_required !== current.captcha_registration_required ||
       draft.max_sessions !== current.max_sessions ||
       draft.max_websocket_connections !== current.max_websocket_connections ||
+      draft.leaderboard_refresh_interval_seconds !== current.leaderboard_refresh_interval_seconds ||
       draft.maintenance_enabled !== current.maintenance_enabled ||
       draft.maintenance_message !== current.maintenance_message),
   );
 });
-const valid = computed(() => draft.max_sessions >= 1 && draft.max_sessions <= 20 && draft.max_websocket_connections >= 1 && draft.max_websocket_connections <= 20 && draft.maintenance_message.length <= 500);
+const valid = computed(() => draft.max_sessions >= 1 && draft.max_sessions <= 20 && draft.max_websocket_connections >= 1 && draft.max_websocket_connections <= 20 && draft.leaderboard_refresh_interval_seconds >= 1 && draft.leaderboard_refresh_interval_seconds <= 86400 && draft.maintenance_message.length <= 500);
 
 function syncDraft(current: AdminSystemSettings) {
   draft.registration_open = current.registration_open;
@@ -69,6 +72,7 @@ function syncDraft(current: AdminSystemSettings) {
   draft.captcha_registration_required = current.captcha_registration_required;
   draft.max_sessions = current.max_sessions;
   draft.max_websocket_connections = current.max_websocket_connections;
+  draft.leaderboard_refresh_interval_seconds = current.leaderboard_refresh_interval_seconds;
   draft.maintenance_enabled = current.maintenance_enabled;
   draft.maintenance_message = current.maintenance_message;
 }
@@ -107,6 +111,7 @@ async function save() {
         captcha_registration_required: draft.captcha_registration_required,
         max_sessions: draft.max_sessions,
         max_websocket_connections: draft.max_websocket_connections,
+        leaderboard_refresh_interval_seconds: draft.leaderboard_refresh_interval_seconds,
         maintenance_enabled: draft.maintenance_enabled,
         maintenance_message: draft.maintenance_message.trim(),
       },
@@ -238,6 +243,17 @@ onBeforeUnmount(() => dirtyToast.clear());
                     :reset="() => (draft.max_websocket_connections = settings!.max_websocket_connections)"
                   >
                     <u-input-number v-model="draft.max_websocket_connections" :min="1" :max="20" :disabled="saving" class="w-32" />
+                  </rb-form-field>
+                  <u-separator />
+                  <rb-form-field
+                    row
+                    :label="t('admin.pages.settings.leaderboardRefreshInterval')"
+                    icon="material-symbols:leaderboard-outline-rounded"
+                    :description="t('admin.pages.settings.leaderboardRefreshIntervalDescription')"
+                    :dirty="draft.leaderboard_refresh_interval_seconds !== settings.leaderboard_refresh_interval_seconds"
+                    :reset="() => (draft.leaderboard_refresh_interval_seconds = settings!.leaderboard_refresh_interval_seconds)"
+                  >
+                    <u-input-number v-model="draft.leaderboard_refresh_interval_seconds" :min="1" :max="86400" :disabled="saving" class="w-32" />
                   </rb-form-field>
                 </div>
               </section>

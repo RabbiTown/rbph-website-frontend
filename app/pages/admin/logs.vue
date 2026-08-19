@@ -133,6 +133,7 @@ function logView(log: AdminLogData) {
           captcha_registration_required: t('activityLog.fields.registrationCaptcha'),
           max_sessions: t('admin.common.maxConcurrentSessions'),
           max_websocket_connections: t('admin.common.maxConcurrentConnections'),
+          leaderboard_refresh_interval_seconds: t('admin.pages.settings.leaderboardRefreshInterval'),
           maintenance_enabled: t('admin.common.maintenanceMode'),
           maintenance_message: t('admin.common.maintenanceMessage'),
         }),

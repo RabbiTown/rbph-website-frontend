@@ -1,6 +1,7 @@
 export interface SystemStatus {
   registration_open: boolean;
   require_email_verification: boolean;
+  leaderboard_refresh_interval_seconds: number;
   maintenance_enabled: boolean;
   maintenance_message?: string;
 }
@@ -14,6 +15,7 @@ export function useSystemStatus() {
     state.value = {
       registration_open: state.value?.registration_open ?? false,
       require_email_verification: state.value?.require_email_verification ?? false,
+      leaderboard_refresh_interval_seconds: state.value?.leaderboard_refresh_interval_seconds ?? 5,
       maintenance_enabled: true,
       maintenance_message: message,
     };
