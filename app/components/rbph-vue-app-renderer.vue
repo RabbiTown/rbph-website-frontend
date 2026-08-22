@@ -35,7 +35,7 @@ type RbphVueAppContext = {
     refreshPuzzle(): Promise<void>;
     refreshTeam(): Promise<void>;
     navigate(path: string): Promise<void>;
-    toast(options: { title?: string; description?: string; color?: string }): void;
+    toast(options: { title?: string; description?: string; color?: string; icon?: string; iconAsset?: string }): void;
   };
   assets: {
     baseUrl: string;
@@ -83,6 +83,7 @@ const game = useGame().ref;
 const team = useTeam(false).ref;
 const puzzleState = usePuzzle().ref;
 const backendEventListeners = new Map<string, Set<BackendEventListener>>();
+const toastAssetIcons = new Map<string, Component>();
 
 useSync().listen(SyncMessageType.PuzzleBackendEvent, ({ data }) => {
   const puzzleId = puzzleState.value?.data.id ?? currentNumericRouteParam('puzzle');
@@ -118,6 +119,38 @@ function resolveUrl(path: string, baseUrl: string) {
 
 function manifestBaseUrl(manifestUrl: string) {
   return new URL('.', manifestUrl).href;
+}
+
+function toastAssetIcon(url: string) {
+  const cached = toastAssetIcons.get(url);
+  if (cached) return cached;
+
+  const maskImage = `url(${JSON.stringify(url)})`;
+  const component = defineComponent({
+    name: 'RbphToastAssetIcon',
+    setup() {
+      return () =>
+        h('span', {
+          'aria-hidden': 'true',
+          style: {
+            display: 'inline-block',
+            width: '1em',
+            height: '1em',
+            backgroundColor: 'currentColor',
+            maskImage,
+            maskPosition: 'center',
+            maskRepeat: 'no-repeat',
+            maskSize: 'contain',
+            WebkitMaskImage: maskImage,
+            WebkitMaskPosition: 'center',
+            WebkitMaskRepeat: 'no-repeat',
+            WebkitMaskSize: 'contain',
+          },
+        });
+    },
+  });
+  toastAssetIcons.set(url, component);
+  return component;
 }
 
 async function loadManifest(src: string) {
@@ -224,10 +257,12 @@ function createContext(manifestUrl: string): RbphVueAppContext {
         await navigateTo(path);
       },
       toast(options) {
+        const icon = options.iconAsset ? toastAssetIcon(resolveUrl(options.iconAsset, baseUrl)) : options.icon;
         toast.add({
           title: options.title,
           description: options.description,
           color: options.color as Parameters<typeof toast.add>[0]['color'],
+          icon,
         });
       },
     },
