@@ -1,5 +1,5 @@
-<script setup lang="ts">const { t } = useI18n();
-
+<script setup lang="ts">
+const { t } = useI18n();
 
 type RbphVueAppManifest = {
   type: 'rbph-vue-app';
@@ -54,10 +54,12 @@ type BackendEventListener = (message: RbphBackendEvent) => void;
 type RbphVueAppModule = {
   mount?: (el: Element, context: RbphVueAppContext) => unknown;
   unmount?: () => void;
-  default?: ((el: Element, context: RbphVueAppContext) => unknown) | {
-    mount?: (el: Element, context: RbphVueAppContext) => unknown;
-    unmount?: () => void;
-  };
+  default?:
+    | ((el: Element, context: RbphVueAppContext) => unknown)
+    | {
+        mount?: (el: Element, context: RbphVueAppContext) => unknown;
+        unmount?: () => void;
+      };
 };
 
 const props = withDefaults(
@@ -196,9 +198,9 @@ function createContext(manifestUrl: string): RbphVueAppContext {
       post: (path, body) => api.post(path, body),
     },
     backend: {
-      call: (name, body) => api.post(backendPath(puzzleId, name), body),
-      get: (name, query) => api.get(backendPath(puzzleId, name), { query }),
-      post: (name, body) => api.post(backendPath(puzzleId, name), body),
+      call: <T = unknown,>(name: string, body?: unknown) => api.post(backendPath(puzzleId, name), body).then(x => ({ code: x.code, data: (x.data as { data: T }).data })),
+      get: <T = unknown,>(name: string, query?: Record<string, unknown>) => api.get(backendPath(puzzleId, name), { query }).then(x => ({ code: x.code, data: (x.data as { data: T }).data })),
+      post: <T = unknown,>(name: string, body?: unknown) => api.post(backendPath(puzzleId, name), body).then(x => ({ code: x.code, data: (x.data as { data: T }).data })),
       on: subscribeBackendEvent,
     },
     route: {
