@@ -37,7 +37,7 @@ export interface SyncMessageMap {
 
   // 100 - game
   [SyncMessageType.GameNewAnnouncement]: { game_id: number | null };
-  [SyncMessageType.GameReleaseUpdated]: { game_id: number; cursor: number };
+  [SyncMessageType.GameReleaseUpdated]: { game_id: number; cursor: number; force: boolean };
 
   // 200 - team
   [SyncMessageType.TeamDisbanded]: null;

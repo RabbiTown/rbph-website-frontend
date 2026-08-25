@@ -12,8 +12,6 @@ export default defineNuxtPlugin(nuxtApp => {
   const releaseSync = useGameReleaseSync();
   const systemStatus = useSystemStatus();
 
-  releaseSync.start();
-
   const syncEnabled = computed(() => {
     const currentUser = user.ref.value;
     const status = systemStatus.ref.value;
@@ -31,12 +29,10 @@ export default defineNuxtPlugin(nuxtApp => {
 
   watch([game.ref, team.ref], () => notificationUnread.refresh(), { immediate: true });
 
-  watch(sync.online, newState => {
-    if (newState) releaseSync.sync();
-  });
+  watch(sync.online, releaseSync.connectionChanged, { immediate: true });
 
   sync.listen(SyncMessageType.GameReleaseUpdated, ({ data }) => {
-    releaseSync.notify(data.game_id, data.cursor);
+    releaseSync.notify(data.game_id, data.cursor, data.force);
   });
 
   sync.listen(SyncMessageType.SystemStatusUpdated, async () => {

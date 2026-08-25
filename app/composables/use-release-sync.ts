@@ -4,7 +4,9 @@ let releaseCursor = 0;
 let timer: ReturnType<typeof setTimeout> | undefined = undefined;
 let retryTimer: ReturnType<typeof setTimeout> | undefined = undefined;
 let syncingPromise: Promise<void> | undefined = undefined;
-let started = false;
+let pendingCursor = 0;
+let forcePending = false;
+let hasConnected = false;
 
 function clearTimer() {
   clearTimeout(timer);
@@ -44,6 +46,8 @@ export function useGameReleaseSync() {
     const teamId = info.team?.id;
     if (activeGameId !== gameId || activeTeamId !== teamId) {
       releaseCursor = info.release_cursor;
+      pendingCursor = info.release_cursor;
+      forcePending = false;
     } else {
       releaseCursor = Math.max(releaseCursor, info.release_cursor);
     }
@@ -85,16 +89,25 @@ export function useGameReleaseSync() {
   }
 
   async function sync() {
+    forcePending = true;
+    return runRequestedSync();
+  }
+
+  async function runRequestedSync() {
     if (!activeGameId) return;
     if (syncingPromise) return syncingPromise;
+    if (!forcePending && pendingCursor <= releaseCursor) return;
 
     const gameId = activeGameId;
     const after = releaseCursor;
+    forcePending = false;
+    let succeeded = false;
     syncingPromise = (async () => {
       try {
         const { data } = await useApi().post<RbReleaseSyncResponse>(`/games/${gameId}/releases/sync`, { after });
         if (activeGameId !== gameId) return;
         useSyncTime().syncWith(new Date(data.server_time));
+        const visibleReleaseChanged = data.events.length > 0;
         for (const event of data.events) {
           if (event.id > releaseCursor) showEvent(gameId, event);
           releaseCursor = Math.max(releaseCursor, event.id);
@@ -104,39 +117,45 @@ export function useGameReleaseSync() {
         const currencyStateChanged = features.value.currency !== data.features.currency;
         features.value = data.features;
         clearRetryTimer();
-        if (activeTeamId) await useGame().updateRoundState();
+        if (activeTeamId && visibleReleaseChanged) await useGame().updateRoundState();
         if (activeTeamId && currencyStateChanged) await useCurrency().updateData(true);
-        revision.value++;
+        if (visibleReleaseChanged) revision.value++;
         schedule();
+        succeeded = true;
       } catch (error) {
         console.warn('Failed to sync game releases', error);
         clearRetryTimer();
-        retryTimer = setTimeout(() => sync(), 15_000);
+        forcePending = true;
+        retryTimer = setTimeout(() => runRequestedSync(), 15_000);
       }
     })().finally(() => {
       syncingPromise = undefined;
+      if (succeeded && (forcePending || pendingCursor > releaseCursor)) void runRequestedSync();
     });
     return syncingPromise;
   }
 
-  function notify(gameId: number, _cursor: number) {
-    if (gameId === activeGameId) sync();
+  function notify(gameId: number, cursor: number, force: boolean) {
+    if (gameId !== activeGameId) return;
+    pendingCursor = Math.max(pendingCursor, cursor);
+    if (!force && cursor <= releaseCursor) return;
+    forcePending ||= force;
+    return runRequestedSync();
   }
 
-  function onVisibilityChange() {
-    if (document.visibilityState === 'visible') sync();
-  }
-
-  function start() {
-    if (!import.meta.client || started) return;
-    started = true;
-    document.addEventListener('visibilitychange', onVisibilityChange);
+  function connectionChanged(online: boolean) {
+    if (!online) return;
+    const reconnect = hasConnected;
+    hasConnected = true;
+    if (reconnect && activeGameId) return sync();
   }
 
   function reset() {
     activeGameId = undefined;
     activeTeamId = undefined;
     releaseCursor = 0;
+    pendingCursor = 0;
+    forcePending = false;
     phases.value = [];
     features.value = {
       team_formation: 'open',
@@ -149,5 +168,5 @@ export function useGameReleaseSync() {
     clearRetryTimer();
   }
 
-  return { revision, phases, features, initialize, notify, reset, schedule, start, sync };
+  return { revision, phases, features, initialize, notify, reset, schedule, connectionChanged, sync };
 }
