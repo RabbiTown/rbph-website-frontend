@@ -148,6 +148,8 @@ function activityView(activity: RbTeamActivity) {
     'team:unbanned': t('activityLog.access.teamUnbanned'),
     'team:locked': t('activityLog.access.teamLocked'),
     'team:unlocked': t('activityLog.access.teamUnlocked'),
+    'team:beta_enabled': t('activityLog.access.teamBetaEnabled'),
+    'team:beta_disabled': t('activityLog.access.teamBetaDisabled'),
     'direct_message:banned': t('activityLog.access.directMessageBanned'),
     'direct_message:unbanned': t('activityLog.access.directMessageUnbanned'),
     'puzzle_ticket:banned': t('activityLog.access.puzzleTicketBanned'),
@@ -163,7 +165,7 @@ function activityView(activity: RbTeamActivity) {
       return { icon: 'material-symbols:edit-outline-rounded', color: 'neutral' as const, title: t('activityLog.teamUpdated', { actor }), details: [] };
     case 'team.access_changed': {
       const changes = (data.changes ?? []).map(change => accessChangeLabels[`${change.target === 'feature' ? change.feature : 'team'}:${change.action}`]).filter(Boolean);
-      const restricted = (data.changes ?? []).some(change => change.action === 'banned' || change.action === 'locked');
+      const restricted = (data.changes ?? []).some(change => change.action === 'banned' || change.action === 'locked' || change.action === 'beta_enabled');
       const reason = typeof data.reason === 'string' ? data.reason.trim() : '';
       return {
         icon: 'material-symbols:admin-panel-settings-outline-rounded',

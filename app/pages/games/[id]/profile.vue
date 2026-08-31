@@ -587,6 +587,7 @@ watch(user, () => syncUserState(), { immediate: true });
                 <div class="flex min-w-0 flex-wrap items-center gap-2">
                   <h2 class="text-xl font-semibold text-highlighted">{{ t('pages.profile.teamInfo') }}</h2>
                   <u-badge v-if="teamData.is_locked" class="mt-0.5" color="warning" variant="soft" icon="material-symbols:lock-outline">{{ t('pages.profile.teamLocked') }}</u-badge>
+                  <u-badge v-if="teamData.is_beta" class="mt-0.5" color="info" variant="soft" icon="material-symbols:science-outline-rounded">{{ t('pages.profile.betaTeam') }}</u-badge>
                 </div>
               </div>
 

@@ -25,6 +25,7 @@ export interface RbTeam {
   state?: RbTeamState;
   is_banned?: boolean;
   is_locked?: boolean;
+  is_beta?: boolean;
   pass: string;
   bio: string;
   ctime_at: string;
@@ -379,6 +380,7 @@ export interface AdminTeamListItem {
   name: string;
   is_banned: boolean;
   is_locked: boolean;
+  is_beta: boolean;
   finish_at?: string | null;
   member_count: number;
   captain_id?: number | null;
@@ -396,6 +398,7 @@ export interface AdminUserOption {
 export interface AdminTeamDetail extends Omit<RbTeam, 'state'> {
   is_banned: boolean;
   is_locked: boolean;
+  is_beta: boolean;
   game_id: number;
   finish_at?: string | null;
   features: AdminTeamFeatureData[];

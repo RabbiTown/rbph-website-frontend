@@ -1,5 +1,5 @@
-<script setup lang="ts">const { t } = useI18n();
-
+<script setup lang="ts">
+const { t } = useI18n();
 
 interface CurrencyDraft {
   amount: number;
@@ -42,6 +42,7 @@ const draft = reactive({
   bio: '',
   is_banned: false,
   is_locked: false,
+  is_beta: false,
   features: {} as Record<RbTeamFeature, boolean>,
 });
 
@@ -82,6 +83,7 @@ const teamFieldsDirty = computed(() => {
     draft.bio !== current.bio ||
     draft.is_banned !== current.is_banned ||
     draft.is_locked !== current.is_locked ||
+    draft.is_beta !== current.is_beta ||
     current.features.some(feature => draft.features[feature.feature] !== feature.enabled)
   );
 });
@@ -115,6 +117,14 @@ const accessChanges = computed<AccessChangePreview[]>(() => {
       color: draft.is_locked ? 'warning' : 'primary',
     });
   }
+  if (draft.is_beta !== current.is_beta) {
+    changes.push({
+      key: 'team-beta',
+      label: draft.is_beta ? t('admin.pages.team.accessChange.enableBeta') : t('admin.pages.team.accessChange.disableBeta'),
+      icon: 'material-symbols:science-outline-rounded',
+      color: draft.is_beta ? 'warning' : 'primary',
+    });
+  }
   for (const feature of current.features) {
     const enabled = draft.features[feature.feature];
     if (enabled !== feature.enabled) {
@@ -145,6 +155,7 @@ function syncDrafts(next: AdminTeamDetail) {
   draft.bio = next.bio;
   draft.is_banned = next.is_banned;
   draft.is_locked = next.is_locked;
+  draft.is_beta = next.is_beta;
   draft.features = Object.fromEntries(next.features.map(feature => [feature.feature, feature.enabled])) as Record<RbTeamFeature, boolean>;
 
   for (const currency of next.currency) {
@@ -217,6 +228,7 @@ async function saveTeam(reasonConfirmed = false) {
           bio: draft.bio,
           is_banned: draft.is_banned,
           is_locked: draft.is_locked,
+          is_beta: draft.is_beta,
           features: Object.entries(draft.features).map(([feature, enabled]) => ({ feature, enabled })),
           reason: accessChanges.value.length > 0 ? accessChangeReason.value.trim() || undefined : undefined,
         },
@@ -346,6 +358,7 @@ onBeforeUnmount(() => dirtyToast.clear());
           <div v-if="team" class="mt-1 flex flex-wrap gap-1.5 pl-10">
             <u-badge size="sm" color="neutral" variant="soft" icon="material-symbols:calendar-today-outline-rounded">{{ t('admin.pages.team.createdAt', { time: formatDate(team.ctime_at) }) }}</u-badge>
             <u-badge v-if="team.finish_at" size="sm" color="success" variant="soft" icon="material-symbols:flag-outline-rounded">{{ t('admin.common.finishedAt', { time: formatDate(team.finish_at) }) }}</u-badge>
+            <u-badge v-if="team.is_beta" size="sm" color="info" variant="soft" icon="material-symbols:science-outline-rounded">{{ t('admin.pages.team.beta') }}</u-badge>
           </div>
         </div>
         <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" :loading="loading" :disabled="dirty || saving" @click="loadTeam" />
@@ -405,6 +418,20 @@ onBeforeUnmount(() => dirtyToast.clear());
                 <u-button color="neutral" variant="soft" active-color="primary" icon="material-symbols:lock-open-outline-rounded" :label="t('admin.pages.team.unlock')" :active="!draft.is_locked" :disabled="saving" @click="draft.is_locked = false" />
               </u-field-group>
             </rb-form-field>
+            <u-separator />
+            <rb-form-field
+              row
+              :label="t('admin.pages.team.beta')"
+              icon="material-symbols:science-outline-rounded"
+              :description="draft.is_beta ? t('admin.pages.team.betaDescription.enabled') : t('admin.pages.team.betaDescription.disabled')"
+              :dirty="draft.is_beta !== team.is_beta"
+              :reset="() => (draft.is_beta = team!.is_beta)"
+            >
+              <u-field-group>
+                <u-button color="neutral" variant="soft" active-color="info" icon="material-symbols:science-outline-rounded" :label="t('admin.pages.team.beta')" :active="draft.is_beta" :disabled="saving" @click="draft.is_beta = true" />
+                <u-button color="neutral" variant="soft" active-color="primary" icon="material-symbols:check-rounded" :label="t('admin.pages.team.normal')" :active="!draft.is_beta" :disabled="saving" @click="draft.is_beta = false" />
+              </u-field-group>
+            </rb-form-field>
             <template v-for="feature in team.features" :key="feature.feature">
               <u-separator />
               <rb-form-field
@@ -416,8 +443,26 @@ onBeforeUnmount(() => dirtyToast.clear());
                 :reset="() => (draft.features[feature.feature] = feature.enabled)"
               >
                 <u-field-group>
-                  <u-button color="neutral" variant="soft" active-color="error" icon="material-symbols:block-outline" :label="t('admin.common.banned')" :active="!draft.features[feature.feature]" :disabled="saving" @click="draft.features[feature.feature] = false" />
-                  <u-button color="neutral" variant="soft" active-color="primary" icon="material-symbols:check-rounded" :label="t('admin.pages.team.normal')" :active="draft.features[feature.feature]" :disabled="saving" @click="draft.features[feature.feature] = true" />
+                  <u-button
+                    color="neutral"
+                    variant="soft"
+                    active-color="error"
+                    icon="material-symbols:block-outline"
+                    :label="t('admin.common.banned')"
+                    :active="!draft.features[feature.feature]"
+                    :disabled="saving"
+                    @click="draft.features[feature.feature] = false"
+                  />
+                  <u-button
+                    color="neutral"
+                    variant="soft"
+                    active-color="primary"
+                    icon="material-symbols:check-rounded"
+                    :label="t('admin.pages.team.normal')"
+                    :active="draft.features[feature.feature]"
+                    :disabled="saving"
+                    @click="draft.features[feature.feature] = true"
+                  />
                 </u-field-group>
               </rb-form-field>
             </template>
@@ -455,7 +500,11 @@ onBeforeUnmount(() => dirtyToast.clear());
                 <u-button v-if="currencyDirty(currency)" size="xs" color="warning" variant="soft" icon="material-symbols:restart-alt-rounded" :label="t('admin.common.reset')" :disabled="saving" @click="resetCurrency(currency)" />
               </div>
               <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_10rem]">
-                <rb-form-field :label="t('admin.pages.team.currentBalance')" :dirty="currencyDrafts[currency.id]?.amount !== (currency.current_amount ?? currency.amount)" :reset="() => (currencyDrafts[currency.id].amount = currency.current_amount ?? currency.amount)">
+                <rb-form-field
+                  :label="t('admin.pages.team.currentBalance')"
+                  :dirty="currencyDrafts[currency.id]?.amount !== (currency.current_amount ?? currency.amount)"
+                  :reset="() => (currencyDrafts[currency.id].amount = currency.current_amount ?? currency.amount)"
+                >
                   <rb-input-number v-model="currencyDrafts[currency.id].amount" :prec="currency.prec" :max="currency.max_amount" orientation="vertical" class="w-full" :disabled="saving" />
                 </rb-form-field>
                 <rb-form-field :label="t('admin.common.growthPerMinute')" :dirty="currencyDrafts[currency.id]?.growth !== currency.team_growth" :reset="() => (currencyDrafts[currency.id].growth = currency.team_growth)">
@@ -468,7 +517,12 @@ onBeforeUnmount(() => dirtyToast.clear());
                   </div>
                 </rb-form-field>
                 <rb-form-field :label="t('admin.pages.team.hideCurrency')" :dirty="currencyDrafts[currency.id]?.hidden !== Boolean(currency.hidden)" :reset="() => (currencyDrafts[currency.id].hidden = Boolean(currency.hidden))">
-                  <u-switch v-model="currencyDrafts[currency.id].hidden" :disabled="saving" :label="currencyDrafts[currency.id].hidden ? t('admin.pages.team.currencyVisibility.hidden') : t('admin.pages.team.currencyVisibility.visible')" class="mt-2" />
+                  <u-switch
+                    v-model="currencyDrafts[currency.id].hidden"
+                    :disabled="saving"
+                    :label="currencyDrafts[currency.id].hidden ? t('admin.pages.team.currencyVisibility.hidden') : t('admin.pages.team.currencyVisibility.visible')"
+                    class="mt-2"
+                  />
                 </rb-form-field>
               </div>
             </div>

@@ -18,6 +18,8 @@ const accessChangeLabels = computed<Record<string, string>>(() => ({
   'team:unbanned': t('activityLog.access.teamUnbanned'),
   'team:locked': t('activityLog.access.teamLocked'),
   'team:unlocked': t('activityLog.access.teamUnlocked'),
+  'team:beta_enabled': t('activityLog.access.teamBetaEnabled'),
+  'team:beta_disabled': t('activityLog.access.teamBetaDisabled'),
   'direct_message:banned': t('activityLog.access.directMessageBanned'),
   'direct_message:unbanned': t('activityLog.access.directMessageUnbanned'),
   'puzzle_ticket:banned': t('activityLog.access.puzzleTicketBanned'),
@@ -53,7 +55,7 @@ function activityView(activity: RbTeamActivity) {
     const changes = (activity.data.changes ?? [])
       .map(change => accessChangeLabels.value[`${change.target === 'feature' ? change.feature : 'team'}:${change.action}`])
       .filter(Boolean);
-    const restricted = (activity.data.changes ?? []).some(change => change.action === 'banned' || change.action === 'locked');
+    const restricted = (activity.data.changes ?? []).some(change => change.action === 'banned' || change.action === 'locked' || change.action === 'beta_enabled');
     return {
       icon: 'material-symbols:admin-panel-settings-outline-rounded',
       color: restricted ? 'text-error' : 'text-primary',

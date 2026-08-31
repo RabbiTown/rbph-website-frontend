@@ -46,7 +46,7 @@ export interface ActivityLogCost {
 export interface ActivityLogAccessChange {
   target?: 'team' | 'feature' | null;
   feature?: RbTeamFeature | null;
-  action?: 'banned' | 'unbanned' | 'locked' | 'unlocked' | null;
+  action?: 'banned' | 'unbanned' | 'locked' | 'unlocked' | 'beta_enabled' | 'beta_disabled' | null;
 }
 
 export interface ActivityLogPayload {
