@@ -46,6 +46,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE ?? '/api',
+      themeDevServer: process.env.NUXT_PUBLIC_THEME_DEV_SERVER ?? '',
     },
   },
   vite: {
@@ -66,6 +67,8 @@ export default defineNuxtConfig({
         '@codemirror/language',
         '@codemirror/state',
         '@codemirror/view',
+        '@iconify/utils',
+        '@iconify/vue',
         '@internationalized/date',
         '@lezer/highlight',
         '@tiptap/extension-color',

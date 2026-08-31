@@ -56,6 +56,11 @@ const tabs = computed(() => {
       icon: 'material-symbols:campaign-outline-rounded',
       to: `/admin/games/${game.value.id}/announcements`,
     },
+    {
+      label: t('admin.frontend.title'),
+      icon: 'material-symbols:palette-outline',
+      to: `/admin/games/${game.value.id}/frontend`,
+    },
   ] satisfies NavigationMenuItem[];
 });
 </script>

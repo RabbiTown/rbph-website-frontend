@@ -83,6 +83,7 @@ export interface RbPuzzleTeamData {
 export interface RbPuzzleShowData {
   data: RbPuzzle;
   state: RbPuzzleTeamData;
+  renderer: RbFrontendRenderer;
 }
 
 export function mergePuzzleSubmitState(current: RbPuzzleTeamData, next: RbPuzzleTeamData | undefined, action: RbJudgeAction): RbPuzzleTeamData {
@@ -216,6 +217,7 @@ export interface RbRoundTeamData {
 export interface RbRoundUserData {
   data: RbRound;
   state: RbRoundTeamData;
+  renderer: RbFrontendRenderer;
 }
 
 export interface RbTeamCurrency {

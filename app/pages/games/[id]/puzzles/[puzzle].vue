@@ -12,9 +12,10 @@ providePuzzleContext(puzzle);
 
 const gameId = computed(() => route.params.id as string);
 const puzzleRef = computed(() => route.params.puzzle as string);
+const preview = computed(() => route.query.preview);
 
 watch(
-  [gameId, puzzleRef],
+  [gameId, puzzleRef, preview],
   async ([newGameId, newPuzzleRef]) => {
     usePuzzle()
       .updateStateByGameRef(newGameId, newPuzzleRef)

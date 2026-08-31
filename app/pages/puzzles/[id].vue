@@ -11,10 +11,11 @@ const puzzle = usePuzzle().ref;
 providePuzzleContext(puzzle);
 
 const puzzle_id = computed(() => route.params.id as string);
+const preview = computed(() => route.query.preview);
 
 watch(
-  puzzle_id,
-  async new_id => {
+  [puzzle_id, preview],
+  async ([new_id]) => {
     usePuzzle()
       .updateState(new_id)
       .catch(e => showError({ status: 400, statusText: e }));

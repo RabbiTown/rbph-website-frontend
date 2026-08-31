@@ -72,6 +72,9 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
     }
     onSubmitSuccess(data.action);
   }
+  if (!isSelfEcho && data.content_changed) {
+    usePuzzle().updateContents();
+  }
 });
 </script>
 

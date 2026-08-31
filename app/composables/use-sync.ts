@@ -277,13 +277,22 @@ if (import.meta.client) {
 }
 
 export function useSync() {
-  function listen<T extends SyncMessageType>(msg: T, callback: Listener<SyncMessageMap[T]>) {
+  function subscribe<T extends SyncMessageType>(msg: T, callback: Listener<SyncMessageMap[T]>) {
     if (!listeners[msg]) listeners[msg] = [];
     listeners[msg].push(callback);
 
-    onUnmounted(() => {
+    let active = true;
+    return () => {
+      if (!active) return;
+      active = false;
       arrayRemove(listeners[msg], callback);
-    });
+    };
+  }
+
+  function listen<T extends SyncMessageType>(msg: T, callback: Listener<SyncMessageMap[T]>) {
+    const stop = subscribe(msg, callback);
+    onUnmounted(stop);
+    return stop;
   }
 
   function listenClose(callback: CloseListener) {
@@ -296,6 +305,7 @@ export function useSync() {
 
   return {
     listen,
+    subscribe,
     listenClose,
     online: wsOnline,
     supported: syncSupported,

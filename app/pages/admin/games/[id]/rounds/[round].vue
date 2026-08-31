@@ -237,6 +237,11 @@ const navItems = computed<NavigationMenuItem[]>(() => [
       openRoundPuzzle();
     },
   },
+  {
+    label: t('admin.pages.puzzle.settingsTab'),
+    icon: 'material-symbols:tune-rounded',
+    to: Number.isFinite(gameId.value) && Number.isFinite(roundId.value) ? `/admin/games/${gameId.value}/rounds/${roundId.value}/settings` : undefined,
+  },
 ]);
 </script>
 

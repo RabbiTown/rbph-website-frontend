@@ -10,7 +10,9 @@ export function handleError(error: unknown, title: string, forceHint: boolean = 
 export function getErrorToast(error: unknown, title: string, forceHint: boolean = false): Partial<Toast> {
   const my = error as { data?: { code?: number; hint?: string; message?: string } };
   const fallback = error instanceof Error ? error.message : String(error);
-  const message = forceHint ? my?.data?.hint : (my?.data?.message ?? fallback);
+  const message = forceHint
+    ? (my?.data?.hint ?? my?.data?.message ?? fallback)
+    : (my?.data?.message ?? fallback);
   const codeExt = my.data?.code ? ` (${my.data?.code})` : '';
   const description = message ? message + codeExt : undefined;
 

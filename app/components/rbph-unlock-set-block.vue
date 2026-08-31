@@ -58,11 +58,14 @@ function setType(type: string) {
       @update:model-value="emit('change')"
     />
 
-    <template v-else-if="node.type === 'puzzle-range'">
-      <u-input-number v-model="node.start" :min="1" :step="1" orientation="vertical" variant="subtle" class="w-28" :disabled="disabled" @update:model-value="emit('change')" />
-      <span class="text-sm text-muted">{{ t('components.rbphUnlockSetBlock.rangeSeparator') }}</span>
-      <u-input-number v-model="node.end" :min="1" :step="1" orientation="vertical" variant="subtle" class="w-28" :disabled="disabled" @update:model-value="emit('change')" />
-    </template>
+    <i18n-t v-else-if="node.type === 'puzzle-range'" keypath="components.rbphUnlockSetBlock.puzzleRange" tag="span" class="contents text-sm text-muted">
+      <template #start>
+        <u-input-number v-model="node.start" :min="1" :step="1" orientation="vertical" variant="subtle" class="w-28" :disabled="disabled" @update:model-value="emit('change')" />
+      </template>
+      <template #end>
+        <u-input-number v-model="node.end" :min="1" :step="1" orientation="vertical" variant="subtle" class="w-28" :disabled="disabled" @update:model-value="emit('change')" />
+      </template>
+    </i18n-t>
 
     <u-select-menu
       v-else

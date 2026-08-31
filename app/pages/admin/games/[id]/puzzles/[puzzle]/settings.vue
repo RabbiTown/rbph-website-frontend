@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { SelectItem } from '@nuxt/ui';
 
+type FrontendSettings = { apply: () => Promise<boolean>; reset: () => void };
+
 const { t } = useI18n();
 
 const api = useApi();
@@ -31,6 +33,8 @@ const clearStatesCheckUnlock = ref(true);
 const immediateReleaseConfirmOpen = ref(false);
 const backendLogsOpen = ref(false);
 const backendFunctionsMenuOpen = ref(false);
+const frontendSettings = ref<FrontendSettings>();
+const frontendDirty = ref(false);
 const retainedBackendFunctions = ref<string[]>([]);
 const loadingOptions = ref(false);
 const rounds = ref<UnlockRoundOptionData[]>([]);
@@ -53,6 +57,9 @@ const functionItems = computed<SelectItem[]>(() =>
     icon: 'material-symbols:function-rounded',
   })),
 );
+const frontendEditors = computed(() => [
+  { surface: 'puzzle-page' as const, label: t('admin.frontend.editors.puzzlePage'), icon: 'material-symbols:extension-outline-rounded' },
+]);
 const unlockCheckConfirmDescription = computed(() => {
   if (!puzzle.value) return '';
   return t('admin.pages.puzzle.settings.confirmCheckUnlocks', { puzzle: puzzle.value.title });
@@ -98,7 +105,7 @@ const backendEnabledDirty = computed(() => Boolean(puzzle.value && backendLoaded
 const backendSourceDirty = computed(() => Boolean(puzzle.value && backendLoaded.value && state.backend.source !== (backend.value?.source ?? '')));
 const backendFunctionsDirty = computed(() => Boolean(puzzle.value && backendLoaded.value && JSON.stringify([...state.backend.functions].sort()) !== JSON.stringify([...(backend.value?.functions ?? [])].sort())));
 const backendDirty = computed(() => backendEnabledDirty.value || backendSourceDirty.value || backendFunctionsDirty.value);
-const dirty = computed(() => releasePhaseDirty.value || unlockCondDirty.value || backendDirty.value);
+const dirty = computed(() => releasePhaseDirty.value || unlockCondDirty.value || backendDirty.value || frontendDirty.value);
 const previewText = computed(() => translateUnlockCondition(unlockCondPatch.value, t));
 const invalid = computed(() => unlockCondPatch.value === '');
 
@@ -163,6 +170,7 @@ function reset() {
   resetReleasePhase();
   resetUnlockCond();
   syncFromBackend();
+  frontendSettings.value?.reset();
   dirtyToast.clear();
 }
 
@@ -310,7 +318,8 @@ async function applyConfirmed() {
     if (!releasePhaseSaved) return;
     const unlockSaved = await applyUnlockCond();
     if (!unlockSaved) return;
-    await applyBackend();
+    if (!await applyBackend()) return;
+    if (frontendSettings.value && !await frontendSettings.value.apply()) return;
   } finally {
     saving.value = false;
   }
@@ -528,6 +537,21 @@ watch(dirty, value => {
       </section>
 
       <u-separator class="my-2" />
+
+      <template v-if="!isRoundPuzzle">
+        <rbph-frontend-scope-settings
+          ref="frontendSettings"
+          v-model:dirty="frontendDirty"
+          :game-id="puzzle.game_id"
+          scope-kind="puzzle"
+          :scope-id="puzzle.id"
+          :editors="frontendEditors"
+          :preview-path="`/games/${puzzle.game_id}/puzzles/${puzzle.id}`"
+          :disabled="saving"
+        />
+
+        <u-separator class="my-2" />
+      </template>
 
       <section class="space-y-4">
         <div class="flex items-center justify-between gap-3">

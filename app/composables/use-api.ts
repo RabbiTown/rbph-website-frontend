@@ -1,7 +1,7 @@
 import type { FetchError, FetchOptions } from 'ofetch';
 import { createError } from '#app';
 
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 interface ApiEnvelope<T> {
   code?: number;
@@ -10,12 +10,12 @@ interface ApiEnvelope<T> {
   [key: string]: unknown;
 }
 
-interface ApiResult<T> {
+export interface ApiResult<T> {
   code: number;
   data: T;
 }
 
-interface ApiRequestOptions<TBody = unknown> extends Omit<FetchOptions, 'body' | 'method' | 'query'> {
+export interface ApiRequestOptions<TBody = unknown> extends Omit<FetchOptions, 'body' | 'method' | 'query'> {
   path: string;
   method?: HttpMethod;
   body?: TBody;

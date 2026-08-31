@@ -59,19 +59,8 @@ function onSelfSubmitFailed(reason: string, answer: string) {
 useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
   const isSelfEcho = useSid().consume(data.sid);
 
-  if (data.puzzle.id === puzzle.value?.data.id && !isSelfEcho) {
-    if (puzzle.value) {
-      puzzle.value.state = applyPuzzleSubmitState(puzzle.value.state, data);
-    }
-    if (data.currency?.length) {
-      useCurrency().setData(data.currency);
-    }
-    if (data.action > 0) {
-      okSubmissionsComp.value?.updateData();
-    }
-  }
-  if (!isSelfEcho && data.content_changed) {
-    usePuzzle().updateContents();
+  if (!isSelfEcho && data.puzzle.id === puzzle.value?.data.id && data.action > 0) {
+    okSubmissionsComp.value?.updateData();
   }
 });
 </script>
@@ -104,9 +93,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
         <div class="text-lg font-bold mb-4 mt-6">{{ t('pages.puzzlePage.recentSuccessfulSubmissions') }}</div>
         <rbph-submissions ref="ok-submissions" :puzzle-id="puzzle.data.id" :only-ok="true" />
         <div class="flex justify-center mt-2">
-          <nuxt-link :to="puzzleRoute('submissions')">
-            <u-button class="cursor-pointer" variant="ghost" color="secondary" icon="material-symbols:more-horiz" trailing-icon="material-symbols:more-horiz">{{ t('pages.puzzlePage.viewAllSubmissions') }}</u-button>
-          </nuxt-link>
+          <u-button :to="puzzleRoute('submissions')" class="cursor-pointer" variant="ghost" color="secondary" icon="material-symbols:more-horiz" trailing-icon="material-symbols:more-horiz">{{ t('pages.puzzlePage.viewAllSubmissions') }}</u-button>
         </div>
       </div>
     </template>
