@@ -9,7 +9,7 @@ const RECONNECT_DELAY = 5_000;
 const listeners: { [K in SyncMessageType]?: Listener<SyncMessageMap[K]>[] } = {};
 const closeListeners: CloseListener[] = [];
 
-const clientId = crypto.randomUUID();
+const clientId = globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 const wsOnline = ref(false);
 const syncSupported = ref(import.meta.client && typeof WebSocket !== 'undefined');
 const connectionState = ref<SyncConnectionState>('idle');
