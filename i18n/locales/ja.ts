@@ -164,7 +164,6 @@ export default defineI18nLocale(() => ({
   nav: {
     home: 'ホーム',
     puzzles: '問題',
-    puzzleRound: 'ラウンド',
     register: '参加登録',
     announcements: 'お知らせ',
     leaderboard: 'ランキング',
@@ -1333,6 +1332,7 @@ export default defineI18nLocale(() => ({
         roundNotFound: 'ラウンドが見つかりません',
         loadRoundInfoFailed: 'ラウンド情報を読み込めませんでした',
         roundTitle: 'ラウンド名',
+        roundDescription: 'ヘッダーに表示するラウンドの説明',
         createRoundPuzzle: 'ラウンド問題を作成',
         currentRoundRoundPuzzleCreate: 'このラウンドにはラウンド問題がありません。今すぐ作成しますか？',
         create: '作成',

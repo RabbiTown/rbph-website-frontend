@@ -163,7 +163,6 @@ export default defineI18nLocale(() => ({
   nav: {
     home: '首頁',
     puzzles: '謎題',
-    puzzleRound: '謎題區域',
     register: '參與比賽',
     announcements: '公告',
     leaderboard: '排行榜',
@@ -1329,6 +1328,7 @@ export default defineI18nLocale(() => ({
         roundNotFound: '區域不存在',
         loadRoundInfoFailed: '取得區域資訊失敗',
         roundTitle: '區域標題',
+        roundDescription: '顯示於頂欄的區域描述',
         createRoundPuzzle: '建立區域謎題',
         currentRoundRoundPuzzleCreate: '目前區域還沒有區域謎題，是否現在建立？',
         create: '建立',

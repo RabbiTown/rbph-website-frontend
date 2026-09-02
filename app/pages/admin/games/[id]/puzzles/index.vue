@@ -7,6 +7,7 @@ interface AdminRound {
   id: number;
   slug?: string | null;
   title: string;
+  description?: string | null;
   cover?: string | null;
   game_id: number;
   puzzle?: number | null;
@@ -1153,6 +1154,7 @@ async function addRound() {
   const body = {
     game_id: gameId.value,
     title,
+    description: null,
     content: '',
     content_type: RbContentType.Markdown,
     cover: null,

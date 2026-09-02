@@ -1,7 +1,7 @@
 import type { ActivityLogPayload } from './activity-log';
 
 export interface RbGame extends RbGameModel {
-  rounds?: Pick<RbRound, 'id' | 'slug' | 'title'>[];
+  rounds?: Pick<RbRound, 'id' | 'slug' | 'title' | 'description'>[];
 }
 
 export enum RbTeamState {
@@ -196,6 +196,7 @@ export interface RbRound {
   id: number;
   slug?: string | null;
   title: string;
+  description?: string | null;
   contents: RbContentBlock[];
   cover?: string;
   game_id: number;

@@ -19,6 +19,7 @@ const titleInput = ref<HTMLInputElement>();
 const headerState = reactive({
   slug: '',
   title: '',
+  description: '',
 });
 
 const gameId = computed(() => Number(route.params.id));
@@ -29,13 +30,15 @@ const isContentPage = computed(() => Boolean(contentPagePath.value && route.path
 const normalizedRoundSlug = computed(() => round.value?.slug ?? '');
 const slugDirty = computed(() => Boolean(round.value && headerState.slug.trim() !== normalizedRoundSlug.value));
 const titleDirty = computed(() => Boolean(round.value && headerState.title !== round.value.title));
-const headerDirty = computed(() => slugDirty.value || titleDirty.value);
+const descriptionDirty = computed(() => Boolean(round.value && headerState.description !== (round.value.description ?? '')));
+const headerDirty = computed(() => slugDirty.value || titleDirty.value || descriptionDirty.value);
 const slugInputWidth = computed(() => `${Math.max(4, headerState.slug.length || 4)}ch`);
 const roundPuzzleRoute = computed(() => (roundPuzzleId.value ? `/admin/games/${gameId.value}/puzzles/${roundPuzzleId.value}/judge` : undefined));
 
 function syncHeaderFromRound() {
   headerState.slug = round.value?.slug ?? '';
   headerState.title = round.value?.title ?? '';
+  headerState.description = round.value?.description ?? '';
 }
 
 function resetHeader() {
@@ -126,10 +129,12 @@ async function applyHeader() {
   const body: {
     slug?: string | null;
     title?: string;
+    description?: string | null;
   } = {};
 
   if (slugDirty.value) body.slug = headerState.slug.trim() || null;
   if (titleDirty.value) body.title = headerState.title;
+  if (descriptionDirty.value) body.description = headerState.description.trim() || null;
 
   headerSaving.value = true;
 
@@ -296,6 +301,20 @@ const navItems = computed<NavigationMenuItem[]>(() => [
                 <u-badge variant="soft" color="neutral">#{{ round.id }}</u-badge>
               </div>
             </div>
+            <label v-if="isContentPage" class="flex items-center gap-2 text-sm text-muted">
+              <u-icon name="material-symbols:short-text-rounded" class="size-5 shrink-0" />
+              <input
+                v-model="headerState.description"
+                class="min-w-0 flex-1 bg-transparent outline-none placeholder:text-dimmed focus:text-highlighted"
+                :placeholder="t('admin.pages.round.roundDescription')"
+                :aria-label="t('admin.pages.round.roundDescription')"
+                :disabled="headerSaving"
+              >
+            </label>
+            <p v-else-if="round.description" class="flex items-center gap-2 text-sm text-muted">
+              <u-icon name="material-symbols:short-text-rounded" class="size-5 shrink-0" />
+              <span>{{ round.description }}</span>
+            </p>
           </u-form>
 
           <u-navigation-menu :items="navItems" class="-mx-1" />

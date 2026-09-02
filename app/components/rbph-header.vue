@@ -58,7 +58,7 @@ const navItems = computed(() => {
         return {
           value: `game-round-${x.id}`,
           label: x.title,
-          description: t('nav.puzzleRound'),
+          description: x.description?.trim() || undefined,
           icon: 'material-symbols:grid-view-outline-rounded',
           to: gameRoundSimpleRoute(game.value?.id, x),
           active: route.path.startsWith(`/games/${game.value?.id}/rounds/${x.slug || x.id}`) || route.path.startsWith(`/rounds/${x.id}`) || (inPuzzlePage && currentPuzzle.value?.data.round.id === x.id),

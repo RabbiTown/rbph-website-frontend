@@ -164,7 +164,6 @@ export default defineI18nLocale(() => ({
   nav: {
     home: '主页',
     puzzles: '谜题',
-    puzzleRound: '谜题区域',
     register: '参与比赛',
     announcements: '公告',
     leaderboard: '排行榜',
@@ -1330,6 +1329,7 @@ export default defineI18nLocale(() => ({
         roundNotFound: '区域不存在',
         loadRoundInfoFailed: '获取区域信息失败',
         roundTitle: '区域标题',
+        roundDescription: '显示在顶栏中的区域描述',
         createRoundPuzzle: '创建区域谜题',
         currentRoundRoundPuzzleCreate: '当前区域还没有区域谜题，是否现在创建？',
         create: '创建',

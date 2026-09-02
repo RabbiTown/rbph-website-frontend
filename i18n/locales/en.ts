@@ -154,7 +154,6 @@ export default defineI18nLocale(() => ({
   nav: {
     home: 'Home',
     puzzles: 'Puzzles',
-    puzzleRound: 'Round',
     register: 'Register',
     announcements: 'Announcements',
     leaderboard: 'Leaderboard',
@@ -1326,6 +1325,7 @@ export default defineI18nLocale(() => ({
         roundNotFound: 'Round not found',
         loadRoundInfoFailed: 'Failed to load round details',
         roundTitle: 'Round title',
+        roundDescription: 'Round description shown in the header',
         createRoundPuzzle: 'Create round puzzle',
         currentRoundRoundPuzzleCreate: 'No round puzzle has been created for this round. Create one now?',
         create: 'Create',

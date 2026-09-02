@@ -4,6 +4,7 @@ export interface AdminRoundData {
   id: number;
   slug?: string | null;
   title: string;
+  description?: string | null;
   cover?: string | null;
   game_id: number;
   puzzle?: number | null;

@@ -117,7 +117,7 @@ export function useGame() {
 
     if (ref.value?.id) {
       try {
-        const { data } = await useApi().get<Pick<RbRound, 'id' | 'title'>[]>(`/games/${ref.value.id}/rounds`);
+        const { data } = await useApi().get<Pick<RbRound, 'id' | 'slug' | 'title' | 'description'>[]>(`/games/${ref.value.id}/rounds`);
         ref.value.rounds = data;
       } catch (error) {
         if (getRbErrorCode(error) === RbErrorCode.NotFound) {
