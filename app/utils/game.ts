@@ -763,7 +763,7 @@ export enum NotificationKind {
 export interface TeamNotification {
   id: number;
   kind: NotificationKind;
-  actor?: { id: number; nickname: string } | null;
+  actor?: { id: number; nickname: string; avatar?: string } | null;
   data: {
     ticket_id: number;
     message_id: number;

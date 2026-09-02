@@ -26,6 +26,11 @@ type GameSettingsPatchBody = Partial<Pick<RbGameModel, 'title' | 'is_listed' | '
     team?: {
       max_members?: number | null;
     };
+    display?: {
+      staff_nickname?: string | null;
+      staff_avatar_email?: string | null;
+      staff_avatar_provider?: AvatarProvider;
+    };
   };
 };
 
@@ -42,6 +47,9 @@ const state = reactive({
   is_listed: false,
   is_active: false,
   max_members: null as number | null,
+  staff_nickname: '',
+  staff_avatar_email: '',
+  staff_avatar_provider: AvatarProvider.Cravatar,
 });
 
 function syncState() {
@@ -49,6 +57,9 @@ function syncState() {
   state.is_listed = game.value?.is_listed ?? false;
   state.is_active = game.value?.is_active ?? false;
   state.max_members = game.value?.settings?.team.max_members ?? null;
+  state.staff_nickname = game.value?.settings?.display?.staff_nickname ?? '';
+  state.staff_avatar_email = game.value?.settings?.display?.staff_avatar_email ?? '';
+  state.staff_avatar_provider = game.value?.settings?.display?.staff_avatar_provider ?? AvatarProvider.Cravatar;
 }
 
 function normalizeMaxMembers(value: number | null | undefined) {
@@ -63,11 +74,32 @@ function makePatchBody() {
   const body: GameSettingsPatchBody = {};
   const maxMembers = normalizeMaxMembers(state.max_members);
   const currentMaxMembers = current.settings?.team.max_members ?? null;
+  const staffNickname = state.staff_nickname.trim() || null;
+  const currentStaffNickname = current.settings?.display?.staff_nickname ?? null;
+  const staffAvatarEmail = state.staff_avatar_email.trim() || null;
+  const currentStaffAvatarEmail = current.settings?.display?.staff_avatar_email ?? null;
+  const currentStaffAvatarProvider = current.settings?.display?.staff_avatar_provider ?? AvatarProvider.Cravatar;
 
   if (state.title !== current.title) body.title = state.title;
   if (state.is_listed !== current.is_listed) body.is_listed = state.is_listed;
   if (state.is_active !== current.is_active) body.is_active = state.is_active;
   if (maxMembers !== currentMaxMembers) body.settings = { team: { max_members: maxMembers } };
+  if (staffNickname !== currentStaffNickname) {
+    body.settings = {
+      ...body.settings,
+      display: { staff_nickname: staffNickname },
+    };
+  }
+  if (staffAvatarEmail !== currentStaffAvatarEmail || state.staff_avatar_provider !== currentStaffAvatarProvider) {
+    body.settings = {
+      ...body.settings,
+      display: {
+        ...body.settings?.display,
+        ...(staffAvatarEmail !== currentStaffAvatarEmail ? { staff_avatar_email: staffAvatarEmail } : {}),
+        ...(state.staff_avatar_provider !== currentStaffAvatarProvider ? { staff_avatar_provider: state.staff_avatar_provider } : {}),
+      },
+    };
+  }
 
   return body;
 }
@@ -81,8 +113,17 @@ const dirtyFields = computed(() => {
     isListed: 'is_listed' in patch,
     isActive: 'is_active' in patch,
     maxMembers: Boolean(patch.settings?.team && 'max_members' in patch.settings.team),
+    staffNickname: Boolean(patch.settings?.display && 'staff_nickname' in patch.settings.display),
+    staffAvatarEmail: Boolean(patch.settings?.display && 'staff_avatar_email' in patch.settings.display),
+    staffAvatarProvider: Boolean(patch.settings?.display && 'staff_avatar_provider' in patch.settings.display),
   };
 });
+
+const staffAvatarPreview = computed(() => buildAvatarUrl(state.staff_avatar_email, state.staff_avatar_provider));
+const avatarProviderItems = [
+  { label: 'Cravatar', value: AvatarProvider.Cravatar, icon: 'material-symbols:account-circle-outline' },
+  { label: 'Catavatar', value: AvatarProvider.Catavatar, icon: 'material-symbols:pets' },
+];
 
 const currencySlugPattern = /^[a-z0-9_-]{1,40}$/;
 const currencyDirty = computed(() => {
@@ -273,6 +314,12 @@ function resetField(field: keyof typeof dirtyFields.value) {
     state.is_active = current.is_active ?? false;
   } else if (field === 'maxMembers') {
     state.max_members = current.settings?.team.max_members ?? null;
+  } else if (field === 'staffNickname') {
+    state.staff_nickname = current.settings?.display?.staff_nickname ?? '';
+  } else if (field === 'staffAvatarEmail') {
+    state.staff_avatar_email = current.settings?.display?.staff_avatar_email ?? '';
+  } else if (field === 'staffAvatarProvider') {
+    state.staff_avatar_provider = current.settings?.display?.staff_avatar_provider ?? AvatarProvider.Cravatar;
   }
 }
 
@@ -296,6 +343,26 @@ async function submitChanges() {
     toast.add({
       title: t('admin.pages.game.settings.teamMemberLimitInvalid'),
       description: t('admin.pages.game.settings.enterGreaterThanOrEmptyUnlimited'),
+      icon: 'material-symbols:error-outline-rounded',
+      color: 'error',
+    });
+    return;
+  }
+
+  if (state.staff_nickname.trim().length > 60) {
+    toast.add({
+      title: t('admin.pages.game.settings.staffNicknameInvalid'),
+      description: t('admin.pages.game.settings.staffNicknameLengthHint'),
+      icon: 'material-symbols:error-outline-rounded',
+      color: 'error',
+    });
+    return;
+  }
+
+  if (state.staff_avatar_email.trim().length > 255) {
+    toast.add({
+      title: t('admin.pages.game.settings.staffAvatarEmailInvalid'),
+      description: t('admin.pages.game.settings.staffAvatarEmailLengthHint'),
       icon: 'material-symbols:error-outline-rounded',
       color: 'error',
     });
@@ -430,6 +497,30 @@ watch(
               <div class="flex flex-wrap items-center gap-3">
                 <u-input-number v-model="state.max_members" :min="1" :step="1" orientation="vertical" :placeholder="t('admin.pages.game.settings.unlimited')" class="w-32" />
               </div>
+            </rb-form-field>
+          </div>
+        </section>
+
+        <u-separator class="my-2" />
+
+        <section class="space-y-4">
+          <div>
+            <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.pages.game.settings.displaySettings') }}</h2>
+          </div>
+          <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
+            <rb-form-field name="staff_nickname" row :label="t('admin.pages.game.settings.staffNickname')" :description="t('admin.pages.game.settings.staffNicknameDescription')" :dirty="dirtyFields.staffNickname" :reset="() => resetField('staffNickname')" :ui="{ container: 'w-full sm:w-96' }">
+              <u-input v-model="state.staff_nickname" :maxlength="60" :placeholder="t('admin.pages.game.settings.staffNicknamePlaceholder')" class="w-full" />
+            </rb-form-field>
+            <u-separator />
+            <rb-form-field name="staff_avatar_provider" row :label="t('admin.pages.game.settings.staffAvatar')" :description="t('admin.pages.game.settings.staffAvatarDescription')" :dirty="dirtyFields.staffAvatarProvider" :reset="() => resetField('staffAvatarProvider')">
+              <div class="flex flex-wrap items-center gap-3">
+                <u-avatar :src="staffAvatarPreview" :text="state.staff_nickname" icon="material-symbols:person-2-rounded" size="xl" />
+                <u-select v-model="state.staff_avatar_provider" :items="avatarProviderItems" class="w-44" />
+              </div>
+            </rb-form-field>
+            <u-separator />
+            <rb-form-field name="staff_avatar_email" row :label="t('admin.pages.game.settings.staffAvatarEmail')" :description="t('admin.pages.game.settings.staffAvatarEmailDescription')" :dirty="dirtyFields.staffAvatarEmail" :reset="() => resetField('staffAvatarEmail')" :ui="{ container: 'w-full sm:w-96' }">
+              <u-input v-model="state.staff_avatar_email" type="email" :maxlength="255" :placeholder="t('admin.pages.game.settings.staffAvatarEmailPlaceholder')" class="w-full" />
             </rb-form-field>
           </div>
         </section>
