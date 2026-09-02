@@ -1,3 +1,14 @@
+/**
+ * 翻訳用語集：
+ * game → ゲーム; puzzle → 問題; round → ラウンド; round puzzle → ラウンド問題
+ * team → チーム; team captain → リーダー; beta team → ベータテストチーム
+ * staff → スタッフ; administrator → 管理者; super administrator → 特権管理者
+ * answer → 解答; answer submission → 解答送信; answer judging → 解答判定
+ * hint → ヒント; puzzle ticket → スタッフヒント; direct message → メッセージ
+ * currency → 通貨; leaderboard → ランキング; announcement → お知らせ
+ * release phase → 公開フェーズ; content block → コンテンツブロック
+ * theme package → テーマパッケージ; puzzle backend → 問題バックエンド
+ */
 export default defineI18nLocale(() => ({
   activityLog: {
     currencyAdjustedByStaff: (ctx: { named: (key: string) => unknown; type: string }) => {

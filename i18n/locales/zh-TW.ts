@@ -1,3 +1,14 @@
+/**
+ * 翻譯術語表：
+ * game → 比賽；puzzle → 謎題；round → 區域；round puzzle → 區域謎題
+ * team → 隊伍；team captain → 隊長；beta team → 內測組
+ * staff → 工作人員；administrator → 管理員；super administrator → 超級管理員
+ * answer → 答案；answer submission → 答案提交；answer judging → 答案判定
+ * hint → 提示；puzzle ticket → 人工提示；direct message → 站內信
+ * currency → 貨幣；leaderboard → 排行榜；announcement → 公告
+ * release phase → 發布階段；content block → 內容區塊
+ * theme package → 主題包；puzzle backend → 題目後端
+ */
 export default defineI18nLocale(() => ({
   activityLog: {
     currencyAdjustedByStaff: (ctx: { named: (key: string) => unknown; type: string }) => {
