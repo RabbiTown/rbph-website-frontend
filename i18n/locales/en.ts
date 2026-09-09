@@ -347,6 +347,7 @@ export default defineI18nLocale(() => ({
     staffMember: 'Staff',
     asTeam: 'As team member',
     asStaff: 'As staff',
+    sendAsStaffAction: 'Send as staff',
     sendAsStaff: 'Reply as staff',
     sentMessage: 'sent a message',
     opened: 'opened the ticket',

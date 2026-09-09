@@ -9,6 +9,8 @@ const contentType = defineModel<RbContentType>('contentType', { default: RbConte
 const props = withDefaults(
   defineProps<{
     disabled?: boolean;
+    submitDisabled?: boolean;
+    hideSubmit?: boolean;
     loading?: boolean;
     contentTypes?: RbContentType[];
     placeholder?: string;
@@ -65,7 +67,7 @@ defineExpose({
 
 <template>
   <div>
-    <u-chat-prompt ref="prompt" v-model="draft" class="text-sm" variant="subtle" :placeholder="placeholder" :ui="{ footer: 'text-muted mt-1 justify-end' }" :rows="3" :submit-on-enter="false" :loading="loading" :autofocus="autofocus" @submit="emit('submit')">
+    <u-chat-prompt ref="prompt" v-model="draft" class="text-sm" variant="subtle" :placeholder="placeholder" :ui="{ footer: 'text-muted mt-1 justify-end' }" :rows="3" :submit-on-enter="false" :loading="loading" :autofocus="autofocus" @submit="!disabled && !loading && !submitDisabled && !hideSubmit && draft?.length && emit('submit')">
       <!-- <u-chat-prompt-submit variant="soft" class="rounded-full cursor-pointer" :disabled="disabled" :loading="loading" /> -->
       <template #footer>
         <u-icon name="material-symbols:markdown-outline-rounded" />
@@ -83,7 +85,7 @@ defineExpose({
           <u-button v-if="canClose" class="justify-center cursor-pointer" color="error" variant="subtle" :loading="loading" :disabled="disabled" icon="material-symbols:check-rounded" @click="emit('submitClose')">
             {{ draft && draft?.length > 0 ? t('components.messageEdit.closeWithReply') : t('components.messageEdit.closeTicket') }}
           </u-button>
-          <u-button class="text-white min-w-20 justify-center cursor-pointer" :loading="loading" :disabled="disabled || !draft?.length" @click="emit('submit')">{{ t('components.messageEdit.send') }}</u-button>
+          <u-button v-if="!hideSubmit" class="text-white min-w-20 justify-center cursor-pointer" :loading="loading" :disabled="disabled || submitDisabled || !draft?.length" @click="emit('submit')">{{ t('components.messageEdit.send') }}</u-button>
         </div>
       </div>
     </div>

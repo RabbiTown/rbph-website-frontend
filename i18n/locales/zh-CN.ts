@@ -357,6 +357,7 @@ export default defineI18nLocale(() => ({
     staffMember: '工作人员',
     asTeam: '作为队伍成员',
     asStaff: '作为工作人员',
+    sendAsStaffAction: '以工作人员发送',
     sendAsStaff: '将作为工作人员回复。',
     sentMessage: '发送了消息',
     opened: '请求了人工提示',

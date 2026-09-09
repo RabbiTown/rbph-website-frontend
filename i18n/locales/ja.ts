@@ -357,6 +357,7 @@ export default defineI18nLocale(() => ({
     staffMember: 'スタッフ',
     asTeam: 'チームとして',
     asStaff: 'スタッフとして',
+    sendAsStaffAction: 'スタッフとして送信',
     sendAsStaff: 'スタッフとして返信します',
     sentMessage: 'メッセージを送信しました',
     opened: 'スタッフヒントを開始しました',

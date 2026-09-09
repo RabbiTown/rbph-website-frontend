@@ -18,6 +18,11 @@ const staffView = ref<StaffView>('staff');
 const selectedTeamId = ref<number>();
 const selectedAdminTeam = ref<StaffTeamOption>();
 const selectedTeam = computed(() => (isAdmin.value ? selectedAdminTeam.value : team.value));
+const isOwnTeam = computed(() => Boolean(team.value?.id && selectedTeamId.value === team.value.id));
+const isStaffTeamView = computed(() => isStaff.value && staffView.value === 'team');
+const sendAsStaff = computed(() => isStaffTeamView.value && !isOwnTeam.value);
+const staffCanOpenTicket = ref(false);
+
 const canOpenTicket = computed(() => pageData.value?.open_block === TicketOpenBlock.Ok);
 const unlockCurrencies = ref<RbTeamCurrency[]>([]);
 const unlockAfterSeconds = ref(0);
@@ -30,6 +35,10 @@ const unlockOffer = computed<MessageUnlockOffer>(() => ({
   costAmount: reqCurrencyAmount.value,
 }));
 
+const teamSendDisabled = computed(() => !canOpenTicket.value || (isStaffTeamView.value && (
+  !isOwnTeam.value || unlockAfterSeconds.value !== 0 || reqCurrencyId.value !== null || reqCurrencyAmount.value !== 0
+)));
+
 async function loadUnlockCurrencies(teamId?: number) {
   unlockCurrencies.value = [];
   unlockAfterSeconds.value = 0;
@@ -38,7 +47,7 @@ async function loadUnlockCurrencies(teamId?: number) {
   if (!teamId || !game.value?.id) return;
   try {
     const { data } = await api.get<{ currencies: RbTeamCurrency[] }>(`/games/${game.value.id}/tickets/staff/teams/${teamId}/currencies`);
-    if (selectedTeamId.value === teamId) unlockCurrencies.value = data.currencies;
+    if (isStaffTeamView.value && selectedTeamId.value === teamId) unlockCurrencies.value = data.currencies;
   } catch (error) {
     handleError(error, t('ticket.loadTeamCurrenciesFailed'));
   }
@@ -81,7 +90,10 @@ function derivePuzzleList(data: TicketPuzzleList, targetTeam?: Pick<RbTeam, 'id'
   };
 }
 
+let listRequest = 0;
 async function updateData(): Promise<boolean> {
+  const request = ++listRequest;
+  staffCanOpenTicket.value = false;
   const puzzleId = puzzle.value?.data.id;
   if (puzzleId) {
     try {
@@ -90,17 +102,25 @@ async function updateData(): Promise<boolean> {
         if (staffView.value === 'team') {
           if (!isAdmin.value) selectedTeamId.value = team.value?.id;
           if (!selectedTeamId.value) return true;
-          const { data } = await api.get<TicketPuzzleList>(`/games/${gameId}/tickets/staff/puzzle/${puzzleId}/teams/${selectedTeamId.value}`);
-          pageData.value = derivePuzzleList(data, selectedTeam.value);
+          const staffEndpoint = `/games/${gameId}/tickets/staff/puzzle/${puzzleId}/teams/${selectedTeamId.value}`;
+          const [staffResponse, teamResponse] = await Promise.all([
+            api.get<TicketPuzzleList>(staffEndpoint),
+            isOwnTeam.value ? api.get<TicketPuzzleList>(`/puzzles/${puzzleId}/tickets`) : Promise.resolve(undefined),
+          ]);
+          if (request !== listRequest) return false;
+          staffCanOpenTicket.value = staffResponse.data.open_block === TicketOpenBlock.Ok;
+          pageData.value = derivePuzzleList(teamResponse?.data ?? staffResponse.data, selectedTeam.value);
           return true;
         }
         const { data } = await api.get<StaffTicketListResponse>(`/games/${gameId}/tickets/staff`, {
           query: { kind: 'puzzle', puzzle_id: puzzleId, state: 'all' },
         });
+        if (request !== listRequest) return false;
         staffTickets.value = data.tickets;
         return true;
       }
       const { data } = await api.get<TicketPuzzleList>(`/puzzles/${puzzleId}/tickets`);
+      if (request !== listRequest) return false;
       pageData.value = derivePuzzleList(data);
       return true;
     } catch (error) {
@@ -128,10 +148,11 @@ watch(
   { immediate: true },
 );
 
-watch([staffView, selectedTeamId], () => {
+watch([staffView, selectedTeamId, isOwnTeam], () => {
   if (!isStaff.value) return;
   pageData.value = undefined;
   if (staffView.value === 'staff') staffTickets.value = undefined;
+  noBidWarningOpen.value = false;
   if (staffView.value === 'team') loadUnlockCurrencies(selectedTeamId.value);
   updateData();
 });
@@ -151,8 +172,12 @@ const submitLoading = ref(false);
 
 const draftMessage = ref('');
 const draftContentType = ref(RbContentType.UnsafeMarkdown);
-async function submitMessage(skipNoBidWarning = false) {
-  const staffTarget = isStaff.value && staffView.value === 'team' ? selectedTeam.value : undefined;
+async function submitMessage(identity: StaffView = 'team', skipNoBidWarning = false) {
+  const asStaff = identity === 'staff';
+  if (submitLoading.value || !draftMessage.value.length) return;
+  if (asStaff ? !isStaffTeamView.value || !staffCanOpenTicket.value : teamSendDisabled.value) return;
+  const staffTarget = asStaff ? selectedTeam.value : undefined;
+  if (asStaff && !staffTarget) return;
   if (staffTarget && !skipNoBidWarning && isMessageUnlockOfferEmpty(unlockOffer.value) && game.value?.id && !isNoBidWarningDisabled(game.value.id)) {
     noBidWarningOpen.value = true;
     return;
@@ -164,25 +189,30 @@ async function submitMessage(skipNoBidWarning = false) {
     try {
       const gameId = puzzle.value?.data.game_id;
       const endpoint = staffTarget ? `/games/${gameId}/tickets/staff/puzzle/${puzzleId}/teams/${staffTarget.id}` : `/puzzles/${puzzleId}/tickets`;
-      const { code, data } = await api.post<TicketOpenResponse>(endpoint, {
-        content: draftMessage.value,
-        content_type: draftContentType.value,
-        cost_id: staffTarget ? reqCurrencyId.value : null,
-        cost_amount: staffTarget ? reqCurrencyAmount.value : 0,
-        unlock_after_seconds: staffTarget ? unlockAfterSeconds.value : 0,
-      } satisfies TicketSendRequest, {
-        errorHints: {
-          [-1]: t('ticket.invalidRequest'),
-          [-2]: t('ticket.onlyOne'),
-          [-3]: t('ticket.puzzleUnavailable'),
-          [-4]: t('ticket.sendBlockType'),
-          [-5]: t('ticket.sendBlockLength'),
-          [-6]: t('ticket.featureClosed'),
-          [-7]: t('ticket.sendBlockExistingOnly'),
-          [-8]: t('ticket.teamFeatureBanned'),
+      const { code, data } = await api.post<TicketOpenResponse>(
+        endpoint,
+        {
+          content: draftMessage.value,
+          content_type: draftContentType.value,
+          cost_id: staffTarget ? reqCurrencyId.value : null,
+          cost_amount: staffTarget ? reqCurrencyAmount.value : 0,
+          unlock_after_seconds: staffTarget ? unlockAfterSeconds.value : 0,
+        } satisfies TicketSendRequest,
+        {
+          errorHints: {
+            [-1]: t('ticket.invalidRequest'),
+            [-2]: t('ticket.onlyOne'),
+            [-3]: t('ticket.puzzleUnavailable'),
+            [-4]: t('ticket.sendBlockType'),
+            [-5]: t('ticket.sendBlockLength'),
+            [-6]: t('ticket.featureClosed'),
+            [-7]: t('ticket.sendBlockExistingOnly'),
+            [-8]: t('ticket.teamFeatureBanned'),
+          },
         },
-      });
+      );
       draftMessage.value = '';
+      staffCanOpenTicket.value = false;
 
       if (code === 0) {
         if (staffTarget && gameId) {
@@ -221,7 +251,7 @@ function confirmNoBidWarning(offer: MessageUnlockOffer) {
   reqCurrencyId.value = offer.costId;
   reqCurrencyAmount.value = offer.costAmount;
   noBidWarningOpen.value = false;
-  return submitMessage(true);
+  return submitMessage('staff', true);
 }
 
 const currentTime = useCurrentTimeSec();
@@ -239,20 +269,28 @@ const cooldown = computed(() => {
       <u-tabs
         v-model="staffView"
         :items="[
-          { label: t('ticket.staffView'), value: 'staff', icon: 'material-symbols:near-me-outline-rounded' },
-          { label: t('ticket.teamView'), value: 'team', icon: 'material-symbols:groups-2-outline-rounded' },
+          { label: t('ticket.staffView'), value: 'staff', icon: 'material-symbols:near-me-outline-rounded', disabled: submitLoading },
+          { label: t('ticket.teamView'), value: 'team', icon: 'material-symbols:groups-2-outline-rounded', disabled: submitLoading },
         ]"
         :content="false"
         variant="link"
       />
-      <rbph-staff-team-select v-if="staffView === 'team' && isAdmin && puzzle?.data.game_id" v-model="selectedTeamId" v-model:team="selectedAdminTeam" :game-id="puzzle.data.game_id" :placeholder="t('pages.staffInbox.searchTeam')" class="w-full sm:max-w-80" />
+      <rbph-staff-team-select
+        v-if="staffView === 'team' && isAdmin && puzzle?.data.game_id"
+        v-model="selectedTeamId"
+        v-model:team="selectedAdminTeam"
+        :game-id="puzzle.data.game_id"
+        :disabled="submitLoading"
+        :placeholder="t('pages.staffInbox.searchTeam')"
+        class="w-full sm:max-w-80"
+      />
       <u-alert v-else-if="staffView === 'team' && team" variant="subtle" color="neutral" icon="material-symbols:groups-2-outline-rounded" :title="t('ticket.ownTeamView', { team: team.name })" />
     </div>
 
     <div v-if="isStaff && staffView === 'staff' && staffTickets" class="flex flex-col gap-4">
-      <div class="flex items-center justify-between gap-3">
-        <u-alert class="flex-1" variant="subtle" :title="t('ticket.staffView')" :description="t('ticket.staffViewDesc')" icon="material-symbols:near-me-outline-rounded" color="warning" />
-        <u-button :to="`/games/${puzzle?.data.game_id}/staff/inbox?kind=puzzle&puzzle_id=${puzzle?.data.id}`" :label="t('pages.staffInbox.openInInbox')" icon="material-symbols:inbox-outline-rounded" />
+      <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <u-alert class="w-full sm:min-w-0 sm:flex-1" variant="subtle" :description="t('ticket.staffViewDesc')" icon="material-symbols:near-me-outline-rounded" color="warning" />
+        <u-button class="w-full shrink-0 justify-center sm:w-auto" :to="`/games/${puzzle?.data.game_id}/staff/inbox?kind=puzzle&puzzle_id=${puzzle?.data.id}`" :label="t('pages.staffInbox.openInInbox')" icon="material-symbols:inbox-outline-rounded" />
       </div>
       <rbph-ticket-card v-for="ticket in staffTickets" :key="ticket.id" :ticket="ticket" />
       <u-empty v-if="staffTickets.length === 0" icon="material-symbols:inbox-outline-rounded" :title="t('ticket.noPuzzleTickets')" />
@@ -264,7 +302,7 @@ const cooldown = computed(() => {
       :description="isAdmin ? t('ticket.selectTeamDesc') : t('ticket.teamViewOnly')"
     />
     <div v-else-if="pageData" class="flex flex-col gap-4">
-      <u-alert v-if="!isStaff && team?.is_banned && canOpenTicket" variant="subtle" :title="t('ticket.teamBannedCanRequest')" icon="material-symbols:warning-outline-rounded" color="warning">
+      <u-alert v-if="!sendAsStaff && team?.is_banned && canOpenTicket" variant="subtle" :title="t('ticket.teamBannedCanRequest')" icon="material-symbols:warning-outline-rounded" color="warning">
         <template #description>
           <i18n-t keypath="ticket.restrictionDetails" tag="span" class="whitespace-nowrap">
             <template #activity><u-button :to="`/games/${game?.id}/activity`" size="xs" variant="link" icon="material-symbols:history-rounded" :label="t('nav.teamActivity')" class="p-0 align-middle mb-0.5" /></template>
@@ -274,14 +312,35 @@ const cooldown = computed(() => {
       <u-alert
         v-if="canOpenTicket"
         variant="subtle"
-        :title="isStaff && selectedTeam ? t('ticket.canRequestFor', { team: selectedTeam.name }) : t('ticket.canRequest')"
-        :description="isStaff && selectedTeam ? t('ticket.canRequestForDesc') : t('ticket.contact')"
+        :title="sendAsStaff && selectedTeam ? t('ticket.canRequestFor', { team: selectedTeam.name }) : t('ticket.canRequest')"
+        :description="sendAsStaff && selectedTeam ? t('ticket.canRequestForDesc') : t('ticket.contact')"
         icon="material-symbols:near-me-outline-rounded"
         color="warning"
       />
-      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.Disabled" variant="subtle" :title="t('ticket.temporarilyUnavailable')" :description="t('ticket.disabledForPuzzle')" icon="material-symbols:near-me-disabled-outline-rounded" color="error" />
-      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.FeatureClosed" variant="subtle" :title="t('ticket.temporarilyUnavailable')" :description="t('ticket.featureClosed')" icon="material-symbols:near-me-disabled-outline-rounded" color="warning" />
-      <u-alert v-else-if="pageData.open_block === TicketOpenBlock.FeatureExistingOnly" variant="subtle" :title="t('ticket.newRequestUnavailable')" :description="t('ticket.featureExistingOnly')" icon="material-symbols:history-rounded" color="warning" />
+      <u-alert
+        v-else-if="pageData.open_block === TicketOpenBlock.Disabled"
+        variant="subtle"
+        :title="t('ticket.temporarilyUnavailable')"
+        :description="t('ticket.disabledForPuzzle')"
+        icon="material-symbols:near-me-disabled-outline-rounded"
+        color="error"
+      />
+      <u-alert
+        v-else-if="pageData.open_block === TicketOpenBlock.FeatureClosed"
+        variant="subtle"
+        :title="t('ticket.temporarilyUnavailable')"
+        :description="t('ticket.featureClosed')"
+        icon="material-symbols:near-me-disabled-outline-rounded"
+        color="warning"
+      />
+      <u-alert
+        v-else-if="pageData.open_block === TicketOpenBlock.FeatureExistingOnly"
+        variant="subtle"
+        :title="t('ticket.newRequestUnavailable')"
+        :description="t('ticket.featureExistingOnly')"
+        icon="material-symbols:history-rounded"
+        color="warning"
+      />
       <u-alert v-else-if="pageData.open_block === TicketOpenBlock.TeamFeatureBanned" variant="subtle" :title="t('ticket.teamFeatureBanned')" icon="material-symbols:block-outline" color="error">
         <template #description>
           <i18n-t keypath="ticket.restrictionDetails" tag="span" class="whitespace-nowrap">
@@ -313,25 +372,32 @@ const cooldown = computed(() => {
         </template>
       </u-alert>
       <rbph-message-edit
-        v-if="canOpenTicket"
+        v-if="canOpenTicket || staffCanOpenTicket"
         v-model:draft="draftMessage"
         v-model:content-type="draftContentType"
         class="mb-6"
         :content-types="[RbContentType.UnsafeMarkdown]"
-        :placeholder="isStaff && selectedTeam ? t('ticket.requestForPlaceholder', { team: selectedTeam.name }) : t('ticket.requestPlaceholder')"
+        :placeholder="sendAsStaff && selectedTeam ? t('ticket.requestForPlaceholder', { team: selectedTeam.name }) : t('ticket.requestPlaceholder')"
         :disabled="!pageData || submitLoading"
         :loading="!pageData || submitLoading"
-        @submit="submitMessage"
+        :submit-disabled="teamSendDisabled"
+        :hide-submit="sendAsStaff"
+        @submit="submitMessage('team')"
       >
-        <template v-if="isStaff && staffView === 'team' && game?.id" #tool>
-          <rbph-message-unlock-editor
-            v-model:unlock-after-seconds="unlockAfterSeconds"
-            v-model:cost-id="reqCurrencyId"
-            v-model:cost-amount="reqCurrencyAmount"
-            :game-id="game.id"
-            :currencies="unlockCurrencies"
-            :disabled="submitLoading"
+        <template v-if="isStaffTeamView" #action>
+          <u-button
+            class="justify-center"
+            :label="t('ticket.sendAsStaffAction')"
+            color="warning"
+            variant="outline"
+            icon="material-symbols:near-me-outline-rounded"
+            :loading="submitLoading"
+            :disabled="submitLoading || !staffCanOpenTicket || !draftMessage.length"
+            @click="submitMessage('staff')"
           />
+        </template>
+        <template v-if="isStaffTeamView && game?.id" #tool>
+          <rbph-message-unlock-editor v-model:unlock-after-seconds="unlockAfterSeconds" v-model:cost-id="reqCurrencyId" v-model:cost-amount="reqCurrencyAmount" :game-id="game.id" :currencies="unlockCurrencies" :disabled="submitLoading" />
         </template>
       </rbph-message-edit>
       <rbph-ticket-card v-for="ticket in pageData.tickets" :key="ticket.id" :ticket="ticket" />
@@ -339,13 +405,6 @@ const cooldown = computed(() => {
     <div v-else class="h-full">
       <u-skeleton class="w-full h-full min-h-24" />
     </div>
-    <rbph-no-bid-confirm-modal
-      v-if="game?.id"
-      v-model:open="noBidWarningOpen"
-      :game-id="game.id"
-      :currencies="unlockCurrencies"
-      :busy="submitLoading"
-      @confirm="confirmNoBidWarning"
-    />
+    <rbph-no-bid-confirm-modal v-if="game?.id" v-model:open="noBidWarningOpen" :game-id="game.id" :currencies="unlockCurrencies" :busy="submitLoading" @confirm="confirmNoBidWarning" />
   </div>
 </template>
