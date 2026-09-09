@@ -23,7 +23,7 @@ async function check() {
     ]);
     const isAdmin = (user.ref.value?.urole ?? RbUserRole.User) >= RbUserRole.Admin;
     if (!current?.maintenance_enabled || isAdmin) {
-      await navigateTo('/transit');
+      await navigateTo('/');
     } else {
       sync.disconnect();
     }

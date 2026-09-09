@@ -43,7 +43,7 @@ export default defineNuxtPlugin(nuxtApp => {
     if (status.maintenance_enabled && (currentUser?.urole ?? RbUserRole.User) < RbUserRole.Admin) {
       await navigateTo('/maintenance');
     } else if (!status.maintenance_enabled && useRoute().path === '/maintenance') {
-      await navigateTo('/transit');
+      await navigateTo('/');
     }
   });
 

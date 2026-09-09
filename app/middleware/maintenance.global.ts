@@ -4,7 +4,7 @@ export default defineNuxtRouteMiddleware(async to => {
   if (!status.ref.value) return;
 
   if (!status.ref.value.maintenance_enabled) {
-    if (to.path === '/maintenance') return navigateTo('/transit');
+    if (to.path === '/maintenance') return navigateTo('/');
     return;
   }
 

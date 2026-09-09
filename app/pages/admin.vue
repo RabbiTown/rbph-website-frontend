@@ -70,10 +70,10 @@ async function loadGamesAndRedirect() {
     game.upsert(games.find(item => item.id === selectedId));
 
     const remembered = rememberedAdminTab(new Set(games.map(item => item.id)));
-    await navigateTo(remembered ?? (game.ref.value ? `/admin/games/${game.ref.value.id}` : '/admin/users'));
+    await navigateTo(remembered ?? (game.ref.value ? `/admin/games/${game.ref.value.id}` : '/admin/users'), { replace: true });
   } catch (error) {
     handleError(error, t('admin.pages.shell.loadGameListFailed'));
-    if (route.name === 'admin') await navigateTo('/admin/users');
+    if (route.name === 'admin') await navigateTo('/admin/users', { replace: true });
   }
 }
 
