@@ -1,5 +1,4 @@
-<script setup lang="ts">import type { NavigationMenuItem } from '@nuxt/ui';
-
+<script setup lang="ts">
 
 const { t } = useI18n();
 
@@ -24,45 +23,8 @@ watch(
   { immediate: true },
 );
 
-const tabs = computed(() => {
-  if (!game.value) return [];
+const tabs = computed(() => game.value ? buildAdminGameNavigation(game.value.id, route.path, t) : []);
 
-  return [
-    {
-      label: t('admin.common.basicSettings'),
-      icon: 'material-symbols:space-dashboard-outline-rounded',
-      to: `/admin/games/${game.value.id}`,
-      exact: true,
-    },
-    {
-      label: t('admin.common.gameFeatures'),
-      icon: 'material-symbols:tune-rounded',
-      to: `/admin/games/${game.value.id}/features`,
-    },
-    {
-      label: t('admin.common.puzzleManagement'),
-      icon: 'material-symbols:extension-outline-rounded',
-      to: `/admin/games/${game.value.id}/puzzles`,
-      active: route.path.startsWith(`/admin/games/${game.value.id}/puzzles`) || route.path.startsWith(`/admin/games/${game.value.id}/rounds`),
-    },
-    {
-      label: t('admin.common.teamManagement'),
-      icon: 'material-symbols:groups-2-outline-rounded',
-      to: `/admin/games/${game.value.id}/teams`,
-      active: route.path.startsWith(`/admin/games/${game.value.id}/teams`),
-    },
-    {
-      label: t('admin.common.gameAnnouncements'),
-      icon: 'material-symbols:campaign-outline-rounded',
-      to: `/admin/games/${game.value.id}/announcements`,
-    },
-    {
-      label: t('admin.frontend.title'),
-      icon: 'material-symbols:palette-outline',
-      to: `/admin/games/${game.value.id}/frontend`,
-    },
-  ] satisfies NavigationMenuItem[];
-});
 </script>
 
 <template>

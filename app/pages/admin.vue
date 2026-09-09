@@ -15,20 +15,6 @@ const gameSwitchIcon = computed(() => (selectedGame.value ? 'material-symbols:sp
 const isDarkMode = computed(() => colorMode.value === 'dark');
 const lastAdminTab = useCookie<string | undefined>('rbph_admin_last_tab', { sameSite: 'lax' });
 
-function adminTabPath(path: string): string | undefined {
-  if (path === '/admin' || path === '/admin/games/create') return;
-  if (path.startsWith('/admin/users')) return '/admin/users';
-  if (path.startsWith('/admin/announcements')) return '/admin/announcements';
-  if (path.startsWith('/admin/logs')) return '/admin/logs';
-  if (path.startsWith('/admin/settings')) return '/admin/settings';
-
-  const match = path.match(/^\/admin\/games\/(\d+)(?:\/(features|puzzles|rounds|teams|announcements))?/);
-  if (!match) return;
-  const [, gameId, section] = match;
-  if (section === 'rounds') return `/admin/games/${gameId}/puzzles`;
-  return `/admin/games/${gameId}${section ? `/${section}` : ''}`;
-}
-
 function rememberedAdminTab(gameIds: Set<number>): string | undefined {
   const path = adminTabPath(lastAdminTab.value ?? '');
   if (!path) return;
@@ -84,12 +70,7 @@ const gameNav = computed(() => {
       icon: 'material-symbols:add-circle-outline-rounded',
       to: '/admin/games/create',
     },
-    {
-      label: t('admin.pages.shell.managementGame'),
-      icon: 'material-symbols:settings-outline-rounded',
-      to: '/admin/games',
-      exact: true,
-    },
+
   ]);
 
   return result;
@@ -121,40 +102,7 @@ const nav = computed(() => {
   const result = [] as NavigationMenuItem[][];
 
   if (game.ref.value) {
-    result.push([
-      {
-        value: 'admin-game-dashboard',
-        label: t('admin.common.basicSettings'),
-        icon: 'material-symbols:space-dashboard-outline-rounded',
-        to: `/admin/games/${game.ref.value.id}`,
-        exact: true,
-      },
-      {
-        label: t('admin.common.gameFeatures'),
-        icon: 'material-symbols:tune-rounded',
-        to: `/admin/games/${game.ref.value.id}/features`,
-      },
-      {
-        value: 'admin-game-puzzles',
-        label: t('admin.common.puzzleManagement'),
-        icon: 'material-symbols:extension-outline-rounded',
-        to: `/admin/games/${game.ref.value.id}/puzzles`,
-        active: route.path.startsWith(`/admin/games/${game.ref.value.id}/puzzles`) || route.path.startsWith(`/admin/games/${game.ref.value.id}/rounds`),
-      },
-      {
-        value: 'admin-game-teams',
-        label: t('admin.common.teamManagement'),
-        icon: 'material-symbols:groups-2-outline-rounded',
-        to: `/admin/games/${game.ref.value.id}/teams`,
-        active: route.path.startsWith(`/admin/games/${game.ref.value.id}/teams`),
-      },
-      {
-        value: 'admin-game-announcements',
-        label: t('admin.common.gameAnnouncements'),
-        icon: 'material-symbols:campaign-outline-rounded',
-        to: `/admin/games/${game.ref.value.id}/announcements`,
-      },
-    ]);
+    result.push(buildAdminGameNavigation(game.ref.value.id, route.path, t));
   }
 
   const systemNav = [
