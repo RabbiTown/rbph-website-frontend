@@ -3,7 +3,7 @@
 
 const { t } = useI18n();
 
-definePageMeta({ middleware: ['admin'] });
+definePageMeta({ layout: 'admin', middleware: ['admin'] });
 
 const route = useRoute();
 
