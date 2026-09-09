@@ -168,7 +168,9 @@ watch(
   <div v-if="content.content_type === RbContentType.Html" v-html="content.content" />
   <template v-else-if="[RbContentType.Markdown, RbContentType.UnsafeMarkdown].includes(content.content_type)">
     <MDCRenderer v-if="mdAst?.body" class="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0" :body="mdAst.body" :data="mdAst.data" />
-    <u-skeleton v-else class="h-24 w-full" />
+    <slot v-else name="loading">
+      <u-skeleton class="h-24 w-full" />
+    </slot>
   </template>
   <u-empty v-else :description="t('components.puzzleContent.invalidType')" />
 </template>
