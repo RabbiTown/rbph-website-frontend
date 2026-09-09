@@ -1,5 +1,4 @@
 <script setup lang="ts">
-
 const { t } = useI18n();
 
 const gameMgr = useAdmin().useGame();
@@ -11,20 +10,7 @@ useHead({
 
 const route = useRoute();
 
-const gameId = computed(() => route.params.id as string);
-
-watch(
-  [gameId, gameMgr.gameList],
-  () => {
-    const id = parseInt(gameId.value);
-    if (isNaN(id)) gameMgr.upsert(undefined);
-    gameMgr.selectById(id);
-  },
-  { immediate: true },
-);
-
-const tabs = computed(() => game.value ? buildAdminGameNavigation(game.value.id, route.path, t) : []);
-
+const tabs = computed(() => (game.value ? buildAdminGameNavigation(game.value.id, route.path, t) : []));
 </script>
 
 <template>

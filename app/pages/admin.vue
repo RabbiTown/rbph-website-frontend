@@ -1,5 +1,5 @@
-<script setup lang="ts">import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui';
-
+<script setup lang="ts">
+import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui';
 
 const { t } = useI18n();
 
@@ -14,6 +14,29 @@ const selectedGame = computed(() => game.ref.value);
 const gameSwitchIcon = computed(() => (selectedGame.value ? 'material-symbols:sports-esports-outline-rounded' : 'material-symbols:remove-selection-rounded'));
 const isDarkMode = computed(() => colorMode.value === 'dark');
 const lastAdminTab = useCookie<string | undefined>('rbph_admin_last_tab', { sameSite: 'lax' });
+const lastAdminGame = useCookie<number | undefined>('rbph_admin_last_game', { sameSite: 'lax' });
+
+watch(
+  [() => route.path, game.gameList],
+  ([path, games]) => {
+    const selectedId = resolveAdminGameSelection(
+      path,
+      games.map(item => item.id),
+      game.ref.value?.id,
+      lastAdminGame.value,
+    );
+    game.upsert(games.find(item => item.id === selectedId));
+  },
+  { immediate: true },
+);
+
+watch(
+  () => game.ref.value?.id,
+  id => {
+    if (id !== undefined && game.gameList.value.some(item => item.id === id)) lastAdminGame.value = id;
+  },
+  { immediate: true },
+);
 
 function rememberedAdminTab(gameIds: Set<number>): string | undefined {
   const path = adminTabPath(lastAdminTab.value ?? '');
@@ -38,9 +61,16 @@ async function loadGamesAndRedirect() {
   try {
     const games = await game.updateGameList();
     if (route.name !== 'admin') return;
+    const selectedId = resolveAdminGameSelection(
+      route.path,
+      games.map(item => item.id),
+      game.ref.value?.id,
+      lastAdminGame.value,
+    );
+    game.upsert(games.find(item => item.id === selectedId));
 
     const remembered = rememberedAdminTab(new Set(games.map(item => item.id)));
-    await navigateTo(remembered ?? (games.length > 0 ? `/admin/games/${games[0]!.id}` : '/admin/users'));
+    await navigateTo(remembered ?? (game.ref.value ? `/admin/games/${game.ref.value.id}` : '/admin/users'));
   } catch (error) {
     handleError(error, t('admin.pages.shell.loadGameListFailed'));
     if (route.name === 'admin') await navigateTo('/admin/users');
@@ -70,7 +100,6 @@ const gameNav = computed(() => {
       icon: 'material-symbols:add-circle-outline-rounded',
       to: '/admin/games/create',
     },
-
   ]);
 
   return result;

@@ -37,3 +37,15 @@ export function buildAdminGameNavigation(gameId: number, path: string, t: (key: 
     };
   });
 }
+
+export function resolveAdminGameSelection(path: string, gameIds: number[], currentId?: number, rememberedId?: number): number | undefined {
+  const routeId = path.match(/^\/admin\/games\/(\d+)(?:\/|$)/)?.[1];
+  if (routeId !== undefined) {
+    const id = Number(routeId);
+    return gameIds.includes(id) ? id : undefined;
+  }
+  for (const id of [currentId, rememberedId]) {
+    if (id !== undefined && gameIds.includes(id)) return id;
+  }
+  return gameIds[0];
+}
