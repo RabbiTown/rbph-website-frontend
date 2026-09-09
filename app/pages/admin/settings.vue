@@ -9,6 +9,7 @@ interface AdminSystemSettings {
   max_sessions: number;
   max_websocket_connections: number;
   leaderboard_refresh_interval_seconds: number;
+  footer_additional_info: string;
   maintenance_enabled: boolean;
   maintenance_message: string;
   updated_by?: number | null;
@@ -44,6 +45,7 @@ const draft = reactive({
   max_sessions: 3,
   max_websocket_connections: 5,
   leaderboard_refresh_interval_seconds: 5,
+  footer_additional_info: '',
   maintenance_enabled: false,
   maintenance_message: '',
 });
@@ -59,11 +61,12 @@ const dirty = computed(() => {
       draft.max_sessions !== current.max_sessions ||
       draft.max_websocket_connections !== current.max_websocket_connections ||
       draft.leaderboard_refresh_interval_seconds !== current.leaderboard_refresh_interval_seconds ||
+      draft.footer_additional_info !== current.footer_additional_info ||
       draft.maintenance_enabled !== current.maintenance_enabled ||
       draft.maintenance_message !== current.maintenance_message),
   );
 });
-const valid = computed(() => draft.max_sessions >= 1 && draft.max_sessions <= 20 && draft.max_websocket_connections >= 1 && draft.max_websocket_connections <= 20 && draft.leaderboard_refresh_interval_seconds >= 1 && draft.leaderboard_refresh_interval_seconds <= 86400 && draft.maintenance_message.length <= 500);
+const valid = computed(() => draft.max_sessions >= 1 && draft.max_sessions <= 20 && draft.max_websocket_connections >= 1 && draft.max_websocket_connections <= 20 && draft.leaderboard_refresh_interval_seconds >= 1 && draft.leaderboard_refresh_interval_seconds <= 86400 && draft.footer_additional_info.length <= 1000 && draft.maintenance_message.length <= 500);
 
 function syncDraft(current: AdminSystemSettings) {
   draft.registration_open = current.registration_open;
@@ -73,6 +76,7 @@ function syncDraft(current: AdminSystemSettings) {
   draft.max_sessions = current.max_sessions;
   draft.max_websocket_connections = current.max_websocket_connections;
   draft.leaderboard_refresh_interval_seconds = current.leaderboard_refresh_interval_seconds;
+  draft.footer_additional_info = current.footer_additional_info;
   draft.maintenance_enabled = current.maintenance_enabled;
   draft.maintenance_message = current.maintenance_message;
 }
@@ -112,6 +116,7 @@ async function save() {
         max_sessions: draft.max_sessions,
         max_websocket_connections: draft.max_websocket_connections,
         leaderboard_refresh_interval_seconds: draft.leaderboard_refresh_interval_seconds,
+        footer_additional_info: draft.footer_additional_info.trim(),
         maintenance_enabled: draft.maintenance_enabled,
         maintenance_message: draft.maintenance_message.trim(),
       },
@@ -254,6 +259,22 @@ onBeforeUnmount(() => dirtyToast.clear());
                     :reset="() => (draft.leaderboard_refresh_interval_seconds = settings!.leaderboard_refresh_interval_seconds)"
                   >
                     <u-input-number v-model="draft.leaderboard_refresh_interval_seconds" :min="1" :max="86400" :disabled="saving" class="w-32" />
+                  </rb-form-field>
+                </div>
+              </section>
+
+              <section class="space-y-4">
+                <h3 class="text-lg font-semibold text-highlighted">{{ t('admin.pages.settings.footer') }}</h3>
+                <div class="space-y-3 rounded-md bg-elevated/60 p-4 ring ring-default">
+                  <rb-form-field
+                    row
+                    :label="t('admin.pages.settings.footerAdditionalInfo')"
+                    icon="material-symbols:branding-watermark-outline-rounded"
+                    :description="t('admin.pages.settings.footerAdditionalInfoDescription')"
+                    :dirty="draft.footer_additional_info !== settings.footer_additional_info"
+                    :reset="() => (draft.footer_additional_info = settings!.footer_additional_info)"
+                  >
+                    <u-textarea v-model="draft.footer_additional_info" class="w-full sm:w-96" :rows="4" :maxlength="1000" :placeholder="t('admin.pages.settings.footerAdditionalInfoPlaceholder')" :disabled="saving" />
                   </rb-form-field>
                 </div>
               </section>

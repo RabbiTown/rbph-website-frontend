@@ -41,7 +41,7 @@ async function submit(event: FormSubmitEvent<Schema>) {
 </script>
 
 <template>
-  <div class="min-h-screen p-6">
+  <div class="p-6">
     <div class="mx-auto w-full max-w-xs py-12">
       <div class="mb-8 text-center">
         <u-icon name="material-symbols:password-rounded" class="size-10 text-warning" />

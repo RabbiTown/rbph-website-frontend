@@ -119,7 +119,7 @@ async function submit(event: FormSubmitEvent<Schema>) {
 </script>
 
 <template>
-  <div class="min-h-screen">
+  <div class="min-w-0">
     <div class="flex items-center justify-center p-6">
       <div class="w-full max-w-xs">
         <u-empty v-if="!systemStatus.ref.value?.registration_open" icon="material-symbols:person-cancel-outline-rounded" :title="t('auth.registrationClosed')" :description="t('auth.registrationClosedDesc')">

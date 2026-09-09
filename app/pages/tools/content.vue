@@ -34,7 +34,7 @@ const full = ref(false);
 </script>
 
 <template>
-  <u-container class="h-screen flex flex-col">
+  <u-container class="min-w-0 flex flex-col">
     <div class="py-6">
       <div class="flex items-baseline justify-between md:flex-row flex-col">
         <div class="text-3xl font-bold">{{ t('pages.contentTest.title') }}</div>

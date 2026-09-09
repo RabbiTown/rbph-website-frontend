@@ -30,39 +30,43 @@ function getErrorMessage(error: NuxtError) {
 
 <template>
   <UApp>
-    <div class="lang-zh h-screen text-light">
-      <div class="error-message">
-        <div class="text-5xl font-bold mb-1">{{ error.statusCode }}</div>
-        <div class="text-gray-400">
-          {{ getErrorMessage(error) }}
+    <rbph-page-shell footer-split>
+      <div class="relative isolate flex min-h-80 flex-col justify-center overflow-hidden px-6 py-12 text-light sm:px-[25%]">
+        <div class="error-message">
+          <div class="text-5xl font-bold mb-1">{{ error.statusCode }}</div>
+          <div class="text-gray-400">
+            {{ getErrorMessage(error) }}
+          </div>
+          <div class="mt-8">
+            <div class="text-gray-500 mb-2 text-sm"><span class="text-red-400">$</span> rbph-website</div>
+            <UButton variant="soft" color="error" class="cursor-pointer" @click="reloadPage">重试</UButton>
+            <UButton variant="soft" class="ms-2 cursor-pointer" @click="() => router.back()">回到上一页</UButton>
+          </div>
         </div>
-        <div class="mt-8">
-          <div class="text-gray-500 mb-2 text-sm"><span class="text-red-400">$</span> rbph-website</div>
-          <UButton variant="soft" color="error" class="cursor-pointer" @click="reloadPage">重试</UButton>
-          <UButton variant="soft" class="ms-2 cursor-pointer" @click="() => router.back()">回到上一页</UButton>
+        <div class="error-band">
+          <template v-for="i in new Array(30)" :key="i">
+            <div>ERROR</div>
+            <div>{{ error.statusCode }}</div>
+          </template>
         </div>
       </div>
-      <div class="error-band">
-        <template v-for="i in new Array(30)" :key="i">
-          <div>ERROR</div>
-          <div>{{ error.statusCode }}</div>
-        </template>
-      </div>
-    </div>
+    </rbph-page-shell>
   </UApp>
 </template>
 
-<style class="scss">
+<style scoped>
 .error-message {
-  position: fixed;
-  bottom: 50%;
-  left: 25%;
+  position: relative;
+  z-index: 1;
+  overflow-wrap: anywhere;
+
   font-size: 16px;
 }
 
 .error-band {
-  position: fixed;
-  top: 65%;
+  position: relative;
+  width: max-content;
+  margin-top: 3rem;
   left: 50%;
   translate: -50%;
   display: flex;

@@ -64,7 +64,7 @@ onMounted(initialize);
 </script>
 
 <template>
-  <main class="mx-auto flex min-h-screen w-full max-w-5xl items-center justify-center px-4 py-10 sm:px-6">
+  <main class="mx-auto flex w-full max-w-5xl items-center justify-center px-4 py-10 sm:px-6">
     <u-icon v-if="loading" name="i-lucide:loader-circle" class="animate-spin" size="60px" />
 
     <section v-else-if="games.length > 1" class="w-full space-y-5">

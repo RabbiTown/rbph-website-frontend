@@ -40,8 +40,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div>
-    <u-main class="flex justify-center items-center">
+  <div class="flex flex-col">
+    <u-main class="min-h-0 flex flex-1 justify-center items-center py-10">
       <div class="">
         <u-icon v-if="success == 'ok'" name="material-symbols:check-rounded" class="text-green-500" size="60px" />
         <u-icon v-else-if="success == 'err'" name="material-symbols:close-rounded" class="text-red-400" size="60px" />

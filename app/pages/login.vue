@@ -112,7 +112,7 @@ async function submit(event: FormSubmitEvent<Schema>) {
 </script>
 
 <template>
-  <div class="min-h-screen">
+  <div class="min-w-0">
     <div class="flex items-center justify-center p-6">
       <div class="w-full max-w-xs">
         <div class="w-full flex justify-center my-4">
