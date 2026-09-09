@@ -1018,6 +1018,7 @@ export default defineI18nLocale(() => ({
           gameFeaturesUpdateNotYetSave: 'Game feature changes have not been saved.',
         },
         settings: {
+          enterGame: 'Enter game',
           confirmDeleteCurrency: 'Mark “{currency}” for deletion? Saving will clear or unset related team balances, hint costs, and penalty settings.',
           gameSettingsUpdateNotYetSave: 'Game setting changes have not been saved.',
           currencySlugExists: 'This currency identifier is already in use.',

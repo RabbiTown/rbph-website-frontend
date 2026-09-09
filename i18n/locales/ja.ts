@@ -1028,6 +1028,7 @@ export default defineI18nLocale(() => ({
           gameFeaturesUpdateNotYetSave: 'ゲーム機能の変更が保存されていません。',
         },
         settings: {
+          enterGame: 'ゲームに入る',
           confirmDeleteCurrency: '「{currency}」を削除予定にしますか？保存すると、関連するチーム残高、ヒント料金、ペナルティ設定が消去または解除されます。',
           gameSettingsUpdateNotYetSave: 'ゲーム設定の変更が保存されていません。',
           currencySlugExists: 'この通貨IDはすでに使用されています。',

@@ -477,8 +477,9 @@ watch(
     <div class="flex min-w-0 flex-col gap-4">
       <u-form :state="state" class="flex flex-col gap-4" @submit.prevent>
         <section class="space-y-4">
-          <div>
+          <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.common.gameInfo') }}</h2>
+            <u-button v-if="game" :to="`/games/${game.id}`" color="neutral" variant="outline" icon="material-symbols:arrow-forward-rounded" :label="t('admin.pages.game.settings.enterGame')" />
           </div>
           <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
             <rb-form-field name="title" row :label="t('admin.common.gameName')" required :description="t('admin.pages.game.settings.platformShowName')" :dirty="dirtyFields.title" :reset="() => resetField('title')" :ui="{ container: 'w-full sm:w-96' }">

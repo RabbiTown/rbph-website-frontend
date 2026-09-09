@@ -1025,6 +1025,7 @@ export default defineI18nLocale(() => ({
           gameFeaturesUpdateNotYetSave: '比赛功能修改尚未保存。',
         },
         settings: {
+          enterGame: '进入比赛',
           confirmDeleteCurrency: '确认将「{currency}」标记为待删除？保存后相关队伍余额、提示消耗和处罚配置会被清除或置空。',
           gameSettingsUpdateNotYetSave: '比赛设置修改尚未保存。',
           currencySlugExists: '货币标识已存在。',
