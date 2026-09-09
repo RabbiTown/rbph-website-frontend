@@ -11,11 +11,11 @@ const games = ref<RbGame[]>([]);
 const enteringGameId = ref<number>();
 const loading = ref(true);
 
-async function enterGame(game: RbGame) {
+async function enterGame(game: RbGame, replace = false) {
   if (enteringGameId.value) return;
   enteringGameId.value = game.id;
   if (import.meta.client) localStorage.setItem('rbph::select_game', game.id.toString());
-  await navigateTo(`/games/${game.id}`);
+  await navigateTo(`/games/${game.id}`, { replace });
 }
 
 async function initialize() {
@@ -38,16 +38,16 @@ async function initialize() {
     await userReady;
     if (selectedGame) {
       redirecting = true;
-      await enterGame(selectedGame);
+      await enterGame(selectedGame, true);
     } else {
       const { data } = await api.get<RbGame[]>('/games/active');
 
       if (data.length === 0 && (userMgr.ref.value?.urole ?? RbUserRole.User) >= RbUserRole.Admin) {
         redirecting = true;
-        await navigateTo('/admin');
+        await navigateTo('/admin', { replace: true });
       } else if (data.length === 1 && data[0]) {
         redirecting = true;
-        await enterGame(data[0]);
+        await enterGame(data[0], true);
       } else {
         games.value = data;
       }
