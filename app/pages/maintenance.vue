@@ -1,4 +1,6 @@
 <script setup lang="ts">
+definePageMeta({ layout: 'maintenance' });
+
 const { t } = useI18n();
 
 useHead({ titleTemplate: computed(() => t('maintenance.headTitle')) });
@@ -13,8 +15,18 @@ async function check() {
   if (checking.value) return;
   checking.value = true;
   try {
-    const current = await status.refresh(true);
-    if (!current?.maintenance_enabled) await navigateTo('/transit');
+    const [current] = await Promise.all([
+      status.refresh(true),
+      user.waitUpdate().finally(() => {
+        userReady.value = true;
+      }),
+    ]);
+    const isAdmin = (user.ref.value?.urole ?? RbUserRole.User) >= RbUserRole.Admin;
+    if (!current?.maintenance_enabled || isAdmin) {
+      await navigateTo('/transit');
+    } else {
+      sync.disconnect();
+    }
   } catch (error) {
     handleError(error, t('maintenance.checkFailed'));
   } finally {
@@ -23,11 +35,7 @@ async function check() {
 }
 
 onMounted(() => {
-  sync.disconnect();
-  check();
-  user.waitUpdate().finally(() => {
-    userReady.value = true;
-  });
+  void check();
 });
 </script>
 
