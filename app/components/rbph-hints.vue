@@ -235,13 +235,13 @@ defineExpose({
           arrow
           :text="t('hints.needMore', { amount: `${intPrecString(hint.cost_amount - (currency[hint.cost_id ?? 0]?.current || 0), currency[hint.cost_id ?? 0]?.prec || 0)} ${currency[hint.cost_id ?? 0]?.name}` })"
         >
-          <u-button variant="soft" size="xs" class="cursor-pointer -my-8" icon="material-symbols:emoji-objects-outline-rounded" :loading="purchaseLoading || syncingDueHints" :disabled="!checkEnough(hint)" @click="() => purchaseHint(hint.id)">
+          <u-button variant="soft" size="xs" class="cursor-pointer" icon="material-symbols:emoji-objects-outline-rounded" :loading="purchaseLoading || syncingDueHints" :disabled="!checkEnough(hint)" @click="() => purchaseHint(hint.id)">
             <template v-if="!hint.cost_id"> {{ t('hints.unlock') }} </template>
             <template v-else> {{ currency[hint.cost_id]?.name }} {{ intPrecString(-hint.cost_amount, currency[hint.cost_id]?.prec || 0, true, ' ') }} </template>
           </u-button>
         </u-tooltip>
         <u-tooltip v-else :disabled="checkEnough(hint)" arrow :text="t('hints.waitOver')">
-          <u-button variant="soft" size="xs" class="-my-8" icon="material-symbols:hourglass-outline-rounded" :disabled="true"> {{ formatTime(calcCooldown(hint)) }} </u-button>
+          <u-button variant="soft" size="xs" icon="material-symbols:hourglass-outline-rounded" :disabled="true"> {{ formatTime(calcCooldown(hint)) }} </u-button>
         </u-tooltip>
       </template>
       <rbph-content v-if="hint.state" :content="hint.state" />

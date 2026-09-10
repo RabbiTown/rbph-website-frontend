@@ -323,27 +323,30 @@ defineExpose({ apply, reset });
     <template v-else>
       <div v-for="phase in state" :key="phase.id" class="relative transition-colors" :class="[phase.deleting ? 'opacity-50' : '', phase.removing ? 'pointer-events-none opacity-50' : '', phaseDirtyLineClass(phase)]">
         <u-collapsible v-model:open="phase.open" :unmount-on-hide="false">
-          <div class="group flex cursor-pointer items-center gap-3 rounded-lg bg-elevated/60 px-4 py-2 ring ring-default">
+          <rbph-collapsible-header class="rounded-lg bg-elevated/60 px-4 py-2 ring ring-default">
             <div class="flex min-w-0 flex-1 items-center gap-2">
               <u-icon name="material-symbols:event-outline-rounded" class="shrink-0 text-primary" />
-              <u-input v-if="phase.open" v-model="phase.title" class="-mx-2.5 -my-1.5 w-full font-medium" :placeholder="t('components.rbphReleasePhaseManager.name')" variant="ghost" :disabled="saving || phase.deleting" @click.stop />
-              <div v-else class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">{{ phase.title || t('components.rbphReleasePhaseManager.untitledPhase') }}</div>
+              <u-textarea v-if="phase.open" v-model="phase.title" :rows="1" autoresize :ui="{ base: 'field-sizing-content resize-none' }" class="min-w-0 flex-1 -mx-2.5 -my-1.5 w-full font-medium" :placeholder="t('components.rbphReleasePhaseManager.name')" variant="ghost" :disabled="saving || phase.deleting" @click.stop @keydown.stop />
+              <div v-else class="min-w-0 flex-1 whitespace-normal [overflow-wrap:anywhere] text-sm font-medium text-highlighted">{{ phase.title || t('components.rbphReleasePhaseManager.untitledPhase') }}</div>
             </div>
 
-            <div class="flex min-w-0 flex-none flex-wrap justify-end gap-1" @click.stop>
-              <u-badge v-if="!phase.isPublic" color="neutral" variant="soft">{{ t('components.rbphReleasePhaseManager.hide') }}</u-badge>
-              <u-badge v-if="changesFromStates(phase.states).length" color="warning" variant="soft">{{ t('components.rbphReleasePhaseManager.changeCount', { count: changesFromStates(phase.states).length }) }}</u-badge>
-              <u-badge v-if="phase.puzzleCount" color="info" variant="soft" icon="material-symbols:extension-outline-rounded">{{ t('admin.common.puzzleCount', { count: phase.puzzleCount }) }}</u-badge>
-              <u-badge variant="soft" color="neutral" icon="material-symbols:schedule-outline-rounded">{{ formatDate(phase.releaseAt) }}</u-badge>
-              <u-badge v-if="phase.released" color="success" variant="soft">{{ t('components.rbphReleasePhaseManager.released') }}</u-badge>
-            </div>
+            <template #badges>
+              <div class="flex min-w-0 max-w-full flex-wrap gap-1" @click.stop>
+                <u-badge v-if="!phase.isPublic" color="neutral" variant="soft">{{ t('components.rbphReleasePhaseManager.hide') }}</u-badge>
+                <u-badge v-if="changesFromStates(phase.states).length" color="warning" variant="soft">{{ t('components.rbphReleasePhaseManager.changeCount', { count: changesFromStates(phase.states).length }) }}</u-badge>
+                <u-badge v-if="phase.puzzleCount" color="info" variant="soft" icon="material-symbols:extension-outline-rounded">{{ t('admin.common.puzzleCount', { count: phase.puzzleCount }) }}</u-badge>
+                <u-badge variant="soft" color="neutral" icon="material-symbols:schedule-outline-rounded">{{ formatDate(phase.releaseAt) }}</u-badge>
+                <u-badge v-if="phase.released" color="success" variant="soft">{{ t('components.rbphReleasePhaseManager.released') }}</u-badge>
+              </div>
+            </template>
+            <template #actions>
 
-            <div v-if="phase.deleting || phase.puzzleCount === 0" class="flex items-center" @pointerdown.stop @click.stop>
-              <u-button v-if="phase.deleting" type="button" icon="material-symbols:undo-rounded" color="neutral" variant="ghost" size="sm" :disabled="saving" @click.stop="restorePhase(phase)" />
-              <u-button v-else type="button" icon="material-symbols:delete-outline-rounded" color="error" variant="ghost" size="sm" :disabled="saving || phase.removing" @click.stop="removePhase(phase)" />
-            </div>
-            <u-icon name="material-symbols:expand-more-rounded" class="size-5 shrink-0 text-muted transition-transform duration-200 group-data-[state=open]:rotate-180" />
-          </div>
+              <div v-if="phase.deleting || phase.puzzleCount === 0" class="flex items-center" @pointerdown.stop @click.stop>
+                <u-button v-if="phase.deleting" type="button" icon="material-symbols:undo-rounded" color="neutral" variant="ghost" size="sm" :disabled="saving" @click.stop="restorePhase(phase)" />
+                <u-button v-else type="button" icon="material-symbols:delete-outline-rounded" color="error" variant="ghost" size="sm" :disabled="saving || phase.removing" @click.stop="removePhase(phase)" />
+              </div>
+            </template>
+          </rbph-collapsible-header>
 
           <template #content>
             <div class="border-t border-default bg-elevated/40 px-4 pb-4 pt-4">

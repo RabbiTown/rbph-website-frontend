@@ -19,16 +19,20 @@ withDefaults(
 <template>
   <u-card class="w-full" variant="subtle" :ui="{ body: 'sm:p-0 p-0' }">
     <u-collapsible :default-open="defaultOpen" :disabled="!collapsible" :unmount-on-hide="false">
-      <div class="px-5 py-3 flex items-center group dark:bg-slate-800 bg-slate-100" :class="{ 'cursor-pointer': collapsible }">
-        <u-icon class="align-middle me-2" :class="iconClass" :name="icon" />
-        <div class="text-sm flex-1" :class="titleClass">
-          <slot name="title" />
+      <rbph-collapsible-header class="px-5 py-3 dark:bg-slate-800 bg-slate-100" :collapsible="collapsible">
+        <div class="flex items-start gap-2">
+          <u-icon class="mt-0.5 shrink-0" :class="iconClass" :name="icon" />
+          <div class="min-w-0 flex-1 text-sm" :class="titleClass">
+            <slot name="title" />
+          </div>
         </div>
-        <div v-if="$slots.actions" class="flex items-center" @click.stop @keydown.stop>
+        <template v-if="$slots.badges" #badges>
+          <slot name="badges" />
+        </template>
+        <template v-if="$slots.actions" #actions>
           <slot name="actions" />
-        </div>
-        <u-icon v-if="collapsible" name="material-symbols:expand-more-rounded" class="-me-1 size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
-      </div>
+        </template>
+      </rbph-collapsible-header>
       <template v-if="collapsible" #content>
         <div class="px-4 py-4 border-t dark:border-t-slate-700 border-t-slate-200 text-sm">
           <slot />

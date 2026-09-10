@@ -650,42 +650,45 @@ onBeforeUnmount(() => {
               @drop="onHintDrop"
             >
               <u-collapsible v-model:open="hint.open" :unmount-on-hide="false">
-                <div class="flex items-center gap-3 rounded-lg bg-elevated/60 px-4 py-2 group cursor-pointer ring ring-default">
+                <rbph-collapsible-header class="rounded-lg bg-elevated/60 px-4 py-2 ring ring-default">
                   <div class="flex min-w-0 flex-1 items-center gap-2">
-                    <u-icon name="material-symbols:lightbulb-outline-rounded" class="text-warning" />
-                    <u-input v-if="hint.open" v-model="hint.title" class="w-full -mx-2.5 -my-1.5 font-medium" :placeholder="t('admin.pages.puzzle.hints.hintTitle')" variant="ghost" :disabled="saving || hint.deleting" @click.stop />
-                    <div v-else class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">
+                    <u-icon name="material-symbols:lightbulb-outline-rounded" class="shrink-0 text-warning" />
+                    <u-textarea v-if="hint.open" v-model="hint.title" :rows="1" autoresize :ui="{ base: 'field-sizing-content resize-none' }" class="min-w-0 flex-1 w-full -mx-2.5 -my-1.5 font-medium" :placeholder="t('admin.pages.puzzle.hints.hintTitle')" variant="ghost" :disabled="saving || hint.deleting" @click.stop @keydown.stop />
+                    <div v-else class="min-w-0 flex-1 whitespace-normal [overflow-wrap:anywhere] text-sm font-medium text-highlighted">
                       {{ hint.title || t('admin.pages.puzzle.hints.notMemberHint') }}
                     </div>
                   </div>
-                  <div class="flex min-w-0 flex-none flex-wrap justify-end gap-1" @click.stop>
-                    <u-badge v-if="hint.cooldown > 0" variant="soft" color="warning" class="shrink-0">
-                      <u-icon name="material-symbols:schedule-outline-rounded" class="me-1 size-3.5" />
-                      {{ formatTime(hint.cooldown * 1000) }}
-                    </u-badge>
-                    <u-badge v-if="hint.cost_id !== null && hint.cost_amount > 0" variant="soft" color="primary" class="shrink-0">
-                      <u-icon :name="selectedCurrencyIcon(hint.cost_id) || 'material-symbols:money-bag-outline-rounded'" class="me-1 size-3.5" />
-                      {{ selectedCurrencyLabel(hint.cost_id) }} {{ intPrecString(-hint.cost_amount, currencyPrec(hint.cost_id), true, ' ') }}
-                    </u-badge>
-                  </div>
-                  <div class="flex items-center gap-1" @click.stop>
-                    <u-button
-                      icon="material-symbols:drag-indicator"
-                      color="neutral"
-                      variant="ghost"
-                      size="sm"
-                      :aria-label="t('admin.common.dragToReorder')"
-                      class="cursor-grab active:cursor-grabbing"
-                      draggable="true"
-                      :disabled="saving || hint.deleting"
-                      @dragstart.stop="onHintDragStart(hint, $event)"
-                      @dragend="clearHintDragState"
-                    />
-                    <u-button v-if="hint.deleting" icon="material-symbols:undo-rounded" color="neutral" variant="ghost" size="sm" :disabled="saving" @click="restoreHint(hint)" />
-                    <u-button v-else icon="material-symbols:delete-outline-rounded" color="error" variant="ghost" size="sm" :disabled="saving" @click="removeHint(hint)" />
-                  </div>
-                  <u-icon name="material-symbols:expand-more-rounded" class="size-5 text-muted group-data-[state=open]:rotate-180 transition-transform duration-200" />
-                </div>
+                  <template #badges>
+                    <div class="flex min-w-0 max-w-full flex-wrap gap-1" @click.stop>
+                      <u-badge v-if="hint.cooldown > 0" variant="soft" color="warning" class="shrink-0">
+                        <u-icon name="material-symbols:schedule-outline-rounded" class="me-1 size-3.5" />
+                        {{ formatTime(hint.cooldown * 1000) }}
+                      </u-badge>
+                      <u-badge v-if="hint.cost_id !== null && hint.cost_amount > 0" variant="soft" color="primary" class="shrink-0">
+                        <u-icon :name="selectedCurrencyIcon(hint.cost_id) || 'material-symbols:money-bag-outline-rounded'" class="me-1 size-3.5" />
+                        {{ selectedCurrencyLabel(hint.cost_id) }} {{ intPrecString(-hint.cost_amount, currencyPrec(hint.cost_id), true, ' ') }}
+                      </u-badge>
+                    </div>
+                  </template>
+                  <template #actions>
+                    <div class="flex items-center gap-1" @click.stop>
+                      <u-button
+                        icon="material-symbols:drag-indicator"
+                        color="neutral"
+                        variant="ghost"
+                        size="sm"
+                        :aria-label="t('admin.common.dragToReorder')"
+                        class="cursor-grab active:cursor-grabbing"
+                        draggable="true"
+                        :disabled="saving || hint.deleting"
+                        @dragstart.stop="onHintDragStart(hint, $event)"
+                        @dragend="clearHintDragState"
+                      />
+                      <u-button v-if="hint.deleting" icon="material-symbols:undo-rounded" color="neutral" variant="ghost" size="sm" :disabled="saving" @click="restoreHint(hint)" />
+                      <u-button v-else icon="material-symbols:delete-outline-rounded" color="error" variant="ghost" size="sm" :disabled="saving" @click="removeHint(hint)" />
+                    </div>
+                  </template>
+                </rbph-collapsible-header>
 
                 <template #content>
                   <div class="border-t border-default bg-elevated/40 px-4 pt-4 pb-4">

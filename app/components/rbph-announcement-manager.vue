@@ -206,25 +206,28 @@ onBeforeUnmount(() => dirtyToast.clear());
           ]"
         >
           <u-collapsible v-model:open="announcement.open" :unmount-on-hide="false">
-            <div class="group flex cursor-pointer items-center gap-3 rounded-lg bg-elevated/60 px-4 py-2 ring ring-default">
+            <rbph-collapsible-header class="rounded-lg bg-elevated/60 px-4 py-2 ring ring-default">
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <u-icon name="material-symbols:campaign-outline-rounded" class="shrink-0 text-primary" />
-                <u-input v-if="announcement.open" v-model="announcement.title" class="-mx-2.5 -my-1.5 w-full font-medium" :placeholder="t('components.rbphAnnouncementManager.title')" variant="ghost" :maxlength="120" :disabled="saving || announcement.deleting" @click.stop />
-                <div v-else class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">{{ announcement.title || t('components.rbphAnnouncementManager.untitledAnnouncement') }}</div>
+                <u-textarea v-if="announcement.open" v-model="announcement.title" :rows="1" autoresize :ui="{ base: 'field-sizing-content resize-none' }" class="min-w-0 flex-1 -mx-2.5 -my-1.5 w-full font-medium" :placeholder="t('components.rbphAnnouncementManager.title')" variant="ghost" :maxlength="120" :disabled="saving || announcement.deleting" @click.stop @keydown.stop />
+                <div v-else class="min-w-0 flex-1 whitespace-normal [overflow-wrap:anywhere] text-sm font-medium text-highlighted">{{ announcement.title || t('components.rbphAnnouncementManager.untitledAnnouncement') }}</div>
               </div>
-              <div class="flex min-w-0 flex-none flex-wrap justify-end gap-1" @click.stop>
-                <u-badge :color="announcement.is_shown ? 'success' : 'neutral'" variant="soft" :icon="announcement.is_shown ? 'material-symbols:visibility-outline-rounded' : 'material-symbols:visibility-off-outline-rounded'">
-                  {{ announcement.is_shown ? t('admin.common.published') : t('components.rbphAnnouncementManager.draft') }}
-                </u-badge>
-                <u-badge v-if="announcement.is_pinned" color="warning" variant="soft" icon="material-symbols:keep-outline-rounded">{{ t('components.rbphAnnouncementManager.pinned') }}</u-badge>
-                <u-badge color="neutral" variant="soft" :icon="announcement.puzzle_ids.length ? 'material-symbols:extension-outline-rounded' : 'material-symbols:sports-esports-outline-rounded'">{{ targetLabel(announcement) }}</u-badge>
-              </div>
-              <div class="flex items-center gap-1" @click.stop>
-                <u-button v-if="announcement.deleting" icon="material-symbols:undo-rounded" color="neutral" variant="ghost" size="sm" :disabled="saving" @click="restoreAnnouncement(announcement)" />
-                <u-button v-else icon="material-symbols:delete-outline-rounded" color="error" variant="ghost" size="sm" :disabled="saving" @click="removeAnnouncement(announcement)" />
-              </div>
-              <u-icon name="material-symbols:expand-more-rounded" class="size-5 text-muted transition-transform duration-200 group-data-[state=open]:rotate-180" />
-            </div>
+              <template #badges>
+                <div class="flex min-w-0 max-w-full flex-wrap gap-1" @click.stop>
+                  <u-badge :color="announcement.is_shown ? 'success' : 'neutral'" variant="soft" :icon="announcement.is_shown ? 'material-symbols:visibility-outline-rounded' : 'material-symbols:visibility-off-outline-rounded'">
+                    {{ announcement.is_shown ? t('admin.common.published') : t('components.rbphAnnouncementManager.draft') }}
+                  </u-badge>
+                  <u-badge v-if="announcement.is_pinned" color="warning" variant="soft" icon="material-symbols:keep-outline-rounded">{{ t('components.rbphAnnouncementManager.pinned') }}</u-badge>
+                  <u-badge color="neutral" variant="soft" :icon="announcement.puzzle_ids.length ? 'material-symbols:extension-outline-rounded' : 'material-symbols:sports-esports-outline-rounded'">{{ targetLabel(announcement) }}</u-badge>
+                </div>
+              </template>
+              <template #actions>
+                <div class="flex items-center gap-1" @click.stop>
+                  <u-button v-if="announcement.deleting" icon="material-symbols:undo-rounded" color="neutral" variant="ghost" size="sm" :disabled="saving" @click="restoreAnnouncement(announcement)" />
+                  <u-button v-else icon="material-symbols:delete-outline-rounded" color="error" variant="ghost" size="sm" :disabled="saving" @click="removeAnnouncement(announcement)" />
+                </div>
+              </template>
+            </rbph-collapsible-header>
 
             <template #content>
               <div class="border-t border-default bg-elevated/40 px-4 pt-4 pb-4">

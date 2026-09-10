@@ -37,21 +37,17 @@ function puzzleRoute(anmt: Partial<RbAnnouncementInfo>, puzzle: RbAnnouncementPu
 <template>
   <div v-if="processedData && processedData?.length > 0" class="flex flex-wrap gap-4">
     <rbph-collapsible-content-card v-for="anmt in processedData" :key="anmt.id" icon="material-symbols:campaign-outline-rounded" default-open>
-      <template #title>
-        <div class="flex flex-wrap justify-between">
-          <div>
-            {{ anmt.title }}
-            <u-badge v-if="anmt.game_id === null" variant="soft" color="error" class="ms-1">{{ t('components.announcement.allSite') }}</u-badge>
-            <u-badge v-if="anmt.is_pinned" variant="soft" color="warning" class="ms-1">{{ t('components.announcement.pinned') }}</u-badge>
-          </div>
-          <div v-if="anmt.utime_at" class="text-secondary text-xs flex items-center ms-1">
-            <u-icon name="material-symbols:schedule-outline-rounded" class="align-middle me-0.5" />
-            {{ t('common.updatedAt', { time: formatDate(anmt.utime_at) }) }}
-          </div>
+      <template #title>{{ anmt.title }}</template>
+      <template #badges>
+        <u-badge v-if="anmt.game_id === null" variant="soft" color="error">{{ t('components.announcement.allSite') }}</u-badge>
+        <u-badge v-if="anmt.is_pinned" variant="soft" color="warning">{{ t('components.announcement.pinned') }}</u-badge>
+        <div v-if="anmt.utime_at" class="text-secondary text-xs flex items-center">
+          <u-icon name="material-symbols:schedule-outline-rounded" class="shrink-0 me-0.5" />
+          {{ t('common.updatedAt', { time: formatDate(anmt.utime_at) }) }}
         </div>
       </template>
-      <template v-if="!currentPuzzleId && anmt.puzzles?.length === 1" #actions>
-        <u-button variant="soft" size="xs" class="-my-8 mx-2" icon="material-symbols:arrow-forward-rounded" :to="puzzleRoute(anmt, anmt.puzzles[0]!)">
+      <template #actions>
+        <u-button v-if="!currentPuzzleId && anmt.puzzles?.length === 1" variant="soft" size="xs" icon="material-symbols:arrow-forward-rounded" :to="puzzleRoute(anmt, anmt.puzzles[0]!)">
           <span class="hidden md:inline">{{ t('components.announcement.goToPuzzle') }}</span>
         </u-button>
       </template>
