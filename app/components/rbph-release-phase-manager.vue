@@ -443,7 +443,7 @@ defineExpose({ apply, reset });
         </u-collapsible>
       </div>
 
-      <div class="sticky bottom-4 z-20 flex justify-end">
+      <div class="rb-sticky-actions z-20 flex justify-end">
         <u-button icon="material-symbols:add-rounded" :label="t('components.rbphReleasePhaseManager.create')" size="lg" class="shadow-lg shadow-primary/20" :disabled="loading || saving" @click="addPhase" />
       </div>
     </template>

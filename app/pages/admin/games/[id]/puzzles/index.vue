@@ -1716,7 +1716,7 @@ onBeforeUnmount(cleanupSelectionGesture);
       </section>
     </template>
 
-    <div v-if="!loading" class="sticky bottom-4 z-30 flex justify-start" data-selection-ignore="true">
+    <div v-if="!loading" class="rb-sticky-actions z-30 flex justify-start" data-selection-ignore="true">
       <div v-if="selectionMode" class="flex w-full flex-wrap items-center gap-2 rounded-md bg-default/95 p-2 shadow-lg ring ring-default backdrop-blur-sm">
         <u-badge color="primary" variant="soft" size="lg">{{ t('admin.pages.puzzles.selectedCount', { count: selectedPuzzleCount }) }}</u-badge>
         <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:select-all-rounded" :label="t('admin.pages.puzzles.selectAll')" @click="selectAllEligiblePuzzles" />

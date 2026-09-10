@@ -5,6 +5,15 @@
   --breakpoint-xs: 420px;
 }
 
+/* Reserve the bottom inset in normal flow so sticking does not consume the
+   gap between the final item and its actions at the end of the scroll area. */
+.rb-sticky-actions {
+  position: sticky;
+  bottom: 0;
+  flex-shrink: 0;
+  padding-bottom: 1rem;
+}
+
 /* Dashboard pages scroll inside the panel, independently of the document. */
 @media (width < 40rem) {
   .rb-toast-scroll-body {

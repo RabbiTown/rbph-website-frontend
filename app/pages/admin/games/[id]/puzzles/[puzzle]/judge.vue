@@ -904,7 +904,7 @@ watch(dirty, value => {
               </div>
             </div>
           </div>
-          <div class="sticky bottom-4 z-20 flex justify-end">
+          <div class="rb-sticky-actions z-20 flex justify-end">
             <u-button icon="material-symbols:add-rounded" :label="t('admin.pages.puzzle.judge.addRule')" size="lg" class="shadow-lg shadow-primary/20" :disabled="saving" @click="addRule()" />
           </div>
         </template>
