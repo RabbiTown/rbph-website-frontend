@@ -18,7 +18,7 @@ const controlsWrapped = computed(() => controlsTop.value > titleTop.value + 1);
         <div v-if="$slots.badges" class="flex min-w-0 max-w-full flex-wrap items-center gap-1">
           <slot name="badges" />
         </div>
-        <div v-if="$slots.actions" class="relative ms-auto flex max-w-full flex-wrap items-center justify-end gap-1" :class="{ '-end-8': collapsible && controlsWrapped }">
+        <div v-if="$slots.actions" class="relative ms-auto flex max-w-full flex-wrap items-center justify-end gap-1" :class="{ '-inset-e-9': collapsible && controlsWrapped }">
           <slot name="actions" />
         </div>
       </div>
