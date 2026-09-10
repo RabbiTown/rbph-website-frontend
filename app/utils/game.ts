@@ -608,6 +608,7 @@ export function canSendTicket(perm?: TicketPerm): boolean {
 }
 
 export function getDefaultTicketContentType(perm?: Pick<TicketPerm, 'content_type'>): RbContentType {
+  if (perm?.content_type.includes(RbContentType.UnsafeMarkdown)) return RbContentType.UnsafeMarkdown;
   return perm?.content_type[0] ?? RbContentType.UnsafeMarkdown;
 }
 

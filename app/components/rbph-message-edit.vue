@@ -54,7 +54,7 @@ watch(
   () => props.contentTypes,
   contentTypes => {
     if (contentTypes?.length && !contentTypes.includes(contentType.value)) {
-      contentType.value = contentTypes[0]!;
+      contentType.value = getDefaultTicketContentType({ content_type: contentTypes });
     }
   },
   { immediate: true },
