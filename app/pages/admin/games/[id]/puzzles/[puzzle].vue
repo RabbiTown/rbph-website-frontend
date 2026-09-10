@@ -268,7 +268,7 @@ const isEditablePuzzleHeader = computed(() => isContentPage.value && !isRoundPuz
             </div>
           </u-form>
 
-          <u-navigation-menu :items="navItems" class="-mx-1" />
+          <u-navigation-menu :items="navItems" class="-mx-1 overflow-x-auto" :ui="{ linkLeadingIcon: 'hidden sm:inline-block', linkLabel: 'whitespace-nowrap overflow-visible', item: 'shrink-0' }" />
         </div>
 
         <aside class="hidden xl:block" />

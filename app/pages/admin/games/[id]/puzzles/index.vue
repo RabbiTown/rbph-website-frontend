@@ -1146,11 +1146,20 @@ function isRoundBeingCreated(roundId: number) {
   return creatingRoundId.value === roundId;
 }
 
-async function addRound() {
+const createRoundOpen = ref(false);
+const newRoundTitle = ref('');
+
+function openCreateRound() {
   if (applyLoading.value) return;
+  newRoundTitle.value = t('admin.pages.puzzles.roundLabel', { round: rounds.value.length + 1 });
+  createRoundOpen.value = true;
+}
+
+async function addRound() {
+  const title = newRoundTitle.value.trim();
+  if (!createRoundOpen.value || applyLoading.value || !title) return;
 
   const nextSort = rounds.value.reduce((max, round) => Math.max(max, round.sort), -1) + 1;
-  const title = t('admin.pages.puzzles.roundLabel', { round: rounds.value.length + 1 });
   const body = {
     game_id: gameId.value,
     title,
@@ -1173,6 +1182,7 @@ async function addRound() {
     });
 
     rounds.value = reindexSort([...rounds.value, data.round]);
+    createRoundOpen.value = false;
     puzzles.value = [...puzzles.value];
     originalRounds.value = cloneRounds(rounds.value);
     originalPuzzles.value = clonePuzzles(puzzles.value);
@@ -1723,7 +1733,7 @@ onBeforeUnmount(cleanupSelectionGesture);
         <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:change-history-outline-rounded" :label="t('admin.pages.puzzles.invertSelection')" @click="invertEligiblePuzzleSelection" />
         <u-button type="button" size="sm" color="neutral" variant="ghost" icon="material-symbols:deselect-rounded" :label="t('admin.pages.puzzles.empty')" :disabled="selectedPuzzleCount === 0" @click="clearPuzzleSelection" />
       </div>
-      <u-button v-else icon="material-symbols:add-rounded" :label="t('admin.pages.puzzles.createRound')" size="lg" class="shadow-lg shadow-primary/20" :disabled="applyLoading" @click="addRound" />
+      <u-button v-else icon="material-symbols:add-rounded" :label="t('admin.pages.puzzles.createRound')" size="lg" class="shadow-lg shadow-primary/20" :disabled="applyLoading" @click="openCreateRound" />
     </div>
 
     <div
@@ -1731,6 +1741,21 @@ onBeforeUnmount(cleanupSelectionGesture);
       class="pointer-events-none fixed z-50 border border-primary bg-primary/10 shadow-sm"
       :style="{ left: `${selectionRect.left}px`, top: `${selectionRect.top}px`, width: `${selectionRect.width}px`, height: `${selectionRect.height}px` }"
     />
+    <rb-confirm-modal
+      v-model:open="createRoundOpen"
+      :title="t('admin.pages.puzzles.createRound')"
+      :confirm-label="t('admin.pages.round.create')"
+      confirm-icon="material-symbols:add-rounded"
+      :confirm-disabled="!newRoundTitle.trim()"
+      :busy="applyLoading"
+      @confirm="addRound"
+    >
+      <template #body>
+        <rb-form-field :label="t('admin.pages.round.roundTitle')" required>
+          <u-input v-model="newRoundTitle" class="w-full" :disabled="applyLoading" />
+        </rb-form-field>
+      </template>
+    </rb-confirm-modal>
     <rb-confirm-modal v-model:open="batchConfirmOpen" :title="t('admin.pages.puzzles.releaseMethod')" :description="t('admin.pages.puzzles.batchReleaseDescription', { count: batchPuzzleIds.length })" :busy="batchUpdating">
       <template #body>
         <rb-form-field row narrow-label :label="t('admin.pages.puzzles.releaseMethodLabel')">

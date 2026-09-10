@@ -1095,7 +1095,7 @@ export default defineI18nLocale(() => ({
         puzzleNotFound: '問題が見つかりません',
         backendScriptNotFound: 'バックエンドスクリプトが見つかりません。',
         loadPuzzleInfoFailed: '問題情報を読み込めませんでした',
-        puzzleContent: '内容',
+        puzzleContent: '問題文',
         answerSubmission: '解答',
         hintEdit: 'ヒント',
         settingsTab: '設定',
