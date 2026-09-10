@@ -171,7 +171,7 @@ onMounted(loadUsers);
                 <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.pages.users.userList') }}</h2>
                 <p class="mt-1 text-sm text-muted">{{ t('admin.pages.users.matchingCount', { count: total }) }}</p>
               </div>
-              <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" :loading="loading" @click="loadUsers" />
+              <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" size="sm" :loading="loading" @click="loadUsers" />
             </div>
             <div v-if="loading && users.length === 0" class="space-y-2"><u-skeleton v-for="i in 4" :key="i" class="h-20 w-full" /></div>
             <u-empty v-else-if="users.length === 0" icon="material-symbols:person-search-outline-rounded" :title="t('admin.pages.users.emptyUser')" :description="t('admin.pages.users.filterConditionOrCreateItemUser')" />

@@ -147,7 +147,6 @@ onBeforeUnmount(() => dirtyToast.clear());
                   <u-badge v-if="user.must_change_password" color="warning" variant="soft" icon="material-symbols:password-rounded">{{ t('admin.common.passwordChangeRequired') }}</u-badge>
                 </div>
               </div>
-              <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" :loading="loading" :disabled="dirty || saving" @click="loadUser" />
             </div>
 
             <div v-if="loading && !user" class="space-y-3">

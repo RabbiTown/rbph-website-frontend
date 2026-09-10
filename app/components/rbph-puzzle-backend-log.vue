@@ -177,7 +177,7 @@ watch(
           </div>
           <div class="flex flex-wrap gap-2">
             <u-button type="submit" icon="material-symbols:search-rounded" :label="t('admin.pages.puzzle.settings.backendLogs.search')" :loading="loading" />
-            <u-button color="neutral" variant="soft" icon="material-symbols:refresh-rounded" :label="t('admin.pages.puzzle.settings.backendLogs.refresh')" :disabled="loading" @click="load(page)" />
+            <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" size="sm" :aria-label="t('admin.pages.puzzle.settings.backendLogs.refresh')" :loading="loading" @click="load(page)" />
             <u-button color="neutral" variant="ghost" icon="material-symbols:filter-list-off-rounded" :label="t('admin.common.reset')" :disabled="loading" @click="resetFilters" />
           </div>
         </form>

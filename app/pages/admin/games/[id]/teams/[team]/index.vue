@@ -361,7 +361,6 @@ onBeforeUnmount(() => dirtyToast.clear());
             <u-badge v-if="team.is_beta" size="sm" color="info" variant="soft" icon="material-symbols:science-outline-rounded">{{ t('admin.pages.team.beta') }}</u-badge>
           </div>
         </div>
-        <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" :loading="loading" :disabled="dirty || saving" @click="loadTeam" />
       </div>
 
       <u-skeleton v-if="loading && !team" class="h-96 w-full" />

@@ -166,7 +166,7 @@ onMounted(loadTeams);
           <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.pages.teams.teamList') }}</h2>
           <p class="mt-1 text-sm text-muted">{{ t('admin.pages.teams.matchingCount', { count: total }) }}</p>
         </div>
-        <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" :loading="loading" @click="loadTeams" />
+        <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" size="sm" :loading="loading" @click="loadTeams" />
       </div>
 
       <div v-if="loading && teams.length === 0" class="space-y-2">

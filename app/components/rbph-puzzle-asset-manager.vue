@@ -667,7 +667,6 @@ onMounted(fetchStorageBackends);
         <h2 class="truncate text-md font-semibold text-highlighted">{{ t('components.rbphPuzzleAssetManager.assetManager') }}</h2>
         <p class="text-sm text-muted">{{ t('components.rbphPuzzleAssetManager.description') }}</p>
       </div>
-      <u-button color="neutral" variant="ghost" size="xs" icon="material-symbols:refresh-rounded" :loading="loading" @click="refreshAssets" />
     </div>
 
     <u-file-upload

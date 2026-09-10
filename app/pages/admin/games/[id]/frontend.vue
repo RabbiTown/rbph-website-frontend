@@ -470,7 +470,6 @@ onMounted(refresh);
             <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.frontend.title') }}</h2>
             <p class="mt-1 text-sm text-muted">{{ t('admin.frontend.description') }}</p>
           </div>
-          <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" :loading="loading" :disabled="busy || configurationDirty" @click="refresh()" />
         </div>
 
         <div v-if="loading && !state" class="space-y-3">

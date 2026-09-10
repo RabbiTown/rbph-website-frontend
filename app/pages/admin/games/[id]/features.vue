@@ -169,7 +169,6 @@ onBeforeUnmount(() => dirtyToast.clear());
         <div>
           <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.common.gameFeatures') }}</h2>
         </div>
-        <u-button size="sm" variant="ghost" icon="material-symbols:refresh-rounded" :loading="loading" :disabled="dirty || saving" @click="fetchFeatures()" />
       </div>
 
       <div v-if="loading" class="space-y-2"><u-skeleton v-for="i in 5" :key="i" class="h-24 w-full" /></div>

@@ -534,7 +534,6 @@ watch(
               <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.common.currencyManagement') }}</h2>
               <p class="mt-1 text-sm text-muted">{{ t('admin.pages.game.settings.currencySectionDescription') }}</p>
             </div>
-            <u-button size="sm" variant="ghost" icon="material-symbols:refresh-rounded" :loading="currencyLoading" :disabled="hasDirty || currencySubmitting" @click="fetchCurrencies(game?.id)" />
           </div>
 
           <div v-if="currencyLoading" class="space-y-2">

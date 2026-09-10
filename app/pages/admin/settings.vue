@@ -163,7 +163,6 @@ onBeforeUnmount(() => dirtyToast.clear());
                 <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.common.systemSettings') }}</h2>
                 <p class="mt-1 text-sm text-muted">{{ t('admin.pages.settings.globalPolicyUpdateImmediate') }}</p>
               </div>
-              <u-button icon="material-symbols:refresh-rounded" color="neutral" variant="ghost" :loading="loading" :disabled="dirty || saving" @click="load" />
             </div>
 
             <div v-if="loading && !settings" class="space-y-3">
