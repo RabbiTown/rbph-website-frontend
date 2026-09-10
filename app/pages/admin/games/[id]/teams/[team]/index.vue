@@ -121,7 +121,7 @@ const accessChanges = computed<AccessChangePreview[]>(() => {
     changes.push({
       key: 'team-beta',
       label: draft.is_beta ? t('admin.pages.team.accessChange.enableBeta') : t('admin.pages.team.accessChange.disableBeta'),
-      icon: 'material-symbols:science-outline-rounded',
+      icon: 'material-symbols:bug-report-outline-rounded',
       color: draft.is_beta ? 'warning' : 'primary',
     });
   }
@@ -358,7 +358,7 @@ onBeforeUnmount(() => dirtyToast.clear());
           <div v-if="team" class="mt-1 flex flex-wrap gap-1.5 pl-10">
             <u-badge size="sm" color="neutral" variant="soft" icon="material-symbols:calendar-today-outline-rounded">{{ t('admin.pages.team.createdAt', { time: formatDate(team.ctime_at) }) }}</u-badge>
             <u-badge v-if="team.finish_at" size="sm" color="success" variant="soft" icon="material-symbols:flag-outline-rounded">{{ t('admin.common.finishedAt', { time: formatDate(team.finish_at) }) }}</u-badge>
-            <u-badge v-if="team.is_beta" size="sm" color="info" variant="soft" icon="material-symbols:science-outline-rounded">{{ t('admin.pages.team.beta') }}</u-badge>
+            <u-badge v-if="team.is_beta" size="sm" color="info" variant="soft" icon="material-symbols:bug-report-outline-rounded">{{ t('admin.pages.team.beta') }}</u-badge>
           </div>
         </div>
       </div>
@@ -421,13 +421,13 @@ onBeforeUnmount(() => dirtyToast.clear());
             <rb-form-field
               row
               :label="t('admin.pages.team.beta')"
-              icon="material-symbols:science-outline-rounded"
+              icon="material-symbols:bug-report-outline-rounded"
               :description="draft.is_beta ? t('admin.pages.team.betaDescription.enabled') : t('admin.pages.team.betaDescription.disabled')"
               :dirty="draft.is_beta !== team.is_beta"
               :reset="() => (draft.is_beta = team!.is_beta)"
             >
               <u-field-group>
-                <u-button color="neutral" variant="soft" active-color="info" icon="material-symbols:science-outline-rounded" :label="t('admin.pages.team.beta')" :active="draft.is_beta" :disabled="saving" @click="draft.is_beta = true" />
+                <u-button color="neutral" variant="soft" active-color="info" icon="material-symbols:bug-report-outline-rounded" :label="t('admin.pages.team.beta')" :active="draft.is_beta" :disabled="saving" @click="draft.is_beta = true" />
                 <u-button color="neutral" variant="soft" active-color="primary" icon="material-symbols:check-rounded" :label="t('admin.pages.team.normal')" :active="!draft.is_beta" :disabled="saving" @click="draft.is_beta = false" />
               </u-field-group>
             </rb-form-field>

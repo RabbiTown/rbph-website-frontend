@@ -34,7 +34,7 @@ const filters = [
   { label: t('admin.common.bannedLabel'), value: 'banned', icon: 'material-symbols:block-outline' },
   { label: t('admin.pages.teams.locked'), value: 'locked', icon: 'material-symbols:lock-outline' },
   { label: t('admin.pages.teams.finished'), value: 'finished', icon: 'material-symbols:flag-outline-rounded' },
-  { label: t('admin.pages.teams.beta'), value: 'beta', icon: 'material-symbols:science-outline-rounded' },
+  { label: t('admin.pages.teams.beta'), value: 'beta', icon: 'material-symbols:bug-report-outline-rounded' },
 ] as const;
 
 const createValid = computed(() => Boolean(createDraft.name.trim() && createDraft.pass.trim() && createDraft.captain_user_id != null));
@@ -120,7 +120,7 @@ function statusBadges(team: AdminTeamListItem) {
   if (team.is_banned) result.push({ label: t('admin.common.banned'), color: 'error', icon: 'material-symbols:block-outline' });
   if (team.is_locked) result.push({ label: t('admin.common.locked'), color: 'warning', icon: 'material-symbols:lock-outline' });
   if (team.finish_at) result.push({ label: t('admin.pages.teams.finishedLabel'), color: 'success', icon: 'material-symbols:flag-outline-rounded' });
-  if (team.is_beta) result.push({ label: t('admin.pages.teams.betaLabel'), color: 'info', icon: 'material-symbols:science-outline-rounded' });
+  if (team.is_beta) result.push({ label: t('admin.pages.teams.betaLabel'), color: 'info', icon: 'material-symbols:bug-report-outline-rounded' });
   return result;
 }
 
