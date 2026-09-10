@@ -327,7 +327,7 @@ defineExpose({ apply, reset });
             <div class="flex min-w-0 flex-1 items-center gap-2">
               <u-icon name="material-symbols:event-outline-rounded" class="shrink-0 text-primary" />
               <u-textarea v-if="phase.open" v-model="phase.title" :rows="1" autoresize :ui="{ base: 'field-sizing-content resize-none' }" class="min-w-0 flex-1 -mx-2.5 -my-1.5 w-full font-medium" :placeholder="t('components.rbphReleasePhaseManager.name')" variant="ghost" :disabled="saving || phase.deleting" @click.stop @keydown.stop />
-              <div v-else class="min-w-0 flex-1 whitespace-normal [overflow-wrap:anywhere] text-sm font-medium text-highlighted">{{ phase.title || t('components.rbphReleasePhaseManager.untitledPhase') }}</div>
+              <div v-else class="min-w-0 flex-1 whitespace-normal wrap-anywhere text-sm font-medium text-highlighted">{{ phase.title || t('components.rbphReleasePhaseManager.untitledPhase') }}</div>
             </div>
 
             <template #badges>

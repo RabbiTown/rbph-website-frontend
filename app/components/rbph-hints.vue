@@ -107,8 +107,11 @@ async function updateData(newId: number | undefined = undefined) {
 }
 
 const purchaseLoading = ref(false);
+const purchaseConfirmId = ref<number>();
 
 async function purchaseHint(hintId: number) {
+  const target = rawData.value?.data.find(hint => hint.id === hintId);
+  if (purchaseLoading.value || syncingDueHints.value || !target || calcCooldown(target) > 0 || !checkEnough(target) || rawData.value?.state.some(hint => hint.id === hintId)) return;
   const api = useApi();
   const sid = sidStore.create('hint-purchase');
 
@@ -151,6 +154,7 @@ async function purchaseHint(hintId: number) {
       });
     }
 
+    purchaseConfirmId.value = undefined;
     useCurrency().updateData();
   } catch (error) {
     sidStore.clear(sid);
@@ -174,6 +178,7 @@ watch(
   () => props.puzzleId,
   async new_id => {
     clearDueHintTimer();
+    purchaseConfirmId.value = undefined;
     rawData.value = undefined;
     updateData(new_id);
   },
@@ -235,10 +240,22 @@ defineExpose({
           arrow
           :text="t('hints.needMore', { amount: `${intPrecString(hint.cost_amount - (currency[hint.cost_id ?? 0]?.current || 0), currency[hint.cost_id ?? 0]?.prec || 0)} ${currency[hint.cost_id ?? 0]?.name}` })"
         >
-          <u-button variant="soft" size="xs" class="cursor-pointer" icon="material-symbols:emoji-objects-outline-rounded" :loading="purchaseLoading || syncingDueHints" :disabled="!checkEnough(hint)" @click="() => purchaseHint(hint.id)">
-            <template v-if="!hint.cost_id"> {{ t('hints.unlock') }} </template>
-            <template v-else> {{ currency[hint.cost_id]?.name }} {{ intPrecString(-hint.cost_amount, currency[hint.cost_id]?.prec || 0, true, ' ') }} </template>
-          </u-button>
+          <u-popover :open="purchaseConfirmId === hint.id" arrow @update:open="purchaseConfirmId = $event ? hint.id : undefined">
+            <u-button variant="soft" size="xs" class="cursor-pointer" icon="material-symbols:emoji-objects-outline-rounded" :loading="purchaseLoading || syncingDueHints" :disabled="!checkEnough(hint)">
+              <template v-if="!hint.cost_id"> {{ t('hints.unlock') }} </template>
+              <template v-else> {{ currency[hint.cost_id]?.name }} {{ intPrecString(-hint.cost_amount, currency[hint.cost_id]?.prec || 0, true, ' ') }} </template>
+            </u-button>
+            <template #content>
+              <div class="flex max-w-sm items-center gap-1 py-2 px-4 text-xs" @click.stop @keydown.stop>
+                <u-icon name="material-symbols:lock-open-right-outline-rounded" class="shrink-0" />
+                <span class="min-w-0 mx-1 wrap-anywhere">
+                  {{ t('hints.confirmUnlock') }}
+                  <span v-if="hint.cost_id && hint.cost_amount > 0" class="text-muted">{{ t('ticket.unlockCost', { cost: `${currency[hint.cost_id]?.name ?? ''} ${intPrecString(hint.cost_amount, currency[hint.cost_id]?.prec || 0)}` }) }}</span>
+                </span>
+                <u-button class="shrink-0 cursor-pointer" color="success" variant="soft" size="xs" :loading="purchaseLoading" :disabled="syncingDueHints || !checkEnough(hint) || calcCooldown(hint) > 0" @click="purchaseHint(hint.id)">{{ t('hints.unlock') }}</u-button>
+              </div>
+            </template>
+          </u-popover>
         </u-tooltip>
         <u-tooltip v-else :disabled="checkEnough(hint)" arrow :text="t('hints.waitOver')">
           <u-button variant="soft" size="xs" icon="material-symbols:hourglass-outline-rounded" :disabled="true"> {{ formatTime(calcCooldown(hint)) }} </u-button>

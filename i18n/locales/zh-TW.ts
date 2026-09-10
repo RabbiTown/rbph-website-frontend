@@ -465,6 +465,7 @@ export default defineI18nLocale(() => ({
     sendBlockExistingOnly: '比賽目前僅允許回覆已有人工提示。',
   },
   hints: {
+    confirmUnlock: '確定要解鎖這個提示嗎？',
     title: '提示',
     noHints: '暫無提示',
     noAvailable: '沒有可用提示',

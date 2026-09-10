@@ -654,7 +654,7 @@ onBeforeUnmount(() => {
                   <div class="flex min-w-0 flex-1 items-center gap-2">
                     <u-icon name="material-symbols:lightbulb-outline-rounded" class="shrink-0 text-warning" />
                     <u-textarea v-if="hint.open" v-model="hint.title" :rows="1" autoresize :ui="{ base: 'field-sizing-content resize-none' }" class="min-w-0 flex-1 w-full -mx-2.5 -my-1.5 font-medium" :placeholder="t('admin.pages.puzzle.hints.hintTitle')" variant="ghost" :disabled="saving || hint.deleting" @click.stop @keydown.stop />
-                    <div v-else class="min-w-0 flex-1 whitespace-normal [overflow-wrap:anywhere] text-sm font-medium text-highlighted">
+                    <div v-else class="min-w-0 flex-1 whitespace-normal wrap-anywhere text-sm font-medium text-highlighted">
                       {{ hint.title || t('admin.pages.puzzle.hints.notMemberHint') }}
                     </div>
                   </div>

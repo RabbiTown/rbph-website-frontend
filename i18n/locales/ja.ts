@@ -466,6 +466,7 @@ export default defineI18nLocale(() => ({
     sendBlockExistingOnly: '既存のスタッフヒントにのみ返信できます。',
   },
   hints: {
+    confirmUnlock: 'このヒントを解放してもよろしいですか？',
     title: 'ヒント',
     noHints: 'ヒントはありません',
     noAvailable: '利用できるヒントはありません',

@@ -456,6 +456,7 @@ export default defineI18nLocale(() => ({
     sendBlockExistingOnly: 'You can only reply to existing tickets.',
   },
   hints: {
+    confirmUnlock: 'Are you sure you want to unlock this hint?',
     title: 'Hints',
     noHints: 'No hints',
     noAvailable: 'No hints available',

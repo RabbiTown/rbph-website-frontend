@@ -210,7 +210,7 @@ onBeforeUnmount(() => dirtyToast.clear());
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <u-icon name="material-symbols:campaign-outline-rounded" class="shrink-0 text-primary" />
                 <u-textarea v-if="announcement.open" v-model="announcement.title" :rows="1" autoresize :ui="{ base: 'field-sizing-content resize-none' }" class="min-w-0 flex-1 -mx-2.5 -my-1.5 w-full font-medium" :placeholder="t('components.rbphAnnouncementManager.title')" variant="ghost" :maxlength="120" :disabled="saving || announcement.deleting" @click.stop @keydown.stop />
-                <div v-else class="min-w-0 flex-1 whitespace-normal [overflow-wrap:anywhere] text-sm font-medium text-highlighted">{{ announcement.title || t('components.rbphAnnouncementManager.untitledAnnouncement') }}</div>
+                <div v-else class="min-w-0 flex-1 whitespace-normal wrap-anywhere text-sm font-medium text-highlighted">{{ announcement.title || t('components.rbphAnnouncementManager.untitledAnnouncement') }}</div>
               </div>
               <template #badges>
                 <div class="flex min-w-0 max-w-full flex-wrap gap-1" @click.stop>
