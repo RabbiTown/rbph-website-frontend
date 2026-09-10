@@ -5,6 +5,7 @@
       <NuxtLayout>
         <NuxtPage />
       </NuxtLayout>
+      <rb-toast-spacer />
       <rb-sync-status />
       <rb-frontend-preview-session />
       <lazy-rb-theme-dev-tools v-if="themeDevEnabled" />
