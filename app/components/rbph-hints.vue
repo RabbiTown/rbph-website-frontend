@@ -62,9 +62,12 @@ function scheduleDueHintSync(nextUnlockAt: string | null | undefined = undefined
   if (!Number.isFinite(target)) return;
 
   const delay = Math.max(target - currentTime.value + 250, 0);
-  dueHintTimer = setTimeout(() => {
-    syncDueHints();
-  }, Math.min(delay, 2_147_483_647));
+  dueHintTimer = setTimeout(
+    () => {
+      syncDueHints();
+    },
+    Math.min(delay, 2_147_483_647),
+  );
 }
 
 async function syncDueHints() {
@@ -122,7 +125,7 @@ async function purchaseHint(hintId: number) {
           [-2]: t('hints.insufficientBalance'),
           [-1]: t('hints.unavailableOrPurchased'),
         },
-      }
+      },
     );
 
     if (rawData.value) {
@@ -142,9 +145,7 @@ async function purchaseHint(hintId: number) {
       const title = data.title ?? hint.title ?? t('hints.title');
       toast.add({
         title: hint.cost_id ? t('hints.purchased') : t('hints.unlocked'),
-        description: hint.cost_id
-          ? t('hints.purchaseSuccessDesc', { amount: intPrecString(hint.cost_amount, cur?.prec || 0), currency: cur?.name, title })
-          : t('hints.unlockSuccessDesc', { title }),
+        description: hint.cost_id ? t('hints.purchaseSuccessDesc', { amount: intPrecString(hint.cost_amount, cur?.prec || 0), currency: cur?.name, title }) : t('hints.unlockSuccessDesc', { title }),
         icon: 'material-symbols:check-rounded',
         color: 'success',
       });
@@ -176,7 +177,7 @@ watch(
     rawData.value = undefined;
     updateData(new_id);
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 function onVisibilityChange() {
@@ -218,33 +219,33 @@ defineExpose({
 
 <template>
   <div v-if="processedData && processedData?.length > 0" class="flex flex-wrap gap-4">
-    <u-card v-for="hint in processedData" :key="hint.id" class="w-full" variant="subtle" :ui="{ body: 'sm:p-0 p-0' }">
-      <u-collapsible :unmount-on-hide="false">
-        <div :class="['px-5 py-3 flex items-center group dark:bg-slate-800 bg-slate-100', hint.state ? 'cursor-pointer' : '']">
-          <u-icon :class="['align-middle me-2', hint.state ? 'text-success' : 'text-error']" :name="hint.state ? 'material-symbols:lock-open-right-outline-rounded' : 'material-symbols:lock-outline'" />
-          <div :class="['text-sm flex-1', !hint.state ? 'text-secondary' : '']">
-            {{ hint.displayTitle }}
-          </div>
-          <template v-if="!hint.state">
-            <u-tooltip v-if="!calcCooldown(hint)" :disabled="checkEnough(hint)" arrow :text="t('hints.needMore', { amount: `${intPrecString(hint.cost_amount - (currency[hint.cost_id ?? 0]?.current || 0), currency[hint.cost_id ?? 0]?.prec || 0)} ${currency[hint.cost_id ?? 0]?.name}` })">
-              <u-button variant="soft" size="xs" class="cursor-pointer -my-8" icon="material-symbols:emoji-objects-outline-rounded" :loading="purchaseLoading || syncingDueHints" :disabled="!checkEnough(hint)" @click="() => purchaseHint(hint.id)">
-                <template v-if="!hint.cost_id"> {{ t('hints.unlock') }} </template>
-                <template v-else> {{ currency[hint.cost_id]?.name }} {{ intPrecString(-hint.cost_amount, currency[hint.cost_id]?.prec || 0, true, ' ') }} </template>
-              </u-button>
-            </u-tooltip>
-            <u-tooltip v-else :disabled="checkEnough(hint)" arrow :text="t('hints.waitOver')">
-              <u-button variant="soft" size="xs" class="-my-8" icon="material-symbols:hourglass-outline-rounded" :disabled="true"> {{ formatTime(calcCooldown(hint)) }} </u-button>
-            </u-tooltip>
-          </template>
-          <u-icon v-else name="material-symbols:expand-more-rounded" class="-me-1 size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
-        </div>
-        <template v-if="hint.state" #content>
-          <div class="px-4 py-4 border-t dark:border-t-slate-700 border-t-slate-200 text-sm">
-            <rbph-content :content="hint.state" />
-          </div>
-        </template>
-      </u-collapsible>
-    </u-card>
+    <rbph-collapsible-content-card
+      v-for="hint in processedData"
+      :key="hint.id"
+      :collapsible="Boolean(hint.state)"
+      :icon="hint.state ? 'material-symbols:lock-open-right-outline-rounded' : 'material-symbols:lock-outline'"
+      :icon-class="hint.state ? 'text-success' : 'text-error'"
+      :title-class="!hint.state ? 'text-secondary' : undefined"
+    >
+      <template #title>{{ hint.displayTitle }}</template>
+      <template v-if="!hint.state" #actions>
+        <u-tooltip
+          v-if="!calcCooldown(hint)"
+          :disabled="checkEnough(hint)"
+          arrow
+          :text="t('hints.needMore', { amount: `${intPrecString(hint.cost_amount - (currency[hint.cost_id ?? 0]?.current || 0), currency[hint.cost_id ?? 0]?.prec || 0)} ${currency[hint.cost_id ?? 0]?.name}` })"
+        >
+          <u-button variant="soft" size="xs" class="cursor-pointer -my-8" icon="material-symbols:emoji-objects-outline-rounded" :loading="purchaseLoading || syncingDueHints" :disabled="!checkEnough(hint)" @click="() => purchaseHint(hint.id)">
+            <template v-if="!hint.cost_id"> {{ t('hints.unlock') }} </template>
+            <template v-else> {{ currency[hint.cost_id]?.name }} {{ intPrecString(-hint.cost_amount, currency[hint.cost_id]?.prec || 0, true, ' ') }} </template>
+          </u-button>
+        </u-tooltip>
+        <u-tooltip v-else :disabled="checkEnough(hint)" arrow :text="t('hints.waitOver')">
+          <u-button variant="soft" size="xs" class="-my-8" icon="material-symbols:hourglass-outline-rounded" :disabled="true"> {{ formatTime(calcCooldown(hint)) }} </u-button>
+        </u-tooltip>
+      </template>
+      <rbph-content v-if="hint.state" :content="hint.state" />
+    </rbph-collapsible-content-card>
   </div>
   <u-empty v-else-if="processedData" icon="material-symbols:contact-support-outline-rounded" :title="t('hints.noHints')" :description="t('hints.noAvailable')" />
 </template>

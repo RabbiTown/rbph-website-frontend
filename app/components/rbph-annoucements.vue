@@ -36,52 +36,39 @@ function puzzleRoute(anmt: Partial<RbAnnouncementInfo>, puzzle: RbAnnouncementPu
 
 <template>
   <div v-if="processedData && processedData?.length > 0" class="flex flex-wrap gap-4">
-    <u-card v-for="anmt in processedData" :key="anmt.id" class="w-full" variant="subtle" :ui="{ body: 'sm:p-0 p-0' }">
-      <u-collapsible :default-open="true" :unmount-on-hide="false">
-        <div class="px-5 py-3 flex items-center group dark:bg-slate-800 bg-slate-100 cursor-pointer">
-          <u-icon class="align-middle me-2 text-primary" name="material-symbols:campaign-outline-rounded" />
-          <div class="text-sm flex-1 flex flex-wrap justify-between">
-            <div>
-              {{ anmt.title }}
-              <u-badge v-if="anmt.game_id === null" variant="soft" color="error" class="ms-1">{{ t('components.announcement.allSite') }}</u-badge>
-              <u-badge v-if="anmt.is_pinned" variant="soft" color="warning" class="ms-1">{{ t('components.announcement.pinned') }}</u-badge>
-            </div>
-            <div v-if="anmt.utime_at" class="text-secondary text-xs flex items-center ms-1">
-              <u-icon name="material-symbols:schedule-outline-rounded" class="align-middle me-0.5" />
-              {{ t('common.updatedAt', { time: formatDate(anmt.utime_at) }) }}
-            </div>
+    <rbph-collapsible-content-card v-for="anmt in processedData" :key="anmt.id" icon="material-symbols:campaign-outline-rounded" default-open>
+      <template #title>
+        <div class="flex flex-wrap justify-between">
+          <div>
+            {{ anmt.title }}
+            <u-badge v-if="anmt.game_id === null" variant="soft" color="error" class="ms-1">{{ t('components.announcement.allSite') }}</u-badge>
+            <u-badge v-if="anmt.is_pinned" variant="soft" color="warning" class="ms-1">{{ t('components.announcement.pinned') }}</u-badge>
           </div>
-          <u-button
-            v-if="!currentPuzzleId && anmt.puzzles?.length === 1"
-            variant="soft"
-            size="xs"
-            class="-my-8 mx-2"
-            icon="material-symbols:arrow-forward-rounded"
-            :to="puzzleRoute(anmt, anmt.puzzles[0]!)"
-          >
-            <span class="hidden md:inline">{{ t('components.announcement.goToPuzzle') }}</span>
-          </u-button>
-          <u-icon name="material-symbols:expand-more-rounded" class="-me-1 size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
+          <div v-if="anmt.utime_at" class="text-secondary text-xs flex items-center ms-1">
+            <u-icon name="material-symbols:schedule-outline-rounded" class="align-middle me-0.5" />
+            {{ t('common.updatedAt', { time: formatDate(anmt.utime_at) }) }}
+          </div>
         </div>
-        <template #content>
-          <div class="px-4 py-4 border-t dark:border-t-slate-700 border-t-slate-200 text-sm">
-            <rbph-content :content="anmt" />
-            <div v-if="anmt.puzzles && anmt.puzzles.length > 1" class="mt-4 flex flex-wrap gap-2">
-              <u-button
-                v-for="puzzle in anmt.puzzles"
-                :key="puzzle.id"
-                size="xs"
-                variant="soft"
-                :icon="puzzle.id === currentPuzzleId ? 'material-symbols:location-on-outline-rounded' : 'material-symbols:arrow-forward-rounded'"
-                :label="puzzle.title"
-                :disabled="puzzle.id === currentPuzzleId"
-                :to="puzzle.id === currentPuzzleId ? undefined : puzzleRoute(anmt, puzzle)"
-              />
-            </div>
-          </div>
-        </template>
-      </u-collapsible>
-    </u-card>
+      </template>
+      <template v-if="!currentPuzzleId && anmt.puzzles?.length === 1" #actions>
+        <u-button variant="soft" size="xs" class="-my-8 mx-2" icon="material-symbols:arrow-forward-rounded" :to="puzzleRoute(anmt, anmt.puzzles[0]!)">
+          <span class="hidden md:inline">{{ t('components.announcement.goToPuzzle') }}</span>
+        </u-button>
+      </template>
+      <rbph-content :content="anmt" />
+      <div v-if="anmt.puzzles && anmt.puzzles.length > 1" class="mt-4 flex flex-wrap gap-2">
+        <u-button
+          v-for="puzzle in anmt.puzzles"
+          :key="puzzle.id"
+          size="xs"
+          variant="soft"
+          :icon="puzzle.id === currentPuzzleId ? 'material-symbols:location-on-outline-rounded' : 'material-symbols:arrow-forward-rounded'"
+          :label="puzzle.title"
+          :disabled="puzzle.id === currentPuzzleId"
+          :to="puzzle.id === currentPuzzleId ? undefined : puzzleRoute(anmt, puzzle)"
+        />
+      </div>
+    </rbph-collapsible-content-card>
   </div>
   <u-empty v-else-if="processedData" icon="material-symbols:contact-support-outline-rounded" :title="t('components.announcement.noAnnouncements')" :description="t('components.announcement.waitForPublish')" />
 </template>
