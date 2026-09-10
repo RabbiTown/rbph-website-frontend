@@ -286,6 +286,8 @@ export default defineI18nLocale(() => ({
     passwordChangeRequired: '先に仮パスワードを変更してください。',
   },
   dirtyToast: {
+    resetConfirmTitle: '変更を元に戻しますか？',
+    resetConfirmDescription: '保存していない変更はすべて破棄され、復元できません。続行しますか？',
     leaveConfirm: '保存していない変更があります。このページを離れると変更は破棄されます。',
     title: '未保存の変更',
     description: '変更はまだ保存されていません。',

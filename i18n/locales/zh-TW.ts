@@ -285,6 +285,8 @@ export default defineI18nLocale(() => ({
     passwordChangeRequired: '必須先修改臨時密碼。',
   },
   dirtyToast: {
+    resetConfirmTitle: '確認重設修改？',
+    resetConfirmDescription: '重設將捨棄所有未儲存的修改，且無法復原。確定要繼續嗎？',
     leaveConfirm: '修改尚未儲存，離開後將放棄這些修改。',
     title: '已修改資料',
     description: '修改尚未儲存。',

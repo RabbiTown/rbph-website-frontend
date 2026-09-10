@@ -276,6 +276,8 @@ export default defineI18nLocale(() => ({
     passwordChangeRequired: 'You must change the temporary password first.',
   },
   dirtyToast: {
+    resetConfirmTitle: 'Reset changes?',
+    resetConfirmDescription: 'Resetting will discard all unsaved changes. This cannot be undone. Continue?',
     leaveConfirm: 'You have unsaved changes. Leaving will discard them.',
     title: 'Unsaved changes',
     description: 'Your changes have not been saved.',

@@ -1,3 +1,5 @@
+import { RbConfirmModal } from '#components';
+
 interface DirtyToastOptions {
   title?: string;
   description?: string;
@@ -10,9 +12,38 @@ interface DirtyToastOptions {
 export function useDirtyToast() {
   const toast = useToast();
   const { t } = useI18n();
+  const overlay = useOverlay();
+  let resetConfirmation: { close: () => void } | undefined;
   let current: Toast | undefined;
   let currentOptions: DirtyToastOptions | undefined;
   let syncingDirtyToast = false;
+
+  function closeResetConfirmation() {
+    resetConfirmation?.close();
+    resetConfirmation = undefined;
+  }
+
+  function confirmReset() {
+    if (!currentOptions || resetConfirmation) return;
+
+    const confirmation = overlay.create(RbConfirmModal, { destroyOnClose: true });
+    resetConfirmation = confirmation;
+    confirmation.open({
+      title: t('dirtyToast.resetConfirmTitle'),
+      description: t('dirtyToast.resetConfirmDescription'),
+      confirmLabel: t('dirtyToast.reset'),
+      confirmColor: 'warning',
+      confirmIcon: 'material-symbols:warning-outline-rounded',
+      'onUpdate:open': open => {
+        if (!open && resetConfirmation === confirmation) resetConfirmation = undefined;
+      },
+      onConfirm: () => {
+        if (resetConfirmation !== confirmation) return;
+        closeResetConfirmation();
+        currentOptions?.reset();
+      },
+    });
+  }
 
   function isGuardEnabled() {
     return Boolean(current && currentOptions?.guardOnLeave);
@@ -94,7 +125,7 @@ export function useDirtyToast() {
           icon: 'material-symbols:restart-alt-rounded',
           color: 'neutral',
           variant: 'soft',
-          onClick: () => options.reset(),
+          onClick: confirmReset,
         },
         {
           label: t('dirtyToast.apply'),
@@ -102,6 +133,7 @@ export function useDirtyToast() {
           color: 'primary',
           variant: 'solid',
           onClick: async () => {
+            closeResetConfirmation();
             await options.apply();
             window.setTimeout(() => {
               if (currentOptions !== options) return;
@@ -121,6 +153,7 @@ export function useDirtyToast() {
   }
 
   function clear() {
+    closeResetConfirmation();
     if (current) toast.remove(current.id);
     current = undefined;
     currentOptions = undefined;
