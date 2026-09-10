@@ -29,6 +29,8 @@ const emit = defineEmits<{
   submitClose: [];
 }>();
 const prompt = ref<{ textareaRef?: HTMLTextAreaElement }>();
+const isDesktop = useIsDesktop();
+const shouldAutofocus = computed(() => props.autofocus && isDesktop.value);
 
 const typeItems = [
   {
@@ -67,7 +69,7 @@ defineExpose({
 
 <template>
   <div>
-    <u-chat-prompt ref="prompt" v-model="draft" class="text-sm" variant="subtle" :placeholder="placeholder" :ui="{ footer: 'text-muted mt-1 justify-end' }" :rows="3" :submit-on-enter="false" :loading="loading" :autofocus="autofocus" @submit="!disabled && !loading && !submitDisabled && !hideSubmit && draft?.length && emit('submit')">
+    <u-chat-prompt ref="prompt" v-model="draft" class="text-sm" variant="subtle" :placeholder="placeholder" :ui="{ footer: 'text-muted mt-1 justify-end' }" :rows="3" :submit-on-enter="false" :loading="loading" :autofocus="shouldAutofocus" @submit="!disabled && !loading && !submitDisabled && !hideSubmit && draft?.length && emit('submit')">
       <!-- <u-chat-prompt-submit variant="soft" class="rounded-full cursor-pointer" :disabled="disabled" :loading="loading" /> -->
       <template #footer>
         <u-icon name="material-symbols:markdown-outline-rounded" />

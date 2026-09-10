@@ -21,6 +21,7 @@ const assigneeLoading = ref(false);
 const assigneeConfirmOpen = ref(false);
 const teamAccessMenu = ref<{ openEditor: () => void }>();
 const messageEditor = ref<{ focus: () => void }>();
+const isDesktop = useIsDesktop();
 const currentTeamFeatureBanned = ref(false);
 const sendConflictOpen = ref(false);
 const sendConflictAssignee = ref<TicketAggreInfoUser>();
@@ -197,7 +198,7 @@ async function loadThread(ticketId = selectedId.value, silent = false, force = f
   } finally {
     if (!silent) threadLoading.value = false;
   }
-  if (loaded && !silent && import.meta.client && window.matchMedia('(min-width: 640px)').matches) {
+  if (loaded && !silent && import.meta.client && isDesktop.value) {
     await nextTick();
     messageEditor.value?.focus();
   }
