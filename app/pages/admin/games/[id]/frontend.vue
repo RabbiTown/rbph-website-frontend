@@ -30,6 +30,11 @@ type FrontendConfig = {
 };
 
 const api = useApi();
+const cosUpload = useCosUpload();
+const hasPendingUploads = computed(() =>
+  Boolean(cosUpload.phase.value && cosUpload.phase.value !== 'complete') ||
+  cosUpload.tasks.value.some(task => task.id !== cosUpload.task.value?.id),
+);
 const { t } = useI18n();
 const route = useRoute();
 const toast = useToast();
@@ -201,9 +206,7 @@ function scopedBindingOrder(binding: FrontendConfigBinding) {
 }
 
 const scopedConfigBindings = computed(() =>
-  (workingConfig.value?.bindings ?? [])
-    .filter(binding => binding.scopeKind !== 'game')
-    .sort((left, right) => scopedBindingOrder(left) - scopedBindingOrder(right) || left.scopeId - right.scopeId || left.surface.localeCompare(right.surface)),
+  (workingConfig.value?.bindings ?? []).filter(binding => binding.scopeKind !== 'game').sort((left, right) => scopedBindingOrder(left) - scopedBindingOrder(right) || left.scopeId - right.scopeId || left.surface.localeCompare(right.surface)),
 );
 
 function bindingScopeLabel(binding: FrontendConfigBinding) {
@@ -280,24 +283,79 @@ async function refresh(force = false) {
     loading.value = false;
   }
 }
+
 async function uploadPackage() {
   const file = themeFile.value;
+
   if (!file || uploading.value || configurationDirty.value) return;
+
   uploading.value = true;
+
   try {
-    const body = new FormData();
-    body.append('file', file, file.name);
-    await api.post(`/admin/games/${gameId.value}/frontend/packages`, body, { errorHints: errorHints(rbFrontendPackageErrorKeys) });
+    const backends = (await api.get<{ backends: UploadBackend[] }>('/admin/assets/storage-backends')).data.backends;
+    const backend = backends.filter(b => b.public_read).sort((a, b) => Number(b.recommended) - Number(a.recommended))[0];
+
+    if (backend?.direct_upload) {
+      await cosUpload.start(file, { purpose: CosUploadPurpose.Theme, mode: CosUploadMode.Group, game_id: gameId.value, backend });
+    } else {
+      const body = new FormData();
+      body.append('file', file, file.name);
+      await api.post(`/admin/games/${gameId.value}/frontend/packages`, body, { errorHints: errorHints(rbFrontendPackageErrorKeys) });
+    }
+
     toast.add({ title: t('admin.frontend.notifications.packageUploaded'), color: 'success' });
     themeFile.value = null;
+
     await refresh(true);
   } catch (error) {
-    themeFile.value = null;
-    handleError(error, t('admin.frontend.errorTitles.uploadPackage'), true);
+    if (cosUpload.phase.value !== 'paused') handleError(error, t('admin.frontend.errorTitles.uploadPackage'), true);
   } finally {
     uploading.value = false;
   }
 }
+
+async function cosUploadCompleted() {
+  themeFile.value = null;
+
+  await refresh(true);
+}
+
+async function resumeCosTask(task: CosTaskSummary, file: File) {
+  const backends = (await api.get<{ backends: UploadBackend[] }>('/admin/assets/storage-backends')).data.backends;
+  const backend = backends.find(b => b.backend === task.request.backend);
+
+  if (!backend) return;
+
+  try {
+    await cosUpload.start(file, { purpose: CosUploadPurpose.Theme, mode: CosUploadMode.Group, game_id: gameId.value, backend }, task.id);
+    await cosUploadCompleted();
+  } catch (error) {
+    if (cosUpload.phase.value !== 'paused') handleError(error, t('admin.frontend.errorTitles.uploadPackage'), true);
+  }
+}
+
+watch(
+  () => cosUpload.active.value,
+  value => {
+    uploading.value = value;
+  },
+);
+
+watch(
+  () => cosUpload.phase.value,
+  phase => {
+    if (['uploading', 'confirming', 'complete'].includes(phase)) themeFile.value = null;
+  },
+);
+
+watch(
+  gameId,
+  value => {
+    if (value) void cosUpload.loadTasks(value, CosUploadPurpose.Theme).catch(() => {});
+  },
+  { immediate: true },
+);
+
 async function deletePackage(item: FrontendPackage) {
   if (configurationDirty.value) return;
   packageUpdating.value = item.id;
@@ -499,9 +557,10 @@ onMounted(refresh);
                 @change="uploadPackage"
               />
 
-              <template v-if="state.packages.length">
+              <template v-if="state.packages.length || hasPendingUploads">
                 <u-separator />
                 <div class="divide-y divide-default">
+                  <rb-cos-upload-status v-if="hasPendingUploads" :upload="cosUpload" theme-package hide-completed @resume="resumeCosTask" @completed="cosUploadCompleted" />
                   <div v-for="item in state.packages" :key="item.id" class="py-3 transition-opacity first:pt-0 last:pb-0" :class="item.delete_pending ? 'opacity-50 grayscale' : ''">
                     <div class="flex items-start justify-between gap-3">
                       <div class="flex min-w-0 items-start gap-3">

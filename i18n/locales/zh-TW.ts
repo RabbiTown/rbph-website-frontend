@@ -10,6 +10,21 @@
  * theme package → 主題包；puzzle backend → 題目後端
  */
 export default defineI18nLocale(() => ({
+  cosUpload: {
+    confirmCancel: '確定取消「{name}」的上傳嗎？取消後無法恢復此任務。',
+    fileProgress: '已上傳 {completed}/{total} 個檔案',
+    preparing: '正在準備檔案',
+    uploading: '正在上傳',
+    confirming: '正在驗證並登記',
+    complete: '上傳完成',
+    paused: '上傳已暫停',
+    failed: '上傳失敗，可重試',
+    pause: '暫停',
+    resume: '恢復',
+    cancel: '取消上傳',
+    selectOriginal: '選擇原始檔案繼續',
+    clientDigest: '檔案清單摘要',
+  },
   activityLog: {
     currencyAdjustedByStaff: (ctx: { named: (key: string) => unknown; type: string }) => {
       const actor = ctx.named('actor');
@@ -862,7 +877,7 @@ export default defineI18nLocale(() => ({
           zipRequired: '請上傳 ZIP 格式的主題包。',
           invalidArchive: '主題包壓縮檔損壞或格式無效。',
           emptyArchive: '主題包壓縮檔為空。',
-          invalidManifest: '主題包結構、rbph-theme.json 或功能資源無效。',
+          invalidManifest: '主題包結構無效。',
           storageFailed: '主題包資源寫入儲存失敗。',
           nameConflict: '已存在同名的可用主題包。',
           assetNotFound: '主題包對應的資源不存在。',

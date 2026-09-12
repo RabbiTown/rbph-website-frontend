@@ -10,6 +10,21 @@
  * theme package → 主题包；puzzle backend → 题目后端
  */
 export default defineI18nLocale(() => ({
+  cosUpload: {
+    confirmCancel: '确定取消「{name}」的上传吗？取消后无法恢复此任务。',
+    fileProgress: '已上传 {completed}/{total} 个文件',
+    preparing: '正在准备文件',
+    uploading: '正在上传',
+    confirming: '正在校验并登记',
+    complete: '上传完成',
+    paused: '上传已暂停',
+    failed: '上传失败，可重试',
+    pause: '暂停',
+    resume: '恢复',
+    cancel: '取消上传',
+    selectOriginal: '选择原文件继续',
+    clientDigest: '文件清单摘要',
+  },
   activityLog: {
     currencyAdjustedByStaff: (ctx: { named: (key: string) => unknown; type: string }) => {
       const actor = ctx.named('actor');
@@ -863,7 +878,7 @@ export default defineI18nLocale(() => ({
           zipRequired: '请上传 ZIP 格式的主题包。',
           invalidArchive: '主题包压缩文件损坏或格式无效。',
           emptyArchive: '主题包压缩文件为空。',
-          invalidManifest: '主题包结构、rbph-theme.json 或功能资源无效。',
+          invalidManifest: '主题包结构无效。',
           storageFailed: '主题包资源写入存储失败。',
           nameConflict: '已存在同名的可用主题包。',
           assetNotFound: '主题包对应的资源不存在。',

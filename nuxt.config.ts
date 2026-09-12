@@ -79,6 +79,8 @@ export default defineNuxtConfig({
         '@tiptap/extension-text-align',
         '@tiptap/extension-text-style',
         '@tiptap/extension-underline',
+        '@zip.js/zip.js',
+        'hash-wasm',
         'katex',
         'tailwind-merge',
         'valibot',

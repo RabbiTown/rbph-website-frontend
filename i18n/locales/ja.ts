@@ -10,6 +10,21 @@
  * theme package → テーマパッケージ; puzzle backend → 問題バックエンド
  */
 export default defineI18nLocale(() => ({
+  cosUpload: {
+    confirmCancel: '「{name}」のアップロードをキャンセルしますか？キャンセル後はこのタスクを再開できません。',
+    fileProgress: 'アップロード済み: {completed}/{total} ファイル',
+    preparing: 'ファイルを準備中',
+    uploading: 'アップロード中',
+    confirming: '検証・登録中',
+    complete: 'アップロード完了',
+    paused: 'アップロードを一時停止しました',
+    failed: 'アップロード失敗。再試行できます',
+    pause: '一時停止',
+    resume: '再開',
+    cancel: 'アップロードを中止',
+    selectOriginal: '元のファイルを選択して再開',
+    clientDigest: 'ファイル一覧のハッシュ',
+  },
   activityLog: {
     currencyAdjustedByStaff: (ctx: { named: (key: string) => unknown; type: string }) => {
       const actor = ctx.named('actor');
@@ -866,7 +881,7 @@ export default defineI18nLocale(() => ({
           zipRequired: 'テーマパッケージを ZIP 形式でアップロードしてください。',
           invalidArchive: 'テーマパッケージの圧縮ファイルが破損しているか無効です。',
           emptyArchive: 'テーマパッケージの圧縮ファイルが空です。',
-          invalidManifest: 'テーマパッケージ構成、rbph-theme.json、または機能リソースが無効です。',
+          invalidManifest: 'テーマパッケージの構成が無効です。',
           storageFailed: 'テーマパッケージのリソースをストレージに書き込めませんでした。',
           nameConflict: '同名の有効なテーマパッケージがすでに存在します。',
           assetNotFound: 'テーマパッケージに対応するリソースが存在しません。',

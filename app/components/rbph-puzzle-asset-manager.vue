@@ -1,7 +1,9 @@
-<script setup lang="ts">const { t } = useI18n();
-
+<script setup lang="ts">
+const { t } = useI18n();
 
 interface AdminAssetGroupData {
+  digest_version?: string;
+  sha256_source?: string;
   id: number;
   game_id: number;
   puzzle_id?: number | null;
@@ -33,6 +35,8 @@ interface AdminAssetGroupItem {
 }
 
 interface AssetStorageBackendData {
+  direct_upload?: boolean;
+  direct_upload_limits?: CosLimits;
   backend: string;
   kind: string;
   label: string;
@@ -67,8 +71,14 @@ const props = defineProps<{
 }>();
 
 const api = useApi();
+const cosUpload = useCosUpload();
+const uploads = shallowRef<{ id: string; upload: ReturnType<typeof createCosUpload> }[]>([]);
+const uploadWatchers: (() => void)[] = [];
+const claimedTaskIds = computed(() => uploads.value.flatMap(item => (item.upload.task.value ? [item.upload.task.value.id] : [])));
 const toast = useToast();
 const puzzleContext = useAdmin().useOptionalPuzzleContext();
+
+let assetRefreshId = 0;
 
 const loading = ref(false);
 const uploading = ref(false);
@@ -79,7 +89,7 @@ const renamingFolderPath = ref<string | null>(null);
 const deletingFileId = ref<number | null>(null);
 const uploadConfirmOpen = ref(false);
 const infoOpen = ref(false);
-const uploadChoice = ref<'group' | 'file'>('group');
+const uploadChoice = ref(CosUploadMode.Group);
 const uploadBackend = ref('local');
 const storageBackends = ref<AssetStorageBackendData[]>([
   {
@@ -109,7 +119,7 @@ const accept = '*';
 
 const gameId = computed(() => props.gameId ?? puzzleContext?.puzzle.value?.game_id ?? null);
 const roundId = computed(() => props.roundId ?? null);
-const puzzleId = computed(() => props.puzzleId ?? (roundId.value ? null : puzzleContext?.puzzle.value?.id ?? null));
+const puzzleId = computed(() => props.puzzleId ?? (roundId.value ? null : (puzzleContext?.puzzle.value?.id ?? null)));
 const hasScope = computed(() => Boolean(gameId.value) && !(puzzleId.value && roundId.value));
 const infoDirty = computed(() => Boolean(infoTarget.value && infoState.originalName.trim() !== infoTarget.value.group.original_name));
 const infoFileTree = computed(() => (infoTarget.value ? buildAssetFileTree(infoTarget.value.files) : []));
@@ -322,6 +332,8 @@ function onAssetDragStart(event: DragEvent, item: AdminAssetGroupItem) {
 }
 
 function refreshAssets() {
+  const requestId = ++assetRefreshId;
+
   if (!gameId.value || !hasScope.value) {
     groups.value = [];
     return Promise.resolve();
@@ -343,13 +355,13 @@ function refreshAssets() {
       },
     })
     .then(({ data }) => {
-      groups.value = data.groups;
+      if (requestId === assetRefreshId) groups.value = data.groups;
     })
     .catch(error => {
-      handleError(error, t('components.rbphPuzzleAssetManager.loadFailed'));
+      if (requestId === assetRefreshId) handleError(error, t('components.rbphPuzzleAssetManager.loadFailed'));
     })
     .finally(() => {
-      loading.value = false;
+      if (requestId === assetRefreshId) loading.value = false;
     });
 }
 
@@ -589,44 +601,132 @@ async function deleteAsset(item: AdminAssetGroupItem) {
   }
 }
 
+function newUpload() {
+  const upload = createCosUpload(api);
+  uploads.value = [{ id: crypto.randomUUID(), upload }, ...uploads.value];
+
+  uploadWatchers.push(
+    watch(
+      () => upload.task.value?.id,
+      id => {
+        if (id) cosUpload.tasks.value = cosUpload.tasks.value.filter(task => task.id !== id);
+      },
+      { flush: 'sync' },
+    ),
+  );
+
+  return upload;
+}
+
 async function uploadFiles() {
   const value = files.value;
+
   if (!value || !gameId.value || !hasScope.value || !selectedStorageBackend.value || uploading.value) return;
 
   uploading.value = true;
 
+  const upload = selectedStorageBackend.value.direct_upload ? newUpload() : undefined;
+  let released = false;
+
+  function releaseForm() {
+    if (released) return;
+
+    released = true;
+    clearUpload();
+    uploading.value = false;
+  }
+
+  const stop = upload
+    ? watch(upload.phase, phase => {
+        if (['uploading', 'confirming', 'complete'].includes(phase)) releaseForm();
+      })
+    : undefined;
+
   try {
-    const form = new FormData();
-    form.append('game_id', String(gameId.value));
-    if (puzzleId.value) form.append('puzzle_id', String(puzzleId.value));
-    if (roundId.value) form.append('round_id', String(roundId.value));
-    form.append('mode', uploadChoice.value);
-    form.append('backend', uploadBackend.value);
-    form.append('file', value, value.name);
+    if (upload) {
+      await upload.start(value, {
+        purpose: CosUploadPurpose.Asset,
+        mode: uploadChoice.value,
+        game_id: gameId.value,
+        puzzle_id: puzzleId.value ?? undefined,
+        round_id: roundId.value ?? undefined,
+        backend: { ...selectedStorageBackend.value, direct_upload: true },
+      });
+    } else {
+      const form = new FormData();
+      form.append('game_id', String(gameId.value));
+      if (puzzleId.value) form.append('puzzle_id', String(puzzleId.value));
+      if (roundId.value) form.append('round_id', String(roundId.value));
+      form.append('mode', String(uploadChoice.value));
+      form.append('backend', uploadBackend.value);
+      form.append('file', value, value.name);
 
-    await api.post('/admin/assets', form, {
-      errorHints: {
-        [-2]: t('components.rbphPuzzleAssetManager.invalidUpload'),
-        [-1]: t('components.rbphPuzzleAssetManager.scopeNotFound'),
-      },
-    });
+      await api.post('/admin/assets', form, {
+        errorHints: {
+          [-2]: t('components.rbphPuzzleAssetManager.invalidUpload'),
+          [-1]: t('components.rbphPuzzleAssetManager.scopeNotFound'),
+        },
+      });
+    }
 
-    files.value = null;
-    uploadConfirmOpen.value = false;
+    releaseForm();
+
     await refreshAssets();
+
     toast.add({
       title: t('components.rbphPuzzleAssetManager.groupUploaded'),
       icon: 'material-symbols:check-rounded',
       color: 'success',
     });
   } catch (error) {
-    files.value = null;
-    uploadConfirmOpen.value = false;
-    handleError(error, t('components.rbphPuzzleAssetManager.uploadGroupFailed'));
+    if (upload?.phase.value !== 'paused') handleError(error, t('components.rbphPuzzleAssetManager.uploadGroupFailed'));
   } finally {
-    uploading.value = false;
+    stop?.();
+    if (!released) uploading.value = false;
   }
 }
+
+async function cosUploadCompleted() {
+  await refreshAssets();
+}
+
+async function resumeCosTask(task: CosTaskSummary, file: File) {
+  const backend = storageBackends.value.find(item => item.backend === task.request.backend);
+
+  if (!backend || claimedTaskIds.value.includes(task.id)) return;
+
+  const upload = newUpload();
+  upload.task.value = { ...task, files: task.files ?? [] };
+
+  try {
+    await upload.start(
+      file,
+      {
+        ...task.request,
+        puzzle_id: task.request.puzzle_id ?? undefined,
+        round_id: task.request.round_id ?? undefined,
+        backend: { ...backend, direct_upload: backend.direct_upload ?? false },
+      },
+      task.id,
+    );
+    await cosUploadCompleted();
+  } catch (error) {
+    if (upload.phase.value !== 'paused') handleError(error, t('components.rbphPuzzleAssetManager.uploadGroupFailed'));
+  }
+}
+
+onBeforeUnmount(() => {
+  for (const stop of uploadWatchers) stop();
+  for (const item of uploads.value) item.upload.dispose();
+});
+
+watch(
+  [gameId, puzzleId, roundId],
+  () => {
+    if (gameId.value) void cosUpload.loadTasks(gameId.value, CosUploadPurpose.Asset, puzzleId.value ?? undefined, roundId.value ?? undefined).catch(() => {});
+  },
+  { immediate: true },
+);
 
 function shouldUploadAsGroup(file: File) {
   return file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed';
@@ -635,7 +735,7 @@ function shouldUploadAsGroup(file: File) {
 function onUploadChange() {
   const value = files.value;
   if (!value || uploading.value) return;
-  uploadChoice.value = shouldUploadAsGroup(value) ? 'group' : 'file';
+  uploadChoice.value = shouldUploadAsGroup(value) ? CosUploadMode.Group : CosUploadMode.File;
   uploadConfirmOpen.value = true;
 }
 
@@ -661,7 +761,7 @@ onMounted(fetchStorageBackends);
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 min-w-0 flex-col gap-4 overflow-y-auto overscroll-contain pb-6 pr-1 scroll-pb-6">
+  <div class="flex h-full min-h-0 w-full min-w-0 max-w-full flex-1 flex-col gap-4 overflow-y-auto overscroll-contain pb-6 pr-1 scroll-pb-6 [scrollbar-gutter:stable]">
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">
         <h2 class="truncate text-md font-semibold text-highlighted">{{ t('components.rbphPuzzleAssetManager.assetManager') }}</h2>
@@ -681,7 +781,9 @@ onMounted(fetchStorageBackends);
       @change="onUploadChange"
     />
 
-    <div class="mt-4 pb-2">
+    <div class="mt-4 space-y-2 pb-2">
+      <rb-cos-upload-status v-for="item in uploads" :key="item.id" :upload="item.upload" hide-completed @completed="cosUploadCompleted" />
+      <rb-cos-upload-status :upload="cosUpload" :excluded-task-ids="claimedTaskIds" hide-completed @resume="resumeCosTask" @completed="cosUploadCompleted" />
       <div v-if="loading" class="space-y-2">
         <u-skeleton v-for="i in 3" :key="i" class="h-16 w-full" />
       </div>
@@ -755,7 +857,7 @@ onMounted(fetchStorageBackends);
               <span class="text-highlighted">{{ formatBytes(infoTarget.group.size) }}</span>
             </div>
             <div class="grid grid-cols-[5rem_minmax(0,1fr)] gap-2">
-              <span class="text-muted">SHA256</span>
+              <span class="text-muted">{{ infoTarget.group.digest_version === 'manifest-v1' ? t('cosUpload.clientDigest') : 'SHA256' }}</span>
               <code class="truncate font-mono text-xs text-highlighted">{{ infoTarget.group.sha256 }}</code>
             </div>
           </div>
@@ -866,9 +968,9 @@ onMounted(fetchStorageBackends);
                 icon="material-symbols:folder-zip-outline-rounded"
                 :label="t('components.rbphPuzzleAssetManager.assetGroup')"
                 class="flex-1 justify-center"
-                :active="uploadChoice === 'group'"
+                :active="uploadChoice === CosUploadMode.Group"
                 :disabled="uploading"
-                @click="uploadChoice = 'group'"
+                @click="uploadChoice = CosUploadMode.Group"
               />
               <u-button
                 color="neutral"
@@ -877,9 +979,9 @@ onMounted(fetchStorageBackends);
                 icon="material-symbols:upload-file-outline-rounded"
                 :label="t('components.rbphPuzzleAssetManager.regularFile')"
                 class="flex-1 justify-center"
-                :active="uploadChoice === 'file'"
+                :active="uploadChoice === CosUploadMode.File"
                 :disabled="uploading"
-                @click="uploadChoice = 'file'"
+                @click="uploadChoice = CosUploadMode.File"
               />
             </u-field-group>
           </div>

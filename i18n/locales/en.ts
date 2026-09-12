@@ -1,4 +1,19 @@
 export default defineI18nLocale(() => ({
+  cosUpload: {
+    confirmCancel: 'Cancel the upload of “{name}”? This task cannot be resumed after cancellation.',
+    fileProgress: 'Files uploaded: {completed}/{total}',
+    preparing: 'Preparing files',
+    uploading: 'Uploading',
+    confirming: 'Verifying and registering',
+    complete: 'Upload complete',
+    paused: 'Upload paused',
+    failed: 'Upload failed; retry available',
+    pause: 'Pause',
+    resume: 'Resume',
+    cancel: 'Cancel upload',
+    selectOriginal: 'Select original file to resume',
+    clientDigest: 'Manifest digest',
+  },
   activityLog: {
     currencyAdjustedByStaff: (ctx: { named: (key: string) => unknown; type: string }) => {
       const actor = ctx.named('actor');
@@ -856,7 +871,7 @@ export default defineI18nLocale(() => ({
           zipRequired: 'Upload the theme package as a ZIP archive.',
           invalidArchive: 'The theme package archive is corrupted or invalid.',
           emptyArchive: 'The theme package archive is empty.',
-          invalidManifest: 'The theme package structure, rbph-theme.json, or feature assets are invalid.',
+          invalidManifest: 'Invalid theme package structure.',
           storageFailed: 'Failed to write the theme package assets to storage.',
           nameConflict: 'An active theme package with the same name already exists.',
           assetNotFound: 'The assets associated with the theme package do not exist.',
