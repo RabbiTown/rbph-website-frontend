@@ -19,7 +19,7 @@ const game = useGame().ref;
 const pageData = ref<TicketThread>();
 const historyGapIndex = ref(1);
 const ticket = computed(() => pageData.value?.ticket);
-const teamBanned = computed(() => ticket.value?.team?.state === RbTeamState.Banned);
+const teamBanned = computed(() => Boolean(ticket.value?.team?.is_banned));
 const sendBlock = computed(() => {
   const block = pageData.value?.perm.send_block;
   return block ? sendBlockConsts[block] : undefined;

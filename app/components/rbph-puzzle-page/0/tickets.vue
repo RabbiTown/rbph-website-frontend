@@ -53,7 +53,7 @@ async function loadUnlockCurrencies(teamId?: number) {
   }
 }
 
-function deriveTicket(ticket: TicketSummary, targetTeam: Pick<RbTeam, 'id' | 'name' | 'state'> | undefined = team.value): TicketSummary {
+function deriveTicket(ticket: TicketSummary, targetTeam: Pick<RbTeam, 'id' | 'name' | 'is_banned' | 'start_at' | 'finish_at'> | undefined = team.value): TicketSummary {
   const puzzleData = puzzle.value?.data;
   const puzzleState = puzzle.value?.state;
 
@@ -71,7 +71,9 @@ function deriveTicket(ticket: TicketSummary, targetTeam: Pick<RbTeam, 'id' | 'na
     ? {
         id: ticket.team?.id ?? targetTeam.id,
         name: ticket.team?.name ?? targetTeam.name,
-        state: ticket.team?.state ?? targetTeam.state,
+        is_banned: ticket.team?.is_banned ?? targetTeam.is_banned,
+        start_at: ticket.team?.start_at ?? targetTeam.start_at,
+        finish_at: ticket.team?.finish_at ?? targetTeam.finish_at,
       }
     : ticket.team;
 
@@ -83,7 +85,7 @@ function deriveTicket(ticket: TicketSummary, targetTeam: Pick<RbTeam, 'id' | 'na
   };
 }
 
-function derivePuzzleList(data: TicketPuzzleList, targetTeam?: Pick<RbTeam, 'id' | 'name' | 'state'>): TicketPuzzleList {
+function derivePuzzleList(data: TicketPuzzleList, targetTeam?: Pick<RbTeam, 'id' | 'name' | 'is_banned' | 'start_at' | 'finish_at'>): TicketPuzzleList {
   return {
     ...data,
     tickets: data.tickets.map(ticket => deriveTicket(ticket, targetTeam)),
@@ -140,7 +142,6 @@ watch(
       ? {
           id: team.value.id,
           name: team.value.name,
-          state: team.value.state ?? RbTeamState.Open,
         }
       : undefined;
     updateData();

@@ -4,13 +4,6 @@ export interface RbGame extends RbGameModel {
   rounds?: Pick<RbRound, 'id' | 'slug' | 'title' | 'description'>[];
 }
 
-export enum RbTeamState {
-  Banned = -1,
-  Open = 0,
-  InGame = 1,
-  Finished = 2,
-}
-
 export interface RbTeamMember {
   id: number;
   is_captain: boolean;
@@ -22,16 +15,24 @@ export interface RbTeamMember {
 export interface RbTeam {
   id: number;
   name: string;
-  state?: RbTeamState;
   is_banned?: boolean;
   is_locked?: boolean;
   is_beta?: boolean;
   pass: string;
   bio: string;
   ctime_at: string;
+  start_at?: string | null;
   finish_at?: string | null;
   members: RbTeamMember[];
   features?: RbTeamFeatureData[];
+}
+
+export function isTeamStarted(team: Pick<RbTeam, 'start_at'> | undefined): boolean {
+  return Boolean(team?.start_at);
+}
+
+export function isTeamFinished(team: Pick<RbTeam, 'start_at' | 'finish_at'> | undefined): boolean {
+  return Boolean(team?.start_at && team.finish_at);
 }
 
 export enum RbPuzzleType {
@@ -375,6 +376,7 @@ export interface RbTeamFeatureData {
 }
 
 export type AdminTeamFeatureData = RbTeamFeatureData;
+export type AdminTeamCurrencyAction = 'initialize' | 'remove';
 
 export interface AdminTeamListItem {
   id: number;
@@ -382,6 +384,7 @@ export interface AdminTeamListItem {
   is_banned: boolean;
   is_locked: boolean;
   is_beta: boolean;
+  start_at?: string | null;
   finish_at?: string | null;
   member_count: number;
   captain_id?: number | null;
@@ -396,11 +399,12 @@ export interface AdminUserOption {
   in_team_name?: string | null;
 }
 
-export interface AdminTeamDetail extends Omit<RbTeam, 'state'> {
+export interface AdminTeamDetail extends RbTeam {
   is_banned: boolean;
   is_locked: boolean;
   is_beta: boolean;
   game_id: number;
+  start_at?: string | null;
   finish_at?: string | null;
   features: AdminTeamFeatureData[];
   currency: AdminTeamCurrency[];
@@ -586,7 +590,7 @@ export interface TicketSummary {
   id: number;
   state: RbTicketState;
   game_id?: number;
-  team?: Pick<RbTeam, 'id' | 'name' | 'state'> & { currency?: RbTeamCurrency[] };
+  team?: Pick<RbTeam, 'id' | 'name' | 'is_banned' | 'start_at' | 'finish_at'> & { currency?: RbTeamCurrency[] };
   puzzle?: Pick<RbPuzzle, 'id' | 'slug' | 'title' | 'round'> & Pick<RbPuzzleTeamData, 'state'>;
   msg_count?: number;
   last_at: string | null;
@@ -750,7 +754,6 @@ export interface StaffPuzzleSubmissionPage {
 export interface StaffTeamOption {
   id: number;
   name: string;
-  state: RbTeamState;
 }
 
 export interface TicketAssignResponse {

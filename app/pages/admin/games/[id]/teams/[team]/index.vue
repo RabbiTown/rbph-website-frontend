@@ -32,6 +32,10 @@ const addUserId = ref<number>();
 const deleteOpen = ref(false);
 const deleteConfirmName = ref('');
 const reasonOpen = ref(false);
+const competitionStateOpen = ref(false);
+const competitionStateTarget = ref(false);
+const competitionCurrencyChecked = ref(true);
+const currencyAction = ref<AdminTeamCurrencyAction>();
 const accessChangeReason = ref('');
 const currencyChangeReason = ref('');
 const currencyDrafts = reactive<Record<number, CurrencyDraft>>({});
@@ -42,6 +46,7 @@ const draft = reactive({
   bio: '',
   is_banned: false,
   is_locked: false,
+  is_started: false,
   is_beta: false,
   features: {} as Record<RbTeamFeature, boolean>,
 });
@@ -83,6 +88,7 @@ const teamFieldsDirty = computed(() => {
     draft.bio !== current.bio ||
     draft.is_banned !== current.is_banned ||
     draft.is_locked !== current.is_locked ||
+    draft.is_started !== isTeamStarted(current) ||
     draft.is_beta !== current.is_beta ||
     current.features.some(feature => draft.features[feature.feature] !== feature.enabled)
   );
@@ -115,6 +121,14 @@ const accessChanges = computed<AccessChangePreview[]>(() => {
       label: draft.is_locked ? t('admin.pages.team.accessChange.lock') : t('admin.pages.team.accessChange.unlock'),
       icon: draft.is_locked ? 'material-symbols:lock-outline' : 'material-symbols:lock-open-outline-rounded',
       color: draft.is_locked ? 'warning' : 'primary',
+    });
+  }
+  if (draft.is_started !== isTeamStarted(current)) {
+    changes.push({
+      key: 'team-started',
+      label: draft.is_started ? t('admin.pages.team.accessChange.start') : t('admin.pages.team.accessChange.unstart'),
+      icon: draft.is_started ? 'material-symbols:play-arrow-rounded' : 'material-symbols:stop-rounded',
+      color: draft.is_started ? 'primary' : 'warning',
     });
   }
   if (draft.is_beta !== current.is_beta) {
@@ -155,6 +169,7 @@ function syncDrafts(next: AdminTeamDetail) {
   draft.bio = next.bio;
   draft.is_banned = next.is_banned;
   draft.is_locked = next.is_locked;
+  draft.is_started = isTeamStarted(next);
   draft.is_beta = next.is_beta;
   draft.features = Object.fromEntries(next.features.map(feature => [feature.feature, feature.enabled])) as Record<RbTeamFeature, boolean>;
 
@@ -167,6 +182,30 @@ function syncDrafts(next: AdminTeamDetail) {
   }
   for (const id of Object.keys(currencyDrafts).map(Number)) {
     if (!next.currency.some(currency => currency.id === id)) Reflect.deleteProperty(currencyDrafts, id);
+  }
+}
+
+function requestCompetitionState(started: boolean) {
+  if (started === draft.is_started) return;
+  if (started === isTeamStarted(team.value)) {
+    draft.is_started = started;
+    currencyAction.value = undefined;
+    return;
+  }
+  competitionStateTarget.value = started;
+  competitionCurrencyChecked.value = started || Boolean(team.value?.currency.length);
+  competitionStateOpen.value = true;
+}
+
+function confirmCompetitionState() {
+  const action = competitionCurrencyChecked.value
+    ? competitionStateTarget.value ? 'initialize' : 'remove'
+    : undefined;
+  competitionStateOpen.value = false;
+  draft.is_started = competitionStateTarget.value;
+  currencyAction.value = action;
+  if (action && team.value) {
+    for (const currency of team.value.currency) resetCurrency(currency);
   }
 }
 
@@ -190,6 +229,7 @@ async function loadTeam() {
 
 function reset() {
   if (team.value) syncDrafts(team.value);
+  currencyAction.value = undefined;
   dirtyToast.clear();
 }
 
@@ -215,7 +255,7 @@ async function saveTeam(reasonConfirmed = false) {
     return;
   }
 
-  const changedCurrencies = current.currency.filter(currencyDirty);
+  const changedCurrencies = currencyAction.value ? [] : current.currency.filter(currencyDirty);
   let next = current;
   saving.value = true;
   try {
@@ -228,6 +268,8 @@ async function saveTeam(reasonConfirmed = false) {
           bio: draft.bio,
           is_banned: draft.is_banned,
           is_locked: draft.is_locked,
+          is_started: draft.is_started !== isTeamStarted(current) ? draft.is_started : undefined,
+          currency_action: currencyAction.value,
           is_beta: draft.is_beta,
           features: Object.entries(draft.features).map(([feature, enabled]) => ({ feature, enabled })),
           reason: accessChanges.value.length > 0 ? accessChangeReason.value.trim() || undefined : undefined,
@@ -251,6 +293,7 @@ async function saveTeam(reasonConfirmed = false) {
     }
 
     applyTeam(next);
+    currencyAction.value = undefined;
     reasonOpen.value = false;
     dirtyToast.clear();
     toast.add({ title: t('admin.pages.team.teamSettingsSaved'), icon: 'material-symbols:check-circle-outline-rounded', color: 'success' });
@@ -357,7 +400,8 @@ onBeforeUnmount(() => dirtyToast.clear());
           </div>
           <div v-if="team" class="mt-1 flex flex-wrap gap-1.5 pl-10">
             <u-badge size="sm" color="neutral" variant="soft" icon="material-symbols:calendar-today-outline-rounded">{{ t('admin.pages.team.createdAt', { time: formatDate(team.ctime_at) }) }}</u-badge>
-            <u-badge v-if="team.finish_at" size="sm" color="success" variant="soft" icon="material-symbols:flag-outline-rounded">{{ t('admin.common.finishedAt', { time: formatDate(team.finish_at) }) }}</u-badge>
+            <u-badge v-if="isTeamFinished(team)" size="sm" color="success" variant="soft" icon="material-symbols:flag-outline-rounded">{{ t('admin.common.finishedAt', { time: formatDate(team.finish_at!) }) }}</u-badge>
+            <u-badge v-else-if="isTeamStarted(team)" size="sm" color="success" variant="soft" icon="material-symbols:play-arrow-rounded">{{ t('admin.pages.teams.startedAt', { time: formatDate(team.start_at!) }) }}</u-badge>
             <u-badge v-if="team.is_beta" size="sm" color="info" variant="soft" icon="material-symbols:bug-report-outline-rounded">{{ t('admin.pages.team.beta') }}</u-badge>
           </div>
         </div>
@@ -401,6 +445,20 @@ onBeforeUnmount(() => dirtyToast.clear());
               <u-field-group>
                 <u-button color="neutral" variant="soft" active-color="error" icon="material-symbols:block-outline" :label="t('admin.common.banned')" :active="draft.is_banned" :disabled="saving" @click="draft.is_banned = true" />
                 <u-button color="neutral" variant="soft" active-color="primary" icon="material-symbols:check-rounded" :label="t('admin.pages.team.normal')" :active="!draft.is_banned" :disabled="saving" @click="draft.is_banned = false" />
+              </u-field-group>
+            </rb-form-field>
+            <u-separator />
+            <rb-form-field
+              row
+              :label="t('admin.pages.team.competitionState')"
+              icon="material-symbols:flag-outline-rounded"
+              :description="draft.is_started ? t('admin.pages.team.competitionStateDescription.started') : t('admin.pages.team.competitionStateDescription.notStarted')"
+              :dirty="draft.is_started !== isTeamStarted(team)"
+              :reset="() => { draft.is_started = isTeamStarted(team); currencyAction = undefined; }"
+            >
+              <u-field-group>
+                <u-button color="neutral" variant="soft" active-color="success" icon="material-symbols:play-arrow-rounded" :label="t('admin.pages.team.started')" :active="draft.is_started" :disabled="saving" @click="requestCompetitionState(true)" />
+                <u-button color="neutral" variant="soft" active-color="primary" icon="material-symbols:stop-rounded" :label="t('admin.pages.team.notStarted')" :active="!draft.is_started" :disabled="saving" @click="requestCompetitionState(false)" />
               </u-field-group>
             </rb-form-field>
             <u-separator />
@@ -546,6 +604,22 @@ onBeforeUnmount(() => dirtyToast.clear());
     </main>
 
     <aside class="hidden xl:block" />
+
+    <rb-confirm-modal
+      v-model:open="competitionStateOpen"
+      :title="competitionStateTarget ? t('admin.pages.team.startCompetitionTitle') : t('admin.pages.team.unstartCompetitionTitle')"
+      :description="competitionStateTarget ? t('admin.pages.team.startCompetitionDescription') : t('admin.pages.team.unstartCompetitionDescription')"
+      :confirm-color="competitionStateTarget ? 'primary' : 'warning'"
+      @confirm="confirmCompetitionState"
+    >
+      <template #body>
+        <u-checkbox
+          v-if="competitionStateTarget || (team?.currency.length ?? 0) > 0"
+          v-model="competitionCurrencyChecked"
+          :label="competitionStateTarget ? t('admin.pages.team.startInitializeCurrency') : t('admin.pages.team.unstartRemoveCurrency')"
+        />
+      </template>
+    </rb-confirm-modal>
 
     <rb-confirm-modal
       v-model:open="reasonOpen"

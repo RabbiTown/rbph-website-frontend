@@ -119,7 +119,6 @@ function statusBadges(team: AdminTeamListItem) {
   const result: { label: string; color: 'error' | 'warning' | 'success' | 'neutral' | 'info'; icon: string }[] = [];
   if (team.is_banned) result.push({ label: t('admin.common.banned'), color: 'error', icon: 'material-symbols:block-outline' });
   if (team.is_locked) result.push({ label: t('admin.common.locked'), color: 'warning', icon: 'material-symbols:lock-outline' });
-  if (team.finish_at) result.push({ label: t('admin.pages.teams.finishedLabel'), color: 'success', icon: 'material-symbols:flag-outline-rounded' });
   if (team.is_beta) result.push({ label: t('admin.pages.teams.betaLabel'), color: 'info', icon: 'material-symbols:bug-report-outline-rounded' });
   return result;
 }
@@ -186,7 +185,8 @@ onMounted(loadTeams);
             <div class="mt-1 flex flex-wrap gap-1.5">
               <u-badge size="sm" :color="team.member_count > 0 ? 'neutral' : 'warning'" variant="soft" icon="material-symbols:group-outline-rounded">{{ t('admin.pages.teams.memberCount', { count: team.member_count }) }}</u-badge>
               <u-badge size="sm" :color="team.captain_name ? 'neutral' : 'warning'" variant="soft" icon="material-symbols:award-star-outline-rounded">{{ team.captain_name ?? t('admin.pages.teams.captain') }}</u-badge>
-              <u-badge v-if="team.finish_at" size="sm" color="success" variant="soft" icon="material-symbols:flag-outline-rounded">{{ t('admin.common.finishedAt', { time: formatDate(team.finish_at) }) }}</u-badge>
+              <u-badge v-if="isTeamFinished(team)" size="sm" color="success" variant="soft" icon="material-symbols:flag-outline-rounded">{{ t('admin.common.finishedAt', { time: formatDate(team.finish_at!) }) }}</u-badge>
+              <u-badge v-else-if="isTeamStarted(team)" size="sm" color="success" variant="soft" icon="material-symbols:play-arrow-rounded">{{ t('admin.pages.teams.startedAt', { time: formatDate(team.start_at!) }) }}</u-badge>
             </div>
           </div>
           <u-icon name="material-symbols:chevron-right-rounded" class="size-5 shrink-0 text-dimmed transition-transform group-hover:translate-x-0.5" />

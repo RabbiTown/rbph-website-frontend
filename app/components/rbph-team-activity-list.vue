@@ -150,6 +150,11 @@ function activityView(activity: RbTeamActivity) {
     'team:unlocked': t('activityLog.access.teamUnlocked'),
     'team:beta_enabled': t('activityLog.access.teamBetaEnabled'),
     'team:beta_disabled': t('activityLog.access.teamBetaDisabled'),
+    'team:started': t('activityLog.access.teamStarted'),
+    'team:unstarted': t('activityLog.access.teamUnstarted'),
+    'currency:initialized': t('activityLog.access.currencyInitialized'),
+    'currency:reset': t('activityLog.access.currencyReset'),
+    'currency:removed': t('activityLog.access.currencyRemoved'),
     'direct_message:banned': t('activityLog.access.directMessageBanned'),
     'direct_message:unbanned': t('activityLog.access.directMessageUnbanned'),
     'puzzle_ticket:banned': t('activityLog.access.puzzleTicketBanned'),
@@ -164,8 +169,8 @@ function activityView(activity: RbTeamActivity) {
     case 'team.updated':
       return { icon: 'material-symbols:edit-outline-rounded', color: 'neutral' as const, title: t('activityLog.teamUpdated', { actor }), details: [] };
     case 'team.access_changed': {
-      const changes = (data.changes ?? []).map(change => accessChangeLabels[`${change.target === 'feature' ? change.feature : 'team'}:${change.action}`]).filter(Boolean);
-      const restricted = (data.changes ?? []).some(change => change.action === 'banned' || change.action === 'locked' || change.action === 'beta_enabled');
+      const changes = (data.changes ?? []).map(change => accessChangeLabels[`${change.target === 'feature' ? change.feature : change.target}:${change.action}`]).filter(Boolean);
+      const restricted = (data.changes ?? []).some(change => change.action === 'banned' || change.action === 'locked' || change.action === 'beta_enabled' || change.action === 'unstarted' || change.action === 'removed' || change.action === 'reset');
       const reason = typeof data.reason === 'string' ? data.reason.trim() : '';
       return {
         icon: 'material-symbols:admin-panel-settings-outline-rounded',

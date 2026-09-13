@@ -20,6 +20,11 @@ const accessChangeLabels = computed<Record<string, string>>(() => ({
   'team:unlocked': t('activityLog.access.teamUnlocked'),
   'team:beta_enabled': t('activityLog.access.teamBetaEnabled'),
   'team:beta_disabled': t('activityLog.access.teamBetaDisabled'),
+  'team:started': t('activityLog.access.teamStarted'),
+  'team:unstarted': t('activityLog.access.teamUnstarted'),
+  'currency:initialized': t('activityLog.access.currencyInitialized'),
+  'currency:reset': t('activityLog.access.currencyReset'),
+  'currency:removed': t('activityLog.access.currencyRemoved'),
   'direct_message:banned': t('activityLog.access.directMessageBanned'),
   'direct_message:unbanned': t('activityLog.access.directMessageUnbanned'),
   'puzzle_ticket:banned': t('activityLog.access.puzzleTicketBanned'),
@@ -53,7 +58,7 @@ function activityView(activity: RbTeamActivity) {
   const reason = typeof activity.data.reason === 'string' ? activity.data.reason.trim() : '';
   if (activity.type === 'team.access_changed') {
     const changes = (activity.data.changes ?? [])
-      .map(change => accessChangeLabels.value[`${change.target === 'feature' ? change.feature : 'team'}:${change.action}`])
+      .map(change => accessChangeLabels.value[`${change.target === 'feature' ? change.feature : change.target}:${change.action}`])
       .filter(Boolean);
     const restricted = (activity.data.changes ?? []).some(change => change.action === 'banned' || change.action === 'locked' || change.action === 'beta_enabled');
     return {

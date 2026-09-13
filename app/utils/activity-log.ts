@@ -44,9 +44,9 @@ export interface ActivityLogCost {
 }
 
 export interface ActivityLogAccessChange {
-  target?: 'team' | 'feature' | null;
+  target?: 'team' | 'feature' | 'currency' | null;
   feature?: RbTeamFeature | null;
-  action?: 'banned' | 'unbanned' | 'locked' | 'unlocked' | 'beta_enabled' | 'beta_disabled' | null;
+  action?: 'banned' | 'unbanned' | 'locked' | 'unlocked' | 'beta_enabled' | 'beta_disabled' | 'started' | 'unstarted' | 'initialized' | 'reset' | 'removed' | null;
 }
 
 export interface ActivityLogPayload {
