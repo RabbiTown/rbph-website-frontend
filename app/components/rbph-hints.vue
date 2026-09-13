@@ -269,7 +269,6 @@ defineExpose({
                 <u-icon name="material-symbols:lock-open-right-outline-rounded" class="shrink-0" />
                 <span class="min-w-0 mx-1 wrap-anywhere">
                   {{ t('hints.confirmUnlock') }}
-                  <span v-if="hint.cost_id && hint.cost_amount > 0" class="text-muted">{{ t('ticket.unlockCost', { cost: `${currency[hint.cost_id]?.name ?? ''} ${intPrecString(hint.cost_amount, currency[hint.cost_id]?.prec || 0)}` }) }}</span>
                 </span>
                 <u-button class="shrink-0 cursor-pointer" color="success" variant="soft" size="xs" :loading="purchaseLoading" :disabled="!checkEnough(hint) || calcCooldown(hint) > 0" @click="purchaseHint(hint.id)">{{ t('hints.unlock') }}</u-button>
               </div>
