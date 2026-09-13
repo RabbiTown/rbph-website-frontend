@@ -508,6 +508,7 @@ watch(configurationDirty, dirty => {
     description: t('admin.frontend.configFile.unsavedChanges'),
     guardOnLeave: true,
     apply: applyConfig,
+    applyPending: () => missingPackagesOpen.value || configSaving.value,
     reset: resetConfig,
   });
 });

@@ -370,6 +370,7 @@ watch(dirty, value => {
       description: t('admin.pages.team.teamSettingsUpdateNotYetSave'),
       guardOnLeave: true,
       apply: saveTeam,
+      applyPending: () => reasonOpen.value || saving.value,
       reset,
     });
   } else {

@@ -482,6 +482,7 @@ watch(dirty, value => {
       description: t('admin.pages.puzzle.settings.settingsUpdateNotYetSave'),
       guardOnLeave: true,
       apply,
+      applyPending: () => immediateReleaseConfirmOpen.value || saving.value,
       reset,
     });
   } else {

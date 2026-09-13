@@ -1,4 +1,6 @@
-import { RbConfirmModal } from '#components';
+import { RbConfirmModal, RbDirtyToastContent } from '#components';
+
+type DirtyToastStatus = 'idle' | 'confirming-reset' | 'resetting' | 'applying';
 
 interface DirtyToastOptions {
   title?: string;
@@ -6,7 +8,8 @@ interface DirtyToastOptions {
   leaveConfirmMessage?: string;
   guardOnLeave?: boolean;
   apply: () => void | Promise<void>;
-  reset: () => void;
+  applyPending?: () => boolean;
+  reset: () => void | Promise<void>;
 }
 
 export function useDirtyToast() {
@@ -17,6 +20,7 @@ export function useDirtyToast() {
   let current: Toast | undefined;
   let currentOptions: DirtyToastOptions | undefined;
   let syncingDirtyToast = false;
+  const status = ref<DirtyToastStatus>('idle');
 
   function closeResetConfirmation() {
     resetConfirmation?.close();
@@ -24,10 +28,12 @@ export function useDirtyToast() {
   }
 
   function confirmReset() {
-    if (!currentOptions || resetConfirmation) return;
+    if (!currentOptions || resetConfirmation || status.value !== 'idle') return;
 
+    const options = currentOptions;
     const confirmation = overlay.create(RbConfirmModal, { destroyOnClose: true });
     resetConfirmation = confirmation;
+    status.value = 'confirming-reset';
     confirmation.open({
       title: t('dirtyToast.resetConfirmTitle'),
       description: t('dirtyToast.resetConfirmDescription'),
@@ -35,14 +41,43 @@ export function useDirtyToast() {
       confirmColor: 'warning',
       confirmIcon: 'material-symbols:warning-outline-rounded',
       'onUpdate:open': open => {
-        if (!open && resetConfirmation === confirmation) resetConfirmation = undefined;
+        if (open || resetConfirmation !== confirmation) return;
+        resetConfirmation = undefined;
+        if (status.value === 'confirming-reset') status.value = 'idle';
       },
-      onConfirm: () => {
+      onConfirm: async () => {
         if (resetConfirmation !== confirmation) return;
+        status.value = 'resetting';
         closeResetConfirmation();
-        currentOptions?.reset();
+        try {
+          await options.reset();
+        } finally {
+          if (current && currentOptions === options && status.value === 'resetting') status.value = 'idle';
+        }
       },
     });
+  }
+
+  async function apply() {
+    if (!current || !currentOptions || status.value !== 'idle') return;
+
+    const options = currentOptions;
+    closeResetConfirmation();
+    status.value = 'applying';
+    try {
+      await options.apply();
+      if (options.applyPending?.()) {
+        await new Promise<void>(resolve => {
+          const stop = watch([status, options.applyPending!], ([currentStatus, pending]) => {
+            if (currentStatus === 'applying' && pending) return;
+            stop();
+            resolve();
+          });
+        });
+      }
+    } finally {
+      if (current && currentOptions === options && status.value === 'applying') status.value = 'idle';
+    }
   }
 
   function isGuardEnabled() {
@@ -112,37 +147,19 @@ export function useDirtyToast() {
     currentOptions = options;
 
     const toastData: Partial<Toast> = {
-      title: options.title ?? t('dirtyToast.title'),
-      description: options.description ?? t('dirtyToast.description'),
+      title: () => h(RbDirtyToastContent, {
+        title: options.title ?? t('dirtyToast.title'),
+        description: options.description ?? t('dirtyToast.description'),
+        status: status.value,
+        resetLabel: t('dirtyToast.reset'),
+        applyLabel: t('dirtyToast.apply'),
+        onReset: confirmReset,
+        onApply: apply,
+      }),
       icon: 'material-symbols:edit-note-outline-rounded',
       color: 'warning',
       duration: Infinity,
       close: false,
-      orientation: 'horizontal',
-      actions: [
-        {
-          label: t('dirtyToast.reset'),
-          icon: 'material-symbols:restart-alt-rounded',
-          color: 'neutral',
-          variant: 'soft',
-          onClick: confirmReset,
-        },
-        {
-          label: t('dirtyToast.apply'),
-          icon: 'material-symbols:check-rounded',
-          color: 'primary',
-          variant: 'solid',
-          onClick: async () => {
-            closeResetConfirmation();
-            await options.apply();
-            window.setTimeout(() => {
-              if (currentOptions !== options) return;
-              current = undefined;
-              show(options, true);
-            }, 0);
-          },
-        },
-      ],
     };
 
     if (!forceAdd && current && toast.toasts.value.find(item => item.id === current?.id)) {
@@ -157,6 +174,7 @@ export function useDirtyToast() {
     if (current) toast.remove(current.id);
     current = undefined;
     currentOptions = undefined;
+    status.value = 'idle';
   }
 
   return {
