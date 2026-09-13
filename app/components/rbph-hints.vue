@@ -14,6 +14,7 @@ const currentTime = useCurrentTimeSec();
 const rawData = ref<RbPuzzleHintTeamData>();
 const syncingDueHints = ref(false);
 let dueHintTimer: ReturnType<typeof setTimeout> | undefined = undefined;
+const pendingPurchaseHintIds = new Set<number>();
 
 const processedData = computed(() => {
   if (!rawData.value) return undefined;
@@ -85,6 +86,7 @@ async function syncDueHints() {
     }, 15_000);
   } finally {
     syncingDueHints.value = false;
+    flushPendingHintPurchases();
   }
 }
 
@@ -110,8 +112,13 @@ const purchaseLoading = ref(false);
 const purchaseConfirmId = ref<number>();
 
 async function purchaseHint(hintId: number) {
+  if (syncingDueHints.value) {
+    pendingPurchaseHintIds.add(hintId);
+    return;
+  }
+
   const target = rawData.value?.data.find(hint => hint.id === hintId);
-  if (purchaseLoading.value || syncingDueHints.value || !target || calcCooldown(target) > 0 || !checkEnough(target) || rawData.value?.state.some(hint => hint.id === hintId)) return;
+  if (purchaseLoading.value || !target || calcCooldown(target) > 0 || !checkEnough(target) || rawData.value?.state.some(hint => hint.id === hintId)) return;
   const api = useApi();
   const sid = sidStore.create('hint-purchase');
 
@@ -164,6 +171,16 @@ async function purchaseHint(hintId: number) {
   purchaseLoading.value = false;
 }
 
+async function flushPendingHintPurchases() {
+  while (!syncingDueHints.value && !purchaseLoading.value && pendingPurchaseHintIds.size > 0) {
+    const hintId = pendingPurchaseHintIds.values().next().value;
+    if (hintId === undefined) return;
+
+    pendingPurchaseHintIds.delete(hintId);
+    await purchaseHint(hintId);
+  }
+}
+
 function checkEnough(hint: RbHint): boolean {
   if (!hint.cost_id || hint.cost_amount <= 0) return true;
   const cur = currency.value[hint.cost_id];
@@ -178,6 +195,7 @@ watch(
   () => props.puzzleId,
   async new_id => {
     clearDueHintTimer();
+    pendingPurchaseHintIds.clear();
     purchaseConfirmId.value = undefined;
     rawData.value = undefined;
     updateData(new_id);
@@ -197,6 +215,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearDueHintTimer();
+  pendingPurchaseHintIds.clear();
   document.removeEventListener('visibilitychange', onVisibilityChange);
 });
 
@@ -241,7 +260,7 @@ defineExpose({
           :text="t('hints.needMore', { amount: `${intPrecString(hint.cost_amount - (currency[hint.cost_id ?? 0]?.current || 0), currency[hint.cost_id ?? 0]?.prec || 0)} ${currency[hint.cost_id ?? 0]?.name}` })"
         >
           <u-popover :open="purchaseConfirmId === hint.id" arrow @update:open="purchaseConfirmId = $event ? hint.id : undefined">
-            <u-button variant="soft" size="xs" class="cursor-pointer" icon="material-symbols:emoji-objects-outline-rounded" :loading="purchaseLoading || syncingDueHints" :disabled="!checkEnough(hint)">
+            <u-button variant="soft" size="xs" class="cursor-pointer" icon="material-symbols:emoji-objects-outline-rounded" :loading="purchaseLoading" :disabled="!checkEnough(hint)">
               <template v-if="!hint.cost_id"> {{ t('hints.unlock') }} </template>
               <template v-else> {{ currency[hint.cost_id]?.name }} {{ intPrecString(-hint.cost_amount, currency[hint.cost_id]?.prec || 0, true, ' ') }} </template>
             </u-button>
@@ -252,7 +271,7 @@ defineExpose({
                   {{ t('hints.confirmUnlock') }}
                   <span v-if="hint.cost_id && hint.cost_amount > 0" class="text-muted">{{ t('ticket.unlockCost', { cost: `${currency[hint.cost_id]?.name ?? ''} ${intPrecString(hint.cost_amount, currency[hint.cost_id]?.prec || 0)}` }) }}</span>
                 </span>
-                <u-button class="shrink-0 cursor-pointer" color="success" variant="soft" size="xs" :loading="purchaseLoading" :disabled="syncingDueHints || !checkEnough(hint) || calcCooldown(hint) > 0" @click="purchaseHint(hint.id)">{{ t('hints.unlock') }}</u-button>
+                <u-button class="shrink-0 cursor-pointer" color="success" variant="soft" size="xs" :loading="purchaseLoading" :disabled="!checkEnough(hint) || calcCooldown(hint) > 0" @click="purchaseHint(hint.id)">{{ t('hints.unlock') }}</u-button>
               </div>
             </template>
           </u-popover>
