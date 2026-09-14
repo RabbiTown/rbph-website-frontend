@@ -62,7 +62,14 @@ export interface SyncMessageMap {
     currency_penalty?: RbCurrencyPenalty[];
     content_changed?: boolean;
   };
-  [SyncMessageType.PuzzleHintUnlocked]: { sid?: string; user: { id: number; name: string }; puzzle: { id: number; title: string }; hint: { id: number; title: string; cost_id?: number | null; cost_amount: number } };
+  [SyncMessageType.PuzzleHintUnlocked]: {
+    sid?: string;
+    user: { id: number; name: string };
+    puzzle: { id: number; title: string };
+    hint: { id: number; title: string; cost_id?: number | null; cost_amount: number };
+    unlocks?: { id: number; slug?: string | null; title: string; round_id: number; round_slug?: string | null }[];
+    content_changed?: boolean;
+  };
   [SyncMessageType.PuzzleBackendEvent]: {
     puzzle_id: number;
     event: string;

@@ -14,6 +14,7 @@ interface HintState {
   cost_id: number | null;
   cost_amount: number;
   backend_function: string | null;
+  triggers: string[];
   deleting?: boolean;
   open?: boolean;
   advancedOpen?: boolean;
@@ -31,6 +32,7 @@ interface HintPatch {
   cost_id: number | null;
   cost_amount: number;
   backend_function: string | null;
+  triggers: string[];
   puzzle_id: number;
 }
 
@@ -119,8 +121,8 @@ const activeHints = computed(() => state.value.filter(hint => !hint.deleting));
 const orderedHints = computed(() => [...state.value].sort((a, b) => a.sort - b.sort || (a.id ?? 0) - (b.id ?? 0)));
 const orderedActiveHints = computed(() => [...activeHints.value].sort((a, b) => a.sort - b.sort || (a.id ?? 0) - (b.id ?? 0)));
 
-function hintHasNonDefaultAdvancedSettings(hint: Pick<HintState, 'title_hidden' | 'enable_cond' | 'cooldown_after_enable' | 'backend_function'>) {
-  return !hint.title_hidden || hint.enable_cond !== null || hint.cooldown_after_enable || Boolean(hint.backend_function?.trim());
+function hintHasNonDefaultAdvancedSettings(hint: Pick<HintState, 'title_hidden' | 'enable_cond' | 'cooldown_after_enable' | 'backend_function' | 'triggers'>) {
+  return !hint.title_hidden || hint.enable_cond !== null || hint.cooldown_after_enable || Boolean(hint.backend_function?.trim()) || hint.triggers.length > 0;
 }
 
 function hintToState(hint: AdminHintData, open = false): HintState {
@@ -137,6 +139,7 @@ function hintToState(hint: AdminHintData, open = false): HintState {
     cost_id: hint.cost_id ?? null,
     cost_amount: hint.cost_amount,
     backend_function: hint.backend_function ?? null,
+    triggers: [...(hint.triggers ?? [])],
     open,
   };
   result.advancedOpen = hintHasNonDefaultAdvancedSettings(result);
@@ -156,6 +159,7 @@ function stateToPatch(hint: HintState): HintPatch {
     cost_id: hint.cost_id,
     cost_amount: hint.cost_id === null ? 0 : Math.max(0, Math.trunc(hint.cost_amount || 0)),
     backend_function: hint.backend_function?.trim() || null,
+    triggers: hint.triggers.map(value => value.trim()).filter(Boolean),
     puzzle_id: currentPuzzleId.value,
   };
 }
@@ -173,6 +177,7 @@ function stateToDirtySnapshot(hint: HintState) {
     cost_id: patch.cost_id,
     cost_amount: patch.cost_amount,
     backend_function: patch.backend_function,
+    triggers: patch.triggers,
   };
 }
 
@@ -230,6 +235,7 @@ function addHint() {
     cost_id: null,
     cost_amount: 0,
     backend_function: null,
+    triggers: [],
     open: true,
   });
 }
@@ -476,7 +482,8 @@ function validate(): boolean {
       const costValid = patch.cost_id === null || currencies.value.some(currency => currency.id === patch.cost_id);
       const backendFunctionValid = patch.backend_function === null || /^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(patch.backend_function);
       const enableConditionValid = patch.enable_cond === null || patch.enable_cond.length > 0;
-      return patch.title.length > 0 && patch.cooldown >= 0 && patch.cost_amount >= 0 && costValid && backendFunctionValid && enableConditionValid;
+      const triggersValid = patch.triggers.every(value => /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(value));
+      return patch.title.length > 0 && patch.cooldown >= 0 && patch.cost_amount >= 0 && costValid && backendFunctionValid && enableConditionValid && triggersValid;
     })
   );
 }
@@ -797,6 +804,10 @@ onBeforeUnmount(() => {
                                   />
                                   <div v-if="hintBackendWarning(hint)" class="text-xs text-error">{{ t('admin.pages.puzzle.hints.backendDisabledWarning') }}</div>
                                 </div>
+                              </rb-form-field>
+
+                              <rb-form-field row narrow-label :label="t('admin.common.trigger')" :tooltip="t('admin.pages.puzzle.hints.triggerDescription')">
+                                <u-input-tags v-model="hint.triggers" class="w-full font-mono" :disabled="saving || hint.deleting" />
                               </rb-form-field>
                             </div>
                           </template>

@@ -185,7 +185,11 @@ export default defineNuxtPlugin(nuxtApp => {
   });
 
   sync.listen(SyncMessageType.PuzzleHintUnlocked, ({ data }) => {
-    if (useSid().consume(data.sid)) return;
+    const isSelfEcho = useSid().consume(data.sid);
+
+    if (!isSelfEcho && data.unlocks?.length) useGame().updateRoundState();
+    if (!isSelfEcho && data.content_changed && usePuzzle().ref.value) usePuzzle().updateContents();
+    if (isSelfEcho) return;
 
     useCurrency().updateData();
 

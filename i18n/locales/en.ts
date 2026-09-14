@@ -1145,6 +1145,7 @@ export default defineI18nLocale(() => ({
           unlockFunction: 'Function called on unlock',
           backendFunctionDescription: 'If specified, this backend function is called when the hint is purchased. The purchase will fail if the function fails.',
           backendDisabledWarning: 'The puzzle backend is disabled, so this function will not run. It will take effect again when the backend is enabled.',
+          triggerDescription: 'Trigger these keys for the team when this hint is unlocked for the first time.',
           hintContent: 'Hint content',
           playerRequestTicket: 'Allow players to request staff assistance after a configurable delay.',
           enableTicket: 'Enable tickets',

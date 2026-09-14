@@ -236,6 +236,13 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
     updateRoundState();
   }
 });
+
+useSync().listen(SyncMessageType.PuzzleHintUnlocked, ({ data }) => {
+  if (data.content_changed) updateContents();
+  if (data.content_changed || hasPuzzleUnlockInRound(data.unlocks, round.value?.data.id)) {
+    updateRoundState();
+  }
+});
 </script>
 
 <template>

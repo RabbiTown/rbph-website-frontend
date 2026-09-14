@@ -82,6 +82,7 @@ export interface AdminHintData {
   cost_id?: number | null;
   cost_amount: number;
   backend_function?: string | null;
+  triggers: string[];
   puzzle_id: number;
   ctime_at: string;
 }

@@ -1155,6 +1155,7 @@ export default defineI18nLocale(() => ({
           unlockFunction: '解放時の関数',
           backendFunctionDescription: '指定すると、ヒント購入時にこのバックエンド関数を実行します。関数が失敗すると購入も失敗します。',
           backendDisabledWarning: '問題バックエンドが無効のため、この関数は実行されません。',
+          triggerDescription: 'このヒントが初めて解放されたとき、チームに対してこれらのトリガーを発火します。',
           hintContent: 'ヒントの内容',
           playerRequestTicket: '設定した待ち時間の後、プレイヤーがスタッフヒントを利用できます。',
           enableTicket: 'スタッフヒントを有効化',

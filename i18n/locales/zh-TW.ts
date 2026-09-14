@@ -1151,6 +1151,7 @@ export default defineI18nLocale(() => ({
           unlockFunction: '解鎖呼叫函式',
           backendFunctionDescription: '若非空，購買提示時將呼叫對應的後端函式，函式失敗會導致購買失敗。',
           backendDisabledWarning: '謎題後端已停用，此解鎖函式不會執行；重新啟用後即會恢復。',
+          triggerDescription: '首次成功解鎖此提示時，為隊伍觸發這些觸發器。',
           hintContent: '提示內容',
           playerRequestTicket: '玩家在特定情況下可以請求人工提示。',
           enableTicket: '啟用人工提示',

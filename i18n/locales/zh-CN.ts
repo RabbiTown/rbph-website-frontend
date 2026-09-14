@@ -1152,6 +1152,7 @@ export default defineI18nLocale(() => ({
           unlockFunction: '解锁调用函数',
           backendFunctionDescription: '若非空，购买提示时将调用对应的后端函数，函数失败会导致购买失败。',
           backendDisabledWarning: '题目后端已关闭，该解锁调用函数不会生效；重新启用后端后会恢复。',
+          triggerDescription: '首次成功解锁此提示时，为队伍触发这些触发器。',
           hintContent: '提示内容',
           playerRequestTicket: '玩家在特定情况下可以请求人工提示。',
           enableTicket: '启用人工提示',

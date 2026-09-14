@@ -33,6 +33,11 @@ interface SyncDueHintsResponse {
   next_unlock_at?: string | null;
 }
 
+interface HintPurchaseResponse extends RbHintTeamState {
+  unlocks?: { id: number; slug?: string | null; title: string; round_id: number; round_slug?: string | null }[];
+  content_changed?: boolean;
+}
+
 function clearDueHintTimer() {
   if (dueHintTimer) {
     clearTimeout(dueHintTimer);
@@ -127,7 +132,7 @@ async function purchaseHint(hintId: number) {
   try {
     const hint = rawData.value?.data.find(x => x.id === hintId);
 
-    const { data } = await api.post<RbHintTeamState>(
+    const { data } = await api.post<HintPurchaseResponse>(
       `/hints/${hintId}/purchase`,
       { sid },
       {
@@ -163,6 +168,11 @@ async function purchaseHint(hintId: number) {
 
     purchaseConfirmId.value = undefined;
     useCurrency().updateData();
+    if (data.unlocks?.length) useGame().updateRoundState();
+    if (data.content_changed) {
+      await updateData();
+      await usePuzzle().updateContents();
+    }
   } catch (error) {
     sidStore.clear(sid);
     handleError(error, t('hints.purchaseFailed'));
