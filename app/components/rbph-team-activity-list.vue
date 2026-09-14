@@ -21,7 +21,10 @@ interface CurrencyActivityResponse {
   summary: CurrencyActivitySummary | null;
 }
 
-type CurrencyActivityRow = { kind: 'activity'; id: number; activity: RbTeamActivity } | { kind: 'auto'; id: string; delta: number; balance: number } | { kind: 'init'; id: string; delta: number; balance: number };
+type CurrencyActivityRow =
+  | { kind: 'activity'; id: number; activity: RbTeamActivity; automaticGain: number }
+  | { kind: 'auto'; id: string; automaticGain: number; balance: number }
+  | { kind: 'init'; id: string; delta: number; balance: number };
 
 const pageSize = 20;
 const api = useApi();
@@ -30,6 +33,7 @@ const game = useGame().ref;
 const currency = useCurrency().getAllCurrent();
 const { t } = useI18n();
 const activities = ref<RbTeamActivity[]>([]);
+const olderBoundaryActivity = ref<RbTeamActivity | null>(null);
 const currencySummary = ref<CurrencyActivitySummary | null>(null);
 const loading = ref(false);
 const pageIndex = ref(0);
@@ -46,7 +50,7 @@ const paginationTotal = computed(() => {
 });
 
 function activityQuery(before?: number) {
-  const query: Record<string, number | boolean> = { limit: pageSize };
+  const query: Record<string, number | boolean> = { limit: isCurrencyMode.value ? pageSize + 1 : pageSize };
   if (before !== undefined) query.before = before;
   if (props.currencyId !== undefined && props.currencyId !== null) {
     query.currency_id = props.currencyId;
@@ -56,16 +60,21 @@ function activityQuery(before?: number) {
 }
 
 async function fetchActivities(before?: number) {
-  if (!game.value?.id) return [];
+  if (!game.value?.id) return { data: [], hasMore: false };
   if (isCurrencyMode.value) {
-    const { data } = await api.get<CurrencyActivityResponse>(`/games/${game.value.id}/teams/self/activity`, { query: activityQuery(before) });
-    currencySummary.value = data.summary;
-    return data.data;
+    const { data: response } = await api.get<CurrencyActivityResponse>(`/games/${game.value.id}/teams/self/activity`, { query: activityQuery(before) });
+    currencySummary.value = response.summary;
+    olderBoundaryActivity.value = response.data[pageSize] ?? null;
+    return {
+      data: response.data.slice(0, pageSize),
+      hasMore: response.data.length > pageSize,
+    };
   }
 
   const { data } = await api.get<RbTeamActivity[]>(`/games/${game.value.id}/teams/self/activity`, { query: activityQuery(before) });
   currencySummary.value = null;
-  return data;
+  olderBoundaryActivity.value = null;
+  return { data, hasMore: data.length >= pageSize };
 }
 
 async function loadPage(index: number) {
@@ -73,7 +82,8 @@ async function loadPage(index: number) {
 
   loading.value = true;
   try {
-    const data = await fetchActivities(cursors.value[index]);
+    const page = await fetchActivities(cursors.value[index]);
+    const data = page.data;
     if (data.length === 0 && index > 0) {
       reachedEnd.value = true;
       return;
@@ -81,7 +91,7 @@ async function loadPage(index: number) {
 
     activities.value = data;
     pageIndex.value = index;
-    reachedEnd.value = data.length < pageSize;
+    reachedEnd.value = !page.hasMore;
     emit('updated', Date.now());
   } catch (error) {
     handleError(error, t('activity.loadFailed'));
@@ -93,6 +103,7 @@ async function loadPage(index: number) {
 async function reloadActivities() {
   cursors.value = [undefined];
   reachedEnd.value = false;
+  olderBoundaryActivity.value = null;
   currencySummary.value = null;
   await loadPage(0);
 }
@@ -258,6 +269,13 @@ function activityIconClass(activity: RbTeamActivity) {
   return 'size-4 text-muted';
 }
 
+function currencyActivityAmounts(activity: RbTeamActivity) {
+  const delta = Number(activity.data.delta ?? activity.delta_amount ?? 0);
+  const after = Number(activity.data.after ?? 0);
+  const before = Number(activity.data.before ?? after - delta);
+  return { before, after, delta };
+}
+
 watch(
   () => [game.value?.id, props.currencyId] as const,
   () => reloadActivities(),
@@ -270,15 +288,25 @@ const currencyRows = computed<CurrencyActivityRow[]>(() => {
   const selected = selectedCurrency.value;
 
   if (pageIndex.value === 0 && summary && selected && selected.growth !== 0) {
+    const newestBalance = activities.value[0] ? currencyActivityAmounts(activities.value[0]).after : summary.init_amount;
     rows.push({
       kind: 'auto',
       id: `auto-${summary.currency_id}`,
-      delta: summary.current_amount - summary.init_amount - Number(summary.logged_delta),
+      automaticGain: summary.current_amount - newestBalance,
       balance: summary.current_amount,
     });
   }
 
-  rows.push(...activities.value.map(activity => ({ kind: 'activity' as const, id: activity.id, activity })));
+  rows.push(...activities.value.map((activity, index) => {
+    const olderActivity = activities.value[index + 1] ?? olderBoundaryActivity.value;
+    const previousBalance = olderActivity ? currencyActivityAmounts(olderActivity).after : summary?.init_amount ?? 0;
+    return {
+      kind: 'activity' as const,
+      id: activity.id,
+      activity,
+      automaticGain: currencyActivityAmounts(activity).before - previousBalance,
+    };
+  }));
 
   if (reachedEnd.value && summary && summary.init_amount !== 0) {
     rows.push({
@@ -323,10 +351,27 @@ const currencyColumns = computed<TableColumn<CurrencyActivityRow>[]>(() => [
     },
   },
   {
+    accessorKey: 'automaticGain',
+    header: t('activity.automaticGainColumn'),
+    cell: ({ row }) => {
+      if (row.original.kind === 'init') return null;
+      const amount = row.original.automaticGain;
+      const color = amount > 0 ? 'text-success' : amount < 0 ? 'text-warning' : 'text-muted';
+      return h('span', { class: ['font-medium', color] }, formatCurrencyAmount(amount));
+    },
+    meta: {
+      class: {
+        th: 'w-28',
+        td: 'w-28 whitespace-nowrap',
+      },
+    },
+  },
+  {
     accessorKey: 'delta',
     header: t('activity.change'),
     cell: ({ row }) => {
-      const delta = row.original.kind === 'activity' ? Number(row.original.activity.data.delta ?? row.original.activity.delta_amount ?? 0) : row.original.delta;
+      if (row.original.kind === 'auto') return null;
+      const delta = row.original.kind === 'activity' ? currencyActivityAmounts(row.original.activity).delta : row.original.delta;
       const color = delta > 0 ? 'text-success' : delta < 0 ? 'text-warning' : 'text-muted';
       return h('span', { class: ['font-medium', color] }, formatCurrencyAmount(delta));
     },

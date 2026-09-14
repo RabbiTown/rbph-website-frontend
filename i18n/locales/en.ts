@@ -311,6 +311,7 @@ export default defineI18nLocale(() => ({
     },
     title: 'Team activity',
     notifications: 'Notifications',
+    automaticGainColumn: 'Growth',
     change: 'Change',
     balance: 'Balance',
     reasonDetail: 'Reason: {reason}',

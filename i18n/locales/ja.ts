@@ -321,6 +321,7 @@ export default defineI18nLocale(() => ({
     },
     title: 'チームアクティビティ',
     notifications: '通知',
+    automaticGainColumn: '自然増加',
     change: '変動',
     balance: '残高',
     reasonDetail: '理由：{reason}',

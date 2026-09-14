@@ -320,6 +320,7 @@ export default defineI18nLocale(() => ({
     },
     title: '隊伍動態',
     notifications: '通知',
+    automaticGainColumn: '自然增長',
     change: '變動',
     balance: '餘額',
     reasonDetail: '原因：{reason}',

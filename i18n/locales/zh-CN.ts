@@ -321,6 +321,7 @@ export default defineI18nLocale(() => ({
     },
     title: '队伍动态',
     notifications: '通知',
+    automaticGainColumn: '自然增长',
     change: '变动',
     balance: '结余',
     reasonDetail: '原因：{reason}',
