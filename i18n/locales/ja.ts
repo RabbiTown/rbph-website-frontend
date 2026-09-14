@@ -1161,7 +1161,7 @@ export default defineI18nLocale(() => ({
           cooldownOriginDescription: '購入までの待ち時間を、問題の解放時またはヒントの有効化条件を満たした時点のどちらから計算するかを選択します。',
           fromPuzzleUnlock: '問題の解放',
           fromHintEnabled: 'ヒントの有効化',
-          unlockFunction: '解放時の関数',
+          unlockFunction: '関数',
           backendFunctionDescription: '指定すると、ヒント購入時にこのバックエンド関数を実行します。関数が失敗すると購入も失敗します。',
           backendDisabledWarning: '問題バックエンドが無効のため、この関数は実行されません。',
           triggerDescription: 'このヒントが初めて解放されたとき、チームに対してこれらのトリガーを発火します。',

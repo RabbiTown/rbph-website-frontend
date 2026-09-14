@@ -1158,7 +1158,7 @@ export default defineI18nLocale(() => ({
           cooldownOriginDescription: '选择购买冷却从题目解锁时开始计算，或从提示满足启用条件时开始计算。',
           fromPuzzleUnlock: '题目解锁',
           fromHintEnabled: '提示启用',
-          unlockFunction: '解锁调用函数',
+          unlockFunction: '调用函数',
           backendFunctionDescription: '若非空，购买提示时将调用对应的后端函数，函数失败会导致购买失败。',
           backendDisabledWarning: '题目后端已关闭，该解锁调用函数不会生效；重新启用后端后会恢复。',
           triggerDescription: '首次成功解锁此提示时，为队伍触发这些触发器。',

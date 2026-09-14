@@ -671,7 +671,7 @@ onBeforeUnmount(() => {
               @drop="onHintDrop"
             >
               <u-collapsible v-model:open="hint.open" :unmount-on-hide="false">
-                <rbph-collapsible-header class="rounded-lg bg-elevated/60 px-4 py-2 ring ring-default">
+                <rbph-collapsible-header center-title class="rounded-lg bg-elevated/60 px-4 py-2 ring ring-default">
                   <div class="flex min-w-0 flex-1 items-center gap-2">
                     <u-icon name="material-symbols:lightbulb-outline-rounded" class="shrink-0 text-warning" />
                     <u-textarea v-if="hint.open" v-model="hint.title" :rows="1" autoresize :ui="{ base: 'field-sizing-content resize-none' }" class="min-w-0 flex-1 w-full -mx-2.5 -my-1.5 font-medium" :placeholder="t('admin.pages.puzzle.hints.hintTitle')" variant="ghost" :disabled="saving || hint.deleting" @click.stop @keydown.stop />
@@ -681,6 +681,10 @@ onBeforeUnmount(() => {
                   </div>
                   <template #badges>
                     <div class="flex min-w-0 max-w-full flex-wrap gap-1" @click.stop>
+                      <u-badge v-if="Boolean(hint.enable_cond)" variant="soft" color="info" class="shrink-0">
+                        <u-icon name="material-symbols:rule-rounded" class="me-1 size-3.5" />
+                        {{ t('admin.pages.puzzle.hints.enableCondition') }}
+                      </u-badge>
                       <u-badge v-if="hint.cooldown > 0" variant="soft" color="warning" class="shrink-0">
                         <u-icon name="material-symbols:schedule-outline-rounded" class="me-1 size-3.5" />
                         {{ formatTime(hint.cooldown * 1000) }}
@@ -810,30 +814,31 @@ onBeforeUnmount(() => {
                                 </rb-form-field>
                               </div>
 
-                              <rb-form-field v-if="showBackendFunction(hint)" row narrow-label :error="hintBackendWarning(hint) ? true : undefined">
-                                <template #label>
-                                  {{ t('admin.pages.puzzle.hints.unlockFunction') }}
-                                  <rb-tooltip :text="t('admin.pages.puzzle.hints.backendFunctionDescription')">
-                                    <u-icon name="material-symbols:help-outline-rounded" class="size-4 align-middle mb-0.5 ms-1 cursor-help" :class="hintBackendWarning(hint) ? 'text-error' : 'text-secondary'" />
-                                  </rb-tooltip>
-                                </template>
-                                <div class="flex flex-col gap-1">
-                                  <u-input
-                                    v-model="hint.backend_function"
-                                    placeholder="(optional)"
-                                    icon="material-symbols:function-rounded"
-                                    variant="subtle"
-                                    class="w-full max-w-md font-mono"
-                                    :color="hintBackendWarning(hint) ? 'error' : 'neutral'"
-                                    :disabled="saving || hint.deleting"
-                                  />
-                                  <div v-if="hintBackendWarning(hint)" class="text-xs text-error">{{ t('admin.pages.puzzle.hints.backendDisabledWarning') }}</div>
-                                </div>
-                              </rb-form-field>
+                              <div class="grid gap-4" :class="{ 'sm:grid-cols-2': showBackendFunction(hint) }">
+                                <rb-form-field row narrow-label :label="t('admin.common.trigger')" :tooltip="t('admin.pages.puzzle.hints.triggerDescription')">
+                                  <u-input-tags v-model="hint.triggers" class="w-full font-mono" :disabled="saving || hint.deleting" />
+                                </rb-form-field>
 
-                              <rb-form-field row narrow-label :label="t('admin.common.trigger')" :tooltip="t('admin.pages.puzzle.hints.triggerDescription')">
-                                <u-input-tags v-model="hint.triggers" class="w-full font-mono" :disabled="saving || hint.deleting" />
-                              </rb-form-field>
+                                <rb-form-field v-if="showBackendFunction(hint)" row narrow-label :error="hintBackendWarning(hint) ? true : undefined">
+                                  <template #label>
+                                    {{ t('admin.pages.puzzle.hints.unlockFunction') }}
+                                    <rb-tooltip :text="t('admin.pages.puzzle.hints.backendFunctionDescription')">
+                                      <u-icon name="material-symbols:help-outline-rounded" class="size-4 align-middle mb-0.5 ms-1 cursor-help" :class="hintBackendWarning(hint) ? 'text-error' : 'text-secondary'" />
+                                    </rb-tooltip>
+                                  </template>
+                                  <div class="flex flex-col gap-1">
+                                    <u-input
+                                      v-model="hint.backend_function"
+                                      placeholder="(optional)"
+                                      icon="material-symbols:function-rounded"
+                                      class="w-full font-mono"
+                                      :color="hintBackendWarning(hint) ? 'error' : 'neutral'"
+                                      :disabled="saving || hint.deleting"
+                                    />
+                                    <div v-if="hintBackendWarning(hint)" class="text-xs text-error">{{ t('admin.pages.puzzle.hints.backendDisabledWarning') }}</div>
+                                  </div>
+                                </rb-form-field>
+                              </div>
                             </div>
                           </template>
                         </u-collapsible>
@@ -870,7 +875,14 @@ onBeforeUnmount(() => {
             <rb-form-field v-if="ticketEnabled" row narrow-label :label="t('admin.pages.puzzle.hints.cooldown')" :dirty="ticketCooldownDirty" :reset="resetTicketCooldown">
               <div class="flex flex-wrap items-center gap-2">
                 <span class="text-sm text-muted">{{ t('admin.pages.puzzle.hints.puzzleUnlock') }}</span>
-                <u-input-number v-model="ticketCooldown" :min="0" :step="10" :step-snapping="false" orientation="vertical" :format-options="{ style: 'unit', unit: 'second' }" variant="subtle" class="w-40" :disabled="saving" />
+                <rb-input-duration
+                  v-model="ticketCooldown"
+                  :max-seconds="maxCooldownSeconds"
+                  icon="material-symbols:timer-outline-rounded"
+                  variant="subtle"
+                  :disabled="saving"
+                  :aria-label="t('admin.pages.puzzle.hints.cooldown')"
+                />
               </div>
             </rb-form-field>
           </div>

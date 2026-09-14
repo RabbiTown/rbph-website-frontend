@@ -1151,7 +1151,7 @@ export default defineI18nLocale(() => ({
           cooldownOriginDescription: 'Choose whether the purchase cooldown starts when the puzzle is unlocked or when the hint meets its enable condition.',
           fromPuzzleUnlock: 'Puzzle unlock',
           fromHintEnabled: 'Hint enabled',
-          unlockFunction: 'Function called on unlock',
+          unlockFunction: 'Function',
           backendFunctionDescription: 'If specified, this backend function is called when the hint is purchased. The purchase will fail if the function fails.',
           backendDisabledWarning: 'The puzzle backend is disabled, so this function will not run. It will take effect again when the backend is enabled.',
           triggerDescription: 'Trigger these keys for the team when this hint is unlocked for the first time.',

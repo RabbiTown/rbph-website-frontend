@@ -1157,7 +1157,7 @@ export default defineI18nLocale(() => ({
           cooldownOriginDescription: '選擇購買冷卻從謎題解鎖時開始計算，或從提示滿足啟用條件時開始計算。',
           fromPuzzleUnlock: '謎題解鎖',
           fromHintEnabled: '提示啟用',
-          unlockFunction: '解鎖呼叫函式',
+          unlockFunction: '呼叫函式',
           backendFunctionDescription: '若非空，購買提示時將呼叫對應的後端函式，函式失敗會導致購買失敗。',
           backendDisabledWarning: '謎題後端已停用，此解鎖函式不會執行；重新啟用後即會恢復。',
           triggerDescription: '首次成功解鎖此提示時，為隊伍觸發這些觸發器。',
