@@ -5,10 +5,11 @@ interface HintState {
   id: number | null;
   sort: number;
   title: string;
-  title_hidden: boolean;
   content: string;
   content_type: RbContentType;
   cooldown: number;
+  title_display_condition: AdminHintDisplayCondition;
+  display_condition: AdminHintDisplayCondition;
   enable_cond: string | null;
   cooldown_after_enable: boolean;
   cost_id: number | null;
@@ -23,10 +24,11 @@ interface HintState {
 interface HintPatch {
   sort: number;
   title: string;
-  title_hidden: boolean;
   content: string;
   content_type: RbContentType;
   cooldown: number;
+  title_display_condition: AdminHintDisplayCondition;
+  display_condition: AdminHintDisplayCondition;
   enable_cond: string | null;
   cooldown_after_enable: boolean;
   cost_id: number | null;
@@ -86,6 +88,13 @@ const currencyItems = computed(() => [
   })),
 ]);
 
+const displayConditionItems = computed(() => [
+  { label: t('admin.pages.puzzle.hints.displayConditions.always'), value: AdminHintDisplayCondition.Always, icon: 'material-symbols:visibility-outline-rounded' },
+  { label: t('admin.pages.puzzle.hints.displayConditions.enabled'), value: AdminHintDisplayCondition.Enabled, icon: 'material-symbols:rule-rounded' },
+  { label: t('admin.pages.puzzle.hints.displayConditions.cooldown'), value: AdminHintDisplayCondition.Cooldown, icon: 'material-symbols:timer-outline-rounded' },
+  { label: t('admin.pages.puzzle.hints.displayConditions.purchasable'), value: AdminHintDisplayCondition.Purchasable, icon: 'material-symbols:shopping-cart-checkout-rounded' },
+]);
+
 function selectedCurrencyIcon(id: number | null) {
   return currencyItems.value.find(item => item.value === id)?.icon;
 }
@@ -121,8 +130,8 @@ const activeHints = computed(() => state.value.filter(hint => !hint.deleting));
 const orderedHints = computed(() => [...state.value].sort((a, b) => a.sort - b.sort || (a.id ?? 0) - (b.id ?? 0)));
 const orderedActiveHints = computed(() => [...activeHints.value].sort((a, b) => a.sort - b.sort || (a.id ?? 0) - (b.id ?? 0)));
 
-function hintHasNonDefaultAdvancedSettings(hint: Pick<HintState, 'title_hidden' | 'enable_cond' | 'cooldown_after_enable' | 'backend_function' | 'triggers'>) {
-  return !hint.title_hidden || hint.enable_cond !== null || hint.cooldown_after_enable || Boolean(hint.backend_function?.trim()) || hint.triggers.length > 0;
+function hintHasNonDefaultAdvancedSettings(hint: Pick<HintState, 'title_display_condition' | 'display_condition' | 'enable_cond' | 'cooldown_after_enable' | 'backend_function' | 'triggers'>) {
+  return hint.title_display_condition !== AdminHintDisplayCondition.Cooldown || hint.display_condition !== AdminHintDisplayCondition.Enabled || hint.enable_cond !== null || hint.cooldown_after_enable || Boolean(hint.backend_function?.trim()) || hint.triggers.length > 0;
 }
 
 function hintToState(hint: AdminHintData, open = false): HintState {
@@ -130,10 +139,11 @@ function hintToState(hint: AdminHintData, open = false): HintState {
     id: hint.id,
     sort: hint.sort,
     title: hint.title,
-    title_hidden: hint.title_hidden,
     content: hint.content,
     content_type: hint.content_type,
     cooldown: hint.cooldown,
+    title_display_condition: hint.title_display_condition,
+    display_condition: hint.display_condition,
     enable_cond: hint.enable_cond ?? null,
     cooldown_after_enable: hint.cooldown_after_enable ?? false,
     cost_id: hint.cost_id ?? null,
@@ -150,10 +160,11 @@ function stateToPatch(hint: HintState): HintPatch {
   return {
     sort: Math.trunc(hint.sort || 0),
     title: hint.title.trim(),
-    title_hidden: hint.title_hidden,
     content: hint.content,
     content_type: RbContentType.Markdown,
     cooldown: Math.max(0, Math.trunc(hint.cooldown || 0)),
+    title_display_condition: hint.title_display_condition,
+    display_condition: hint.display_condition,
     enable_cond: hint.enable_cond,
     cooldown_after_enable: hint.enable_cond !== null && hint.cooldown_after_enable,
     cost_id: hint.cost_id,
@@ -168,10 +179,11 @@ function stateToDirtySnapshot(hint: HintState) {
   const patch = stateToPatch(hint);
   return {
     title: patch.title,
-    title_hidden: patch.title_hidden,
     content: patch.content,
     content_type: patch.content_type,
     cooldown: patch.cooldown,
+    title_display_condition: patch.title_display_condition,
+    display_condition: patch.display_condition,
     enable_cond: patch.enable_cond,
     cooldown_after_enable: patch.cooldown_after_enable,
     cost_id: patch.cost_id,
@@ -226,10 +238,11 @@ function addHint() {
     id: nextDraftId--,
     sort: nextSort,
     title: '',
-    title_hidden: true,
     content: '',
     content_type: RbContentType.Markdown,
     cooldown: 0,
+    title_display_condition: AdminHintDisplayCondition.Cooldown,
+    display_condition: AdminHintDisplayCondition.Enabled,
     enable_cond: null,
     cooldown_after_enable: false,
     cost_id: null,
@@ -482,8 +495,9 @@ function validate(): boolean {
       const costValid = patch.cost_id === null || currencies.value.some(currency => currency.id === patch.cost_id);
       const backendFunctionValid = patch.backend_function === null || /^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(patch.backend_function);
       const enableConditionValid = patch.enable_cond === null || patch.enable_cond.length > 0;
+      const displayConditionsValid = displayConditionItems.value.some(item => item.value === patch.title_display_condition) && displayConditionItems.value.some(item => item.value === patch.display_condition);
       const triggersValid = patch.triggers.every(value => /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(value));
-      return patch.title.length > 0 && patch.cooldown >= 0 && patch.cost_amount >= 0 && costValid && backendFunctionValid && enableConditionValid && triggersValid;
+      return patch.title.length > 0 && patch.cooldown >= 0 && patch.cost_amount >= 0 && costValid && backendFunctionValid && enableConditionValid && displayConditionsValid && triggersValid;
     })
   );
 }
@@ -702,7 +716,7 @@ onBeforeUnmount(() => {
                     <div class="flex flex-col gap-4">
                       <div>
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-                          <rb-form-field row narrow-label class="min-w-0 flex-1" :label="t('admin.pages.puzzle.hints.openTime')">
+                          <rb-form-field row narrow-label class="min-w-0 flex-1" :label="t('admin.pages.puzzle.hints.cooldown')">
                             <div class="flex flex-wrap items-center gap-2">
                               <span class="text-sm text-muted">{{ t('admin.pages.puzzle.hints.puzzleUnlock') }}</span>
                               <rb-input-duration
@@ -711,7 +725,7 @@ onBeforeUnmount(() => {
                                 icon="material-symbols:timer-outline-rounded"
                                 variant="subtle"
                                 :disabled="saving || hint.deleting"
-                                :aria-label="t('admin.pages.puzzle.hints.openTime')"
+                                :aria-label="t('admin.pages.puzzle.hints.cooldown')"
                               />
                             </div>
                           </rb-form-field>
@@ -745,27 +759,38 @@ onBeforeUnmount(() => {
                                 <rbph-content-block-visibility-editor v-model="hint.enable_cond" :game-id="currentGameId" :current-puzzle-id="currentPuzzleId" :disabled="saving || hint.deleting" />
                               </rb-form-field>
 
-                              <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-                                <rb-form-field row narrow-label class="min-w-0 flex-1" :label="t('admin.pages.puzzle.hints.notOpen')">
-                                  <u-field-group>
+                              <div class="grid gap-4 sm:grid-cols-2">
+                                <rb-form-field row narrow-label :label="t('admin.pages.puzzle.hints.displayCondition')" :tooltip="t('admin.pages.puzzle.hints.displayConditionDescription')">
+                                  <u-field-group class="flex-wrap">
                                     <u-button
-                                      :variant="hint.title_hidden ? 'outline' : 'solid'"
-                                      icon="material-symbols:visibility-outline-rounded"
-                                      :label="t('admin.pages.puzzle.hints.showTitle')"
+                                      v-for="item in displayConditionItems"
+                                      :key="item.value"
+                                      :variant="hint.display_condition === item.value ? 'solid' : 'outline'"
+                                      :icon="item.icon"
+                                      :label="item.label"
                                       :disabled="saving || hint.deleting"
-                                      @click="hint.title_hidden = false"
-                                    />
-                                    <u-button
-                                      :variant="hint.title_hidden ? 'solid' : 'outline'"
-                                      icon="material-symbols:visibility-off-outline-rounded"
-                                      :label="t('admin.pages.puzzle.hints.hideTitle')"
-                                      :disabled="saving || hint.deleting"
-                                      @click="hint.title_hidden = true"
+                                      @click="hint.display_condition = item.value"
                                     />
                                   </u-field-group>
                                 </rb-form-field>
 
-                                <rb-form-field v-if="Boolean(hint.enable_cond)" row narrow-label class="min-w-0 flex-1" :label="t('admin.pages.puzzle.hints.cooldownOrigin')" :tooltip="t('admin.pages.puzzle.hints.cooldownOriginDescription')">
+                                <rb-form-field row narrow-label :label="t('admin.pages.puzzle.hints.titleDisplayCondition')" :tooltip="t('admin.pages.puzzle.hints.titleDisplayConditionDescription')">
+                                  <u-field-group class="flex-wrap">
+                                    <u-button
+                                      v-for="item in displayConditionItems"
+                                      :key="item.value"
+                                      :variant="hint.title_display_condition === item.value ? 'solid' : 'outline'"
+                                      :icon="item.icon"
+                                      :label="item.label"
+                                      :disabled="saving || hint.deleting"
+                                      @click="hint.title_display_condition = item.value"
+                                    />
+                                  </u-field-group>
+                                </rb-form-field>
+                              </div>
+
+                              <div v-if="Boolean(hint.enable_cond)" class="flex flex-col gap-4 sm:flex-row sm:items-start">
+                                <rb-form-field row narrow-label class="min-w-0 flex-1" :label="t('admin.pages.puzzle.hints.cooldownOrigin')" :tooltip="t('admin.pages.puzzle.hints.cooldownOriginDescription')">
                                   <u-field-group>
                                     <u-button
                                       :variant="hint.cooldown_after_enable ? 'outline' : 'solid'"
@@ -842,7 +867,7 @@ onBeforeUnmount(() => {
 
             <u-separator v-if="ticketEnabled" />
 
-            <rb-form-field v-if="ticketEnabled" row narrow-label :label="t('admin.pages.puzzle.hints.openTime')" :dirty="ticketCooldownDirty" :reset="resetTicketCooldown">
+            <rb-form-field v-if="ticketEnabled" row narrow-label :label="t('admin.pages.puzzle.hints.cooldown')" :dirty="ticketCooldownDirty" :reset="resetTicketCooldown">
               <div class="flex flex-wrap items-center gap-2">
                 <span class="text-sm text-muted">{{ t('admin.pages.puzzle.hints.puzzleUnlock') }}</span>
                 <u-input-number v-model="ticketCooldown" :min="0" :step="10" :step-snapping="false" orientation="vertical" :format-options="{ style: 'unit', unit: 'second' }" variant="subtle" class="w-40" :disabled="saving" />

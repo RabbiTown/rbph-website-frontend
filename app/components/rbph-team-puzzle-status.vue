@@ -203,8 +203,8 @@ function hintPrice(hint: StaffPuzzleHintStatus) {
 }
 
 function hintRemaining(hint: StaffPuzzleHintStatus) {
-  if (!hint.available_at) return 0;
-  return Math.max(Date.parse(hint.available_at) - currentTime.value, 0);
+  if (!hint.cooldown_until) return 0;
+  return Math.max(Date.parse(hint.cooldown_until) - currentTime.value, 0);
 }
 
 function hintStatusLabel(hint: StaffPuzzleHintStatus) {
@@ -346,8 +346,8 @@ watch(wideInfoLayout, value => {
                         <dd class="text-right text-highlighted">{{ hintPrice(hint) }}</dd>
                       </div>
                       <div class="flex items-start justify-between gap-3">
-                        <dt class="text-muted">{{ t('components.teamPuzzleStatus.hintAvailableAt') }}</dt>
-                        <dd class="text-right text-highlighted">{{ hint.available_at ? formatDate(hint.available_at) : t('components.teamPuzzleStatus.hintNotEnabled') }}</dd>
+                        <dt class="text-muted">{{ t('components.teamPuzzleStatus.hintCooldownUntil') }}</dt>
+                        <dd class="text-right text-highlighted">{{ hint.cooldown_until ? formatDate(hint.cooldown_until) : t('components.teamPuzzleStatus.hintNotEnabled') }}</dd>
                       </div>
                       <div class="flex items-start justify-between gap-3">
                         <dt class="text-muted">{{ t('components.teamPuzzleStatus.hintUnlockedAt') }}</dt>

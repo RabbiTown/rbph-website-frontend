@@ -278,9 +278,9 @@ export function formatCurrencyPenaltySuffix(penalty: RbCurrencyPenalty[] | undef
 export interface RbHint {
   id: number;
   title?: string | null;
-  title_hidden: boolean;
   cooldown: number;
-  available_at: string;
+  enabled: boolean;
+  cooldown_until?: string | null;
   cost_id?: number | null;
   cost_amount: number;
 }
@@ -295,6 +295,7 @@ export interface RbHintTeamState {
 export interface RbPuzzleHintTeamData {
   data: RbHint[];
   state: RbHintTeamState[];
+  next_cooldown_at?: string | null;
 }
 
 export interface RbLeaderBoardTeam {
@@ -706,7 +707,7 @@ export interface StaffPuzzleHintStatus {
   cost_prec?: number | null;
   cost_amount: number;
   enabled: boolean;
-  available_at?: string | null;
+  cooldown_until?: string | null;
   unlocked: boolean;
   unlocked_at?: string | null;
 }

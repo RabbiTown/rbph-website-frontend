@@ -12,8 +12,8 @@ const sidStore = useSid();
 const currentTime = useCurrentTimeSec();
 
 const rawData = ref<RbPuzzleHintTeamData>();
-const syncingDueHints = ref(false);
-let dueHintTimer: ReturnType<typeof setTimeout> | undefined = undefined;
+const syncingHintCooldowns = ref(false);
+let hintCooldownTimer: ReturnType<typeof setTimeout> | undefined = undefined;
 const pendingPurchaseHintIds = new Set<number>();
 
 const processedData = computed(() => {
@@ -28,9 +28,9 @@ const processedData = computed(() => {
   });
 });
 
-interface SyncDueHintsResponse {
+interface SyncHintCooldownsResponse {
   server_time: string;
-  next_unlock_at?: string | null;
+  next_cooldown_at?: string | null;
 }
 
 interface HintPurchaseResponse extends RbHintTeamState {
@@ -38,59 +38,52 @@ interface HintPurchaseResponse extends RbHintTeamState {
   content_changed?: boolean;
 }
 
-function clearDueHintTimer() {
-  if (dueHintTimer) {
-    clearTimeout(dueHintTimer);
-    dueHintTimer = undefined;
+function clearHintCooldownTimer() {
+  if (hintCooldownTimer) {
+    clearTimeout(hintCooldownTimer);
+    hintCooldownTimer = undefined;
   }
 }
 
-function hintUnlockAt(hint: RbHint) {
-  const availableAt = new Date(hint.available_at).getTime();
-  return Number.isNaN(availableAt) ? Infinity : availableAt;
+function hintCooldownUntil(hint: RbHint) {
+  if (!hint.cooldown_until) return Infinity;
+  const cooldownUntil = new Date(hint.cooldown_until).getTime();
+  return Number.isNaN(cooldownUntil) ? Infinity : cooldownUntil;
 }
 
-function nextLocalUnlockAt() {
-  if (!rawData.value) return Infinity;
-  return rawData.value.data.reduce((next, hint) => {
-    const state = rawData.value?.state.find(item => item.id === hint.id);
-    if (state || !hint.title_hidden || hint.title !== null) return next;
-    return Math.min(next, hintUnlockAt(hint));
-  }, Infinity);
-}
-
-function scheduleDueHintSync(nextUnlockAt: string | null | undefined = undefined) {
-  clearDueHintTimer();
+function scheduleHintCooldownSync(nextCooldownAt: string | null | undefined) {
+  clearHintCooldownTimer();
   if (!props.puzzleId || !rawData.value) return;
-  if (nextUnlockAt === null) return;
+  if (!nextCooldownAt) return;
 
-  const target = nextUnlockAt === undefined ? nextLocalUnlockAt() : new Date(nextUnlockAt).getTime();
+  const target = new Date(nextCooldownAt).getTime();
   if (!Number.isFinite(target)) return;
 
   const delay = Math.max(target - currentTime.value + 250, 0);
-  dueHintTimer = setTimeout(
+  hintCooldownTimer = setTimeout(
     () => {
-      syncDueHints();
+      syncHintCooldowns();
     },
     Math.min(delay, 2_147_483_647),
   );
 }
 
-async function syncDueHints() {
-  if (!props.puzzleId || syncingDueHints.value) return;
+async function syncHintCooldowns() {
+  if (!props.puzzleId || syncingHintCooldowns.value) return;
 
-  syncingDueHints.value = true;
+  syncingHintCooldowns.value = true;
   try {
-    const { data } = await api.post<SyncDueHintsResponse>(`/puzzles/${props.puzzleId}/hints/sync`, {});
+    const { data } = await api.post<SyncHintCooldownsResponse>(`/puzzles/${props.puzzleId}/hints/sync`, {});
     useSyncTime().syncWith(new Date(data.server_time));
+    scheduleHintCooldownSync(data.next_cooldown_at);
     await updateData();
   } catch (error) {
-    console.warn('Failed to sync due hints', error);
-    dueHintTimer = setTimeout(() => {
-      syncDueHints();
+    console.warn('Failed to sync hint cooldowns', error);
+    hintCooldownTimer = setTimeout(() => {
+      syncHintCooldowns();
     }, 15_000);
   } finally {
-    syncingDueHints.value = false;
+    syncingHintCooldowns.value = false;
     flushPendingHintPurchases();
   }
 }
@@ -106,7 +99,7 @@ async function updateData(newId: number | undefined = undefined) {
       if (token !== fetchToken) return;
 
       rawData.value = data;
-      scheduleDueHintSync();
+      scheduleHintCooldownSync(data.next_cooldown_at);
     } catch (error) {
       handleError(error, t('hints.getFailed'));
     }
@@ -117,13 +110,13 @@ const purchaseLoading = ref(false);
 const purchaseConfirmId = ref<number>();
 
 async function purchaseHint(hintId: number) {
-  if (syncingDueHints.value) {
+  if (syncingHintCooldowns.value) {
     pendingPurchaseHintIds.add(hintId);
     return;
   }
 
   const target = rawData.value?.data.find(hint => hint.id === hintId);
-  if (purchaseLoading.value || !target || calcCooldown(target) > 0 || !checkEnough(target) || rawData.value?.state.some(hint => hint.id === hintId)) return;
+  if (purchaseLoading.value || !target || !target.enabled || calcCooldown(target) > 0 || !checkEnough(target) || rawData.value?.state.some(hint => hint.id === hintId)) return;
   const api = useApi();
   const sid = sidStore.create('hint-purchase');
 
@@ -182,7 +175,7 @@ async function purchaseHint(hintId: number) {
 }
 
 async function flushPendingHintPurchases() {
-  while (!syncingDueHints.value && !purchaseLoading.value && pendingPurchaseHintIds.size > 0) {
+  while (!syncingHintCooldowns.value && !purchaseLoading.value && pendingPurchaseHintIds.size > 0) {
     const hintId = pendingPurchaseHintIds.values().next().value;
     if (hintId === undefined) return;
 
@@ -198,13 +191,13 @@ function checkEnough(hint: RbHint): boolean {
 }
 
 function calcCooldown(hint: RbHint): number {
-  return Math.max(hintUnlockAt(hint) - currentTime.value, 0);
+  return Math.max(hintCooldownUntil(hint) - currentTime.value, 0);
 }
 
 watch(
   () => props.puzzleId,
   async new_id => {
-    clearDueHintTimer();
+    clearHintCooldownTimer();
     pendingPurchaseHintIds.clear();
     purchaseConfirmId.value = undefined;
     rawData.value = undefined;
@@ -215,7 +208,7 @@ watch(
 
 function onVisibilityChange() {
   if (document.visibilityState === 'visible') {
-    syncDueHints();
+    syncHintCooldowns();
   }
 }
 
@@ -224,7 +217,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  clearDueHintTimer();
+  clearHintCooldownTimer();
   pendingPurchaseHintIds.clear();
   document.removeEventListener('visibilitychange', onVisibilityChange);
 });
@@ -264,7 +257,7 @@ defineExpose({
       <template #title>{{ hint.displayTitle }}</template>
       <template v-if="!hint.state" #actions>
         <u-tooltip
-          v-if="!calcCooldown(hint)"
+          v-if="hint.enabled && !calcCooldown(hint)"
           :disabled="checkEnough(hint)"
           arrow
           :text="t('hints.needMore', { amount: `${intPrecString(hint.cost_amount - (currency[hint.cost_id ?? 0]?.current || 0), currency[hint.cost_id ?? 0]?.prec || 0)} ${currency[hint.cost_id ?? 0]?.name}` })"
@@ -285,8 +278,11 @@ defineExpose({
             </template>
           </u-popover>
         </u-tooltip>
-        <u-tooltip v-else :disabled="checkEnough(hint)" arrow :text="t('hints.waitOver')">
+        <u-tooltip v-else-if="hint.enabled" arrow :text="t('hints.cooldownPending')">
           <u-button variant="soft" size="xs" icon="material-symbols:hourglass-outline-rounded" :disabled="true"> {{ formatTime(calcCooldown(hint)) }} </u-button>
+        </u-tooltip>
+        <u-tooltip v-else arrow :text="t('hints.notEnabledDescription')">
+          <u-button variant="soft" size="xs" icon="material-symbols:block-outline-rounded" :disabled="true">{{ t('hints.notEnabled') }}</u-button>
         </u-tooltip>
       </template>
       <rbph-content v-if="hint.state" :content="hint.state" />
