@@ -529,8 +529,9 @@ export default defineI18nLocale(() => ({
     },
     transit: {
       headTitle: 'ゲームを選択 - RBPH',
+      noGamesHeadTitle: 'ゲームはありません - RBPH',
       title: 'ゲームを選択',
-      noGames: '公開中のゲームはありません',
+      noGames: 'ゲームはありません',
       login: 'ログイン',
     },
     logout: {
@@ -994,6 +995,7 @@ export default defineI18nLocale(() => ({
       maxConcurrentConnections: '同時接続数の上限',
       maintenanceMode: 'メンテナンスモード',
       maintenanceMessage: 'メンテナンスメッセージ',
+      noGameMessage: 'ゲームなしメッセージ',
       userBio: '自己紹介',
       staff: 'スタッフ',
       userManagementTitle: 'ユーザー - RBPH管理画面',
@@ -1587,6 +1589,8 @@ export default defineI18nLocale(() => ({
         footerAdditionalInfo: 'フッター追加情報',
         footerAdditionalInfoDescription: '公開ページのフッターに表示する Markdown コンテンツです。空欄の場合は表示されません。',
         footerAdditionalInfoPlaceholder: '表示しない',
+        statusPages: 'ステータスページ',
+        noGameMessageDescription: '公開中のゲームがないときに「ゲームはありません」ページへ表示します。空欄の場合は表示しません。',
         enableMaintenanceMode: 'メンテナンスモードを有効化',
         maintenanceDescription: 'ユーザーとスタッフはプラットフォームを利用できなくなります。管理者は引き続きアクセスできます。',
       },

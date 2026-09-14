@@ -3,6 +3,7 @@ export interface SystemStatus {
   require_email_verification: boolean;
   leaderboard_refresh_interval_seconds: number;
   footer_additional_info?: string;
+  no_game_message?: string;
   maintenance_enabled: boolean;
   maintenance_message?: string;
 }
@@ -18,6 +19,7 @@ export function useSystemStatus() {
       require_email_verification: state.value?.require_email_verification ?? false,
       leaderboard_refresh_interval_seconds: state.value?.leaderboard_refresh_interval_seconds ?? 5,
       footer_additional_info: state.value?.footer_additional_info,
+      no_game_message: state.value?.no_game_message,
       maintenance_enabled: true,
       maintenance_message: message,
     };

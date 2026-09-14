@@ -519,8 +519,9 @@ export default defineI18nLocale(() => ({
     },
     transit: {
       headTitle: 'Choose game - RBPH',
+      noGamesHeadTitle: 'No games - RBPH',
       title: 'Choose game',
-      noGames: 'No public games',
+      noGames: 'NO GAMES',
       login: 'Log in',
     },
     logout: {
@@ -984,6 +985,7 @@ export default defineI18nLocale(() => ({
       maxConcurrentConnections: 'Maximum concurrent connections',
       maintenanceMode: 'Maintenance mode',
       maintenanceMessage: 'Maintenance message',
+      noGameMessage: 'No-game message',
       userBio: 'Bio',
       staff: 'Staff',
       userManagementTitle: 'User Management - RBPH Admin',
@@ -1580,6 +1582,8 @@ export default defineI18nLocale(() => ({
         footerAdditionalInfo: 'Additional footer information',
         footerAdditionalInfoDescription: 'Markdown shown in the public footer. Leave blank to hide it.',
         footerAdditionalInfoPlaceholder: 'Not displayed',
+        statusPages: 'Status pages',
+        noGameMessageDescription: 'Shown on the no-games page when there are no public games. Leave blank to hide it.',
         enableMaintenanceMode: 'Enable maintenance mode',
         maintenanceDescription: 'Users and staff will be unable to use the platform. Admins will retain access.',
       },

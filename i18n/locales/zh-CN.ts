@@ -529,8 +529,9 @@ export default defineI18nLocale(() => ({
     },
     transit: {
       headTitle: '选择比赛 - RBPH',
+      noGamesHeadTitle: '暂无比赛 - RBPH',
       title: '选择比赛',
-      noGames: '暂无公开活动',
+      noGames: '暂无比赛',
       login: '登录',
     },
     logout: {
@@ -991,6 +992,7 @@ export default defineI18nLocale(() => ({
       maxConcurrentConnections: '最大并发连接',
       maintenanceMode: '维护模式',
       maintenanceMessage: '维护提示',
+      noGameMessage: '无比赛提示',
       userBio: '个人简介',
       staff: '工作人员',
       userManagementTitle: '用户管理 - RBPH 管理后台',
@@ -1584,6 +1586,8 @@ export default defineI18nLocale(() => ({
         footerAdditionalInfo: '页脚附加信息',
         footerAdditionalInfoDescription: '显示在前台页脚中的 Markdown 内容。留空则不显示。',
         footerAdditionalInfoPlaceholder: '不显示',
+        statusPages: '状态页面',
+        noGameMessageDescription: '没有公开比赛时显示在“暂无比赛”页面中的提示。留空则不显示。',
         enableMaintenanceMode: '启用维护模式',
         maintenanceDescription: '普通用户和工作人员将无法使用平台，管理员可继续访问。',
       },

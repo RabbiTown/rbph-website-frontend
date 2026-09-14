@@ -10,6 +10,7 @@ interface AdminSystemSettings {
   max_websocket_connections: number;
   leaderboard_refresh_interval_seconds: number;
   footer_additional_info: string;
+  no_game_message: string;
   maintenance_enabled: boolean;
   maintenance_message: string;
   updated_by?: number | null;
@@ -46,6 +47,7 @@ const draft = reactive({
   max_websocket_connections: 5,
   leaderboard_refresh_interval_seconds: 5,
   footer_additional_info: '',
+  no_game_message: '',
   maintenance_enabled: false,
   maintenance_message: '',
 });
@@ -62,11 +64,12 @@ const dirty = computed(() => {
       draft.max_websocket_connections !== current.max_websocket_connections ||
       draft.leaderboard_refresh_interval_seconds !== current.leaderboard_refresh_interval_seconds ||
       draft.footer_additional_info !== current.footer_additional_info ||
+      draft.no_game_message !== current.no_game_message ||
       draft.maintenance_enabled !== current.maintenance_enabled ||
       draft.maintenance_message !== current.maintenance_message),
   );
 });
-const valid = computed(() => draft.max_sessions >= 1 && draft.max_sessions <= 20 && draft.max_websocket_connections >= 1 && draft.max_websocket_connections <= 20 && draft.leaderboard_refresh_interval_seconds >= 1 && draft.leaderboard_refresh_interval_seconds <= 86400 && draft.footer_additional_info.length <= 1000 && draft.maintenance_message.length <= 500);
+const valid = computed(() => draft.max_sessions >= 1 && draft.max_sessions <= 20 && draft.max_websocket_connections >= 1 && draft.max_websocket_connections <= 20 && draft.leaderboard_refresh_interval_seconds >= 1 && draft.leaderboard_refresh_interval_seconds <= 86400 && draft.footer_additional_info.length <= 1000 && draft.no_game_message.length <= 500 && draft.maintenance_message.length <= 500);
 
 function syncDraft(current: AdminSystemSettings) {
   draft.registration_open = current.registration_open;
@@ -77,6 +80,7 @@ function syncDraft(current: AdminSystemSettings) {
   draft.max_websocket_connections = current.max_websocket_connections;
   draft.leaderboard_refresh_interval_seconds = current.leaderboard_refresh_interval_seconds;
   draft.footer_additional_info = current.footer_additional_info;
+  draft.no_game_message = current.no_game_message;
   draft.maintenance_enabled = current.maintenance_enabled;
   draft.maintenance_message = current.maintenance_message;
 }
@@ -117,6 +121,7 @@ async function save() {
         max_websocket_connections: draft.max_websocket_connections,
         leaderboard_refresh_interval_seconds: draft.leaderboard_refresh_interval_seconds,
         footer_additional_info: draft.footer_additional_info.trim(),
+        no_game_message: draft.no_game_message.trim(),
         maintenance_enabled: draft.maintenance_enabled,
         maintenance_message: draft.maintenance_message.trim(),
       },
@@ -279,8 +284,19 @@ onBeforeUnmount(() => dirtyToast.clear());
               </section>
 
               <section class="space-y-4">
-                <h3 class="text-lg font-semibold text-highlighted">{{ t('admin.common.maintenanceMode') }}</h3>
+                <h3 class="text-lg font-semibold text-highlighted">{{ t('admin.pages.settings.statusPages') }}</h3>
                 <div class="space-y-3 rounded-md bg-elevated/60 p-4 ring ring-default">
+                  <rb-form-field
+                    row
+                    :label="t('admin.common.noGameMessage')"
+                    icon="material-symbols:event-busy-outline-rounded"
+                    :description="t('admin.pages.settings.noGameMessageDescription')"
+                    :dirty="draft.no_game_message !== settings.no_game_message"
+                    :reset="() => (draft.no_game_message = settings!.no_game_message)"
+                  >
+                    <u-textarea v-model="draft.no_game_message" class="w-full sm:w-64" :rows="4" :maxlength="500" :disabled="saving" />
+                  </rb-form-field>
+                  <u-separator />
                   <rb-form-field
                     row
                     :label="t('admin.pages.settings.enableMaintenanceMode')"

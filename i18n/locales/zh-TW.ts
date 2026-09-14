@@ -528,8 +528,9 @@ export default defineI18nLocale(() => ({
     },
     transit: {
       headTitle: '選擇比賽 - RBPH',
+      noGamesHeadTitle: '暫無比賽 - RBPH',
       title: '選擇比賽',
-      noGames: '暫無公開活動',
+      noGames: '暫無比賽',
       login: '登入',
     },
     logout: {
@@ -990,6 +991,7 @@ export default defineI18nLocale(() => ({
       maxConcurrentConnections: '同時連線數上限',
       maintenanceMode: '維護模式',
       maintenanceMessage: '維護提示',
+      noGameMessage: '無比賽提示',
       userBio: '個人簡介',
       staff: '工作人員',
       userManagementTitle: '使用者管理 - RBPH 管理介面',
@@ -1583,6 +1585,8 @@ export default defineI18nLocale(() => ({
         footerAdditionalInfo: '頁尾附加資訊',
         footerAdditionalInfoDescription: '顯示在前台頁尾中的 Markdown 內容。留空則不顯示。',
         footerAdditionalInfoPlaceholder: '不顯示',
+        statusPages: '狀態頁面',
+        noGameMessageDescription: '沒有公開比賽時顯示於「暫無比賽」頁面的提示。留空則不顯示。',
         enableMaintenanceMode: '啟用維護模式',
         maintenanceDescription: '普通使用者和工作人員將無法使用平台，管理員可繼續存取。',
       },

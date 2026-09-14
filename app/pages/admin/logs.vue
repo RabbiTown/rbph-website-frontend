@@ -136,6 +136,7 @@ function logView(log: AdminLogData) {
           leaderboard_refresh_interval_seconds: t('admin.pages.settings.leaderboardRefreshInterval'),
           maintenance_enabled: t('admin.common.maintenanceMode'),
           maintenance_message: t('admin.common.maintenanceMessage'),
+          no_game_message: t('admin.common.noGameMessage'),
         }),
       };
     case 'user.profile_updated':

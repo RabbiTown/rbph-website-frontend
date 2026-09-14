@@ -1,15 +1,15 @@
 <script setup lang="ts">
 const { t } = useI18n();
-
-useHead({
-  titleTemplate: computed(() => t('pages.transit.headTitle')),
-});
-
 const api = useApi();
 const userMgr = useUser();
+const systemStatus = useSystemStatus();
 const games = ref<RbGame[]>([]);
 const enteringGameId = ref<number>();
 const loading = ref(true);
+
+useHead({
+  titleTemplate: computed(() => (!loading.value && games.value.length === 0 ? t('pages.transit.noGamesHeadTitle') : t('pages.transit.headTitle'))),
+});
 
 async function enterGame(game: RbGame, replace = false) {
   if (enteringGameId.value) return;
@@ -40,7 +40,10 @@ async function initialize() {
       redirecting = true;
       await enterGame(selectedGame, true);
     } else {
-      const { data } = await api.get<RbGame[]>('/games/active');
+      const [{ data }] = await Promise.all([
+        api.get<RbGame[]>('/games/active'),
+        systemStatus.refresh().catch(error => console.warn('Failed to load system status for no-game page', error)),
+      ]);
 
       if (data.length === 0 && (userMgr.ref.value?.urole ?? RbUserRole.User) >= RbUserRole.Admin) {
         redirecting = true;
@@ -49,6 +52,7 @@ async function initialize() {
         redirecting = true;
         await enterGame(data[0], true);
       } else {
+        setPageLayout(data.length === 0 ? 'maintenance' : 'default');
         games.value = data;
       }
     }
@@ -64,7 +68,38 @@ onMounted(initialize);
 </script>
 
 <template>
-  <main class="mx-auto flex w-full max-w-5xl items-center justify-center px-4 py-10 sm:px-6">
+  <rbph-status-page
+    v-if="!loading && games.length === 0"
+    icon="material-symbols:event-busy-outline-rounded"
+    :title="t('pages.transit.noGames')"
+    :message="systemStatus.ref.value?.no_game_message"
+  >
+    <template #actions>
+      <div v-if="userMgr.ref.value" class="flex max-w-[calc(100vw-3rem)] items-center gap-2">
+        <u-avatar :src="userMgr.ref.value.avatar" :text="userMgr.ref.value.nickname" size="sm" class="shrink-0" />
+        <span class="min-w-0 max-w-52 truncate font-medium text-white">{{ userMgr.ref.value.nickname }}</span>
+        <u-button
+          to="/logout"
+          icon="material-symbols:logout-rounded"
+          color="neutral"
+          variant="ghost"
+          class="shrink-0 justify-center text-white hover:bg-white/10"
+          :label="t('nav.logout')"
+        />
+      </div>
+      <u-button
+        v-else
+        to="/login"
+        icon="material-symbols:login-rounded"
+        color="neutral"
+        variant="ghost"
+        class="min-w-44 justify-center text-white hover:bg-white/10"
+        :label="t('nav.login')"
+      />
+    </template>
+  </rbph-status-page>
+
+  <main v-else class="mx-auto flex w-full max-w-5xl items-center justify-center px-4 py-10 sm:px-6">
     <u-icon v-if="loading" name="i-lucide:loader-circle" class="animate-spin" size="60px" />
 
     <section v-else-if="games.length > 1" class="w-full space-y-5">
@@ -95,11 +130,5 @@ onMounted(initialize);
         </button>
       </div>
     </section>
-
-    <u-empty v-else-if="games.length === 0" class="w-full" icon="material-symbols:event-busy-outline-rounded" :title="t('pages.transit.noGames')">
-      <template v-if="!userMgr.ref.value" #actions>
-        <u-button to="/login" color="neutral" variant="outline" icon="material-symbols:login-rounded" :label="t('pages.transit.login')" />
-      </template>
-    </u-empty>
   </main>
 </template>
