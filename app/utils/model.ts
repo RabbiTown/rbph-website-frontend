@@ -3,6 +3,7 @@ import type { AvatarProvider } from './user';
 export interface RbGameSettings {
   team: {
     max_members: number | null;
+    allow_duplicate_names: boolean;
   };
   display: {
     staff_nickname: string | null;

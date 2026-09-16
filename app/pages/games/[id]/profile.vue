@@ -222,6 +222,7 @@ async function editSubmit(event: FormSubmitEvent<EditSchema>) {
       },
       {
         errorHints: {
+          [-3]: t('pages.profile.teamNameConflict'),
           [-1]: t('pages.profile.noTeamEditPermission'),
           [RbErrorCode.Forbidden]: t('pages.profile.noTeamEditPermission'),
         },
@@ -442,6 +443,7 @@ async function createSubmit(event: FormSubmitEvent<CreateSchema>) {
       { name: event.data.name, pass: event.data.pass, bio: event.data.bio },
       {
         errorHints: {
+          [-4]: t('pages.profile.teamNameConflict'),
           [-3]: t('pages.profile.teamFormationUnavailable'),
           [-2]: t('pages.profile.invalidCredentials'),
           [-1]: t('pages.profile.alreadyInTeam'),

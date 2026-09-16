@@ -25,6 +25,7 @@ type GameSettingsPatchBody = Partial<Pick<RbGameModel, 'title' | 'is_listed' | '
   settings?: {
     team?: {
       max_members?: number | null;
+      allow_duplicate_names?: boolean;
     };
     display?: {
       staff_nickname?: string | null;
@@ -47,6 +48,7 @@ const state = reactive({
   is_listed: false,
   is_active: false,
   max_members: null as number | null,
+  allow_duplicate_names: false,
   staff_nickname: '',
   staff_avatar_email: '',
   staff_avatar_provider: AvatarProvider.Cravatar,
@@ -57,6 +59,7 @@ function syncState() {
   state.is_listed = game.value?.is_listed ?? false;
   state.is_active = game.value?.is_active ?? false;
   state.max_members = game.value?.settings?.team.max_members ?? null;
+  state.allow_duplicate_names = game.value?.settings?.team.allow_duplicate_names ?? false;
   state.staff_nickname = game.value?.settings?.display?.staff_nickname ?? '';
   state.staff_avatar_email = game.value?.settings?.display?.staff_avatar_email ?? '';
   state.staff_avatar_provider = game.value?.settings?.display?.staff_avatar_provider ?? AvatarProvider.Cravatar;
@@ -74,6 +77,7 @@ function makePatchBody() {
   const body: GameSettingsPatchBody = {};
   const maxMembers = normalizeMaxMembers(state.max_members);
   const currentMaxMembers = current.settings?.team.max_members ?? null;
+  const currentAllowDuplicateNames = current.settings?.team.allow_duplicate_names ?? false;
   const staffNickname = state.staff_nickname.trim() || null;
   const currentStaffNickname = current.settings?.display?.staff_nickname ?? null;
   const staffAvatarEmail = state.staff_avatar_email.trim() || null;
@@ -84,6 +88,15 @@ function makePatchBody() {
   if (state.is_listed !== current.is_listed) body.is_listed = state.is_listed;
   if (state.is_active !== current.is_active) body.is_active = state.is_active;
   if (maxMembers !== currentMaxMembers) body.settings = { team: { max_members: maxMembers } };
+  if (state.allow_duplicate_names !== currentAllowDuplicateNames) {
+    body.settings = {
+      ...body.settings,
+      team: {
+        ...body.settings?.team,
+        allow_duplicate_names: state.allow_duplicate_names,
+      },
+    };
+  }
   if (staffNickname !== currentStaffNickname) {
     body.settings = {
       ...body.settings,
@@ -113,6 +126,7 @@ const dirtyFields = computed(() => {
     isListed: 'is_listed' in patch,
     isActive: 'is_active' in patch,
     maxMembers: Boolean(patch.settings?.team && 'max_members' in patch.settings.team),
+    allowDuplicateNames: Boolean(patch.settings?.team && 'allow_duplicate_names' in patch.settings.team),
     staffNickname: Boolean(patch.settings?.display && 'staff_nickname' in patch.settings.display),
     staffAvatarEmail: Boolean(patch.settings?.display && 'staff_avatar_email' in patch.settings.display),
     staffAvatarProvider: Boolean(patch.settings?.display && 'staff_avatar_provider' in patch.settings.display),
@@ -314,6 +328,8 @@ function resetField(field: keyof typeof dirtyFields.value) {
     state.is_active = current.is_active ?? false;
   } else if (field === 'maxMembers') {
     state.max_members = current.settings?.team.max_members ?? null;
+  } else if (field === 'allowDuplicateNames') {
+    state.allow_duplicate_names = current.settings?.team.allow_duplicate_names ?? false;
   } else if (field === 'staffNickname') {
     state.staff_nickname = current.settings?.display?.staff_nickname ?? '';
   } else if (field === 'staffAvatarEmail') {
@@ -498,6 +514,10 @@ watch(
               <div class="flex flex-wrap items-center gap-3">
                 <u-input-number v-model="state.max_members" :min="1" :step="1" orientation="vertical" :placeholder="t('admin.pages.game.settings.unlimited')" class="w-32" />
               </div>
+            </rb-form-field>
+            <u-separator />
+            <rb-form-field name="allow_duplicate_names" row :label="t('admin.pages.game.settings.allowDuplicateTeamNames')" :description="t('admin.pages.game.settings.allowDuplicateTeamNamesDescription')" :dirty="dirtyFields.allowDuplicateNames" :reset="() => resetField('allowDuplicateNames')">
+              <u-switch v-model="state.allow_duplicate_names" />
             </rb-form-field>
           </div>
         </section>

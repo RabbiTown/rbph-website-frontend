@@ -88,7 +88,19 @@ useHead({
         </div>
       </div>
 
-      <u-tabs v-model="activeTab" :items="tabItems" variant="link" :content="false" class="-mb-2" />
+      <u-tabs
+        v-model="activeTab"
+        :items="tabItems"
+        variant="link"
+        :content="false"
+        class="-mb-2 min-w-0"
+        :ui="{
+          list: 'overflow-x-auto overflow-y-hidden touch-pan-x',
+          indicator: 'bottom-0',
+          trigger: 'shrink-0',
+          label: 'overflow-visible text-clip whitespace-nowrap',
+        }"
+      />
 
       <rbph-team-notification-list v-if="activeTab === 'notifications'" ref="notification-list" @updated="time => (updateTime = time)" />
       <u-card v-else variant="subtle" :ui="{ body: activeCurrencyId ? 'sm:p-4' : undefined }">

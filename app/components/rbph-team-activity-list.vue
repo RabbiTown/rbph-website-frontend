@@ -345,8 +345,8 @@ const currencyColumns = computed<TableColumn<CurrencyActivityRow>[]>(() => [
     },
     meta: {
       class: {
-        th: 'w-64 md:w-none wrap-anywhere whitespace-normal',
-        td: 'w-64 md:w-none wrap-anywhere whitespace-normal',
+        th: 'w-full wrap-anywhere whitespace-normal',
+        td: 'w-full wrap-anywhere whitespace-normal',
       },
     },
   },
@@ -361,8 +361,8 @@ const currencyColumns = computed<TableColumn<CurrencyActivityRow>[]>(() => [
     },
     meta: {
       class: {
-        th: 'w-28',
-        td: 'w-28 whitespace-nowrap',
+        th: 'w-px whitespace-nowrap',
+        td: 'w-px whitespace-nowrap',
       },
     },
   },
@@ -377,8 +377,8 @@ const currencyColumns = computed<TableColumn<CurrencyActivityRow>[]>(() => [
     },
     meta: {
       class: {
-        th: 'w-28',
-        td: 'w-28 whitespace-nowrap',
+        th: 'w-px whitespace-nowrap',
+        td: 'w-px whitespace-nowrap',
       },
     },
   },
@@ -391,8 +391,8 @@ const currencyColumns = computed<TableColumn<CurrencyActivityRow>[]>(() => [
     },
     meta: {
       class: {
-        th: 'w-28',
-        td: 'w-28 whitespace-nowrap',
+        th: 'w-px whitespace-nowrap',
+        td: 'w-px whitespace-nowrap',
       },
     },
   },
@@ -410,7 +410,7 @@ defineExpose({
       <span>{{ t('common.loading') }}</span>
     </div>
     <div v-else-if="isCurrencyMode ? currencyRows.length === 0 : activities.length === 0" class="text-sm text-muted">{{ t('activity.noRecords') }}</div>
-    <u-table v-else-if="isCurrencyMode" :loading="loading" :data="currencyRows" :columns="currencyColumns" :ui="{ base: 'table-fixed w-full' }" />
+    <u-table v-else-if="isCurrencyMode" :loading="loading" :data="currencyRows" :columns="currencyColumns" :ui="{ base: 'table-auto w-full' }" />
     <div v-else class="divide-y divide-default">
       <div v-for="activity in activities" :key="activity.id" :class="['flex gap-3 py-4 first:pt-0 last:pb-0', activityView(activity).details.length === 0 ? 'items-center' : 'items-start']">
         <div :class="['flex size-8 shrink-0 items-center justify-center rounded-md bg-muted', activityView(activity).details.length === 0 ? '' : 'mt-0.5']">
