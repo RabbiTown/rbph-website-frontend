@@ -213,13 +213,11 @@ onBeforeUnmount(() => dirtyToast.clear());
                 <div v-else class="min-w-0 flex-1 whitespace-normal wrap-anywhere text-sm font-medium text-highlighted">{{ announcement.title || t('components.rbphAnnouncementManager.untitledAnnouncement') }}</div>
               </div>
               <template #badges>
-                <div class="flex min-w-0 max-w-full flex-wrap gap-1" @click.stop>
-                  <u-badge :color="announcement.is_shown ? 'success' : 'neutral'" variant="soft" :icon="announcement.is_shown ? 'material-symbols:visibility-outline-rounded' : 'material-symbols:visibility-off-outline-rounded'">
-                    {{ announcement.is_shown ? t('admin.common.published') : t('components.rbphAnnouncementManager.draft') }}
-                  </u-badge>
-                  <u-badge v-if="announcement.is_pinned" color="warning" variant="soft" icon="material-symbols:keep-outline-rounded">{{ t('components.rbphAnnouncementManager.pinned') }}</u-badge>
-                  <u-badge color="neutral" variant="soft" :icon="announcement.puzzle_ids.length ? 'material-symbols:extension-outline-rounded' : 'material-symbols:sports-esports-outline-rounded'">{{ targetLabel(announcement) }}</u-badge>
-                </div>
+                <u-badge :color="announcement.is_shown ? 'success' : 'neutral'" variant="soft" :icon="announcement.is_shown ? 'material-symbols:visibility-outline-rounded' : 'material-symbols:visibility-off-outline-rounded'">
+                  {{ announcement.is_shown ? t('admin.common.published') : t('components.rbphAnnouncementManager.draft') }}
+                </u-badge>
+                <u-badge v-if="announcement.is_pinned" color="warning" variant="soft" icon="material-symbols:keep-outline-rounded">{{ t('components.rbphAnnouncementManager.pinned') }}</u-badge>
+                <u-badge color="neutral" variant="soft" :icon="announcement.puzzle_ids.length ? 'material-symbols:extension-outline-rounded' : 'material-symbols:sports-esports-outline-rounded'">{{ targetLabel(announcement) }}</u-badge>
               </template>
               <template #actions>
                 <div class="flex items-center gap-1" @click.stop>

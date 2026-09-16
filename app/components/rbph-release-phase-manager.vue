@@ -331,13 +331,11 @@ defineExpose({ apply, reset });
             </div>
 
             <template #badges>
-              <div class="flex min-w-0 max-w-full flex-wrap gap-1" @click.stop>
-                <u-badge v-if="!phase.isPublic" color="neutral" variant="soft">{{ t('components.rbphReleasePhaseManager.hide') }}</u-badge>
-                <u-badge v-if="changesFromStates(phase.states).length" color="warning" variant="soft">{{ t('components.rbphReleasePhaseManager.changeCount', { count: changesFromStates(phase.states).length }) }}</u-badge>
-                <u-badge v-if="phase.puzzleCount" color="info" variant="soft" icon="material-symbols:extension-outline-rounded">{{ t('admin.common.puzzleCount', { count: phase.puzzleCount }) }}</u-badge>
-                <u-badge variant="soft" color="neutral" icon="material-symbols:schedule-outline-rounded">{{ formatDate(phase.releaseAt) }}</u-badge>
-                <u-badge v-if="phase.released" color="success" variant="soft">{{ t('components.rbphReleasePhaseManager.released') }}</u-badge>
-              </div>
+              <u-badge v-if="!phase.isPublic" color="neutral" variant="soft">{{ t('components.rbphReleasePhaseManager.hide') }}</u-badge>
+              <u-badge v-if="changesFromStates(phase.states).length" color="warning" variant="soft">{{ t('components.rbphReleasePhaseManager.changeCount', { count: changesFromStates(phase.states).length }) }}</u-badge>
+              <u-badge v-if="phase.puzzleCount" color="info" variant="soft" icon="material-symbols:extension-outline-rounded">{{ t('admin.common.puzzleCount', { count: phase.puzzleCount }) }}</u-badge>
+              <u-badge variant="soft" color="neutral" icon="material-symbols:schedule-outline-rounded">{{ formatDate(phase.releaseAt) }}</u-badge>
+              <u-badge v-if="phase.released" color="success" variant="soft">{{ t('components.rbphReleasePhaseManager.released') }}</u-badge>
             </template>
             <template #actions>
 

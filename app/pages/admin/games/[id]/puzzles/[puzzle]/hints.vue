@@ -671,7 +671,7 @@ onBeforeUnmount(() => {
               @drop="onHintDrop"
             >
               <u-collapsible v-model:open="hint.open" :unmount-on-hide="false">
-                <rbph-collapsible-header center-title class="rounded-lg bg-elevated/60 px-4 py-2 ring ring-default">
+                <rbph-collapsible-header class="rounded-lg bg-elevated/60 px-4 py-2 ring ring-default">
                   <div class="flex min-w-0 flex-1 items-center gap-2">
                     <u-icon name="material-symbols:lightbulb-outline-rounded" class="shrink-0 text-warning" />
                     <u-textarea v-if="hint.open" v-model="hint.title" :rows="1" autoresize :ui="{ base: 'field-sizing-content resize-none' }" class="min-w-0 flex-1 w-full -mx-2.5 -my-1.5 font-medium" :placeholder="t('admin.pages.puzzle.hints.hintTitle')" variant="ghost" :disabled="saving || hint.deleting" @click.stop @keydown.stop />
@@ -680,20 +680,18 @@ onBeforeUnmount(() => {
                     </div>
                   </div>
                   <template #badges>
-                    <div class="flex min-w-0 max-w-full flex-wrap gap-1" @click.stop>
-                      <u-badge v-if="Boolean(hint.enable_cond)" variant="soft" color="info" class="shrink-0">
-                        <u-icon name="material-symbols:rule-rounded" class="me-1 size-3.5" />
-                        {{ t('admin.pages.puzzle.hints.enableCondition') }}
-                      </u-badge>
-                      <u-badge v-if="hint.cooldown > 0" variant="soft" color="warning" class="shrink-0">
-                        <u-icon name="material-symbols:schedule-outline-rounded" class="me-1 size-3.5" />
-                        {{ formatTime(hint.cooldown * 1000) }}
-                      </u-badge>
-                      <u-badge v-if="hint.cost_id !== null && hint.cost_amount > 0" variant="soft" color="primary" class="shrink-0">
-                        <u-icon :name="selectedCurrencyIcon(hint.cost_id) || 'material-symbols:money-bag-outline-rounded'" class="me-1 size-3.5" />
-                        {{ selectedCurrencyLabel(hint.cost_id) }} {{ intPrecString(-hint.cost_amount, currencyPrec(hint.cost_id), true, ' ') }}
-                      </u-badge>
-                    </div>
+                    <u-badge v-if="Boolean(hint.enable_cond)" variant="soft" color="info">
+                      <u-icon name="material-symbols:rule-rounded" class="me-1 size-3.5" />
+                      {{ t('admin.pages.puzzle.hints.enableCondition') }}
+                    </u-badge>
+                    <u-badge v-if="hint.cooldown > 0" variant="soft" color="warning">
+                      <u-icon name="material-symbols:schedule-outline-rounded" class="me-1 size-3.5" />
+                      {{ formatTime(hint.cooldown * 1000) }}
+                    </u-badge>
+                    <u-badge v-if="hint.cost_id !== null && hint.cost_amount > 0" variant="soft" color="primary">
+                      <u-icon :name="selectedCurrencyIcon(hint.cost_id) || 'material-symbols:money-bag-outline-rounded'" class="me-1 size-3.5" />
+                      {{ selectedCurrencyLabel(hint.cost_id) }} {{ intPrecString(-hint.cost_amount, currencyPrec(hint.cost_id), true, ' ') }}
+                    </u-badge>
                   </template>
                   <template #actions>
                     <div class="flex items-center gap-1" @click.stop>
