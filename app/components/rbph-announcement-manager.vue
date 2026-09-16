@@ -9,7 +9,6 @@ interface AnnouncementState {
   is_pinned: boolean;
   is_shown: boolean;
   puzzle_ids: number[];
-  deleting?: boolean;
   open?: boolean;
 }
 
@@ -21,6 +20,13 @@ const loading = ref(false);
 const saving = ref(false);
 const announcements = ref<AdminAnnouncementData[]>([]);
 const state = ref<AnnouncementState[]>([]);
+const announcementEditor = useListEditor(state, {
+  getId: announcement => announcement.id,
+  isPersisted: announcement => announcement.id > 0,
+  keepDraft: announcement => Boolean(announcement.title.trim() || announcement.content.trim()),
+  pendingDeletion: true,
+  reorderable: false,
+});
 const puzzles = ref<UnlockPuzzleOptionData[]>([]);
 let nextDraftId = -1;
 
@@ -56,7 +62,7 @@ function originalSnapshot(id: number) {
 }
 
 function isDirty(announcement: AnnouncementState) {
-  if (announcement.deleting || announcement.id < 0) return true;
+  if (announcementEditor.isPendingDeletion(announcement) || announcement.id < 0) return true;
   return JSON.stringify(snapshot(announcement)) !== JSON.stringify(originalSnapshot(announcement.id));
 }
 
@@ -68,6 +74,7 @@ function expandedIds() {
 
 function reset(openIds = expandedIds()) {
   state.value = announcements.value.map(item => toState(item, openIds.has(item.id)));
+  announcementEditor.resetPendingDeletion();
   dirtyToast.clear();
 }
 
@@ -110,12 +117,11 @@ function addAnnouncement() {
 }
 
 function removeAnnouncement(announcement: AnnouncementState) {
-  if (announcement.id > 0) announcement.deleting = true;
-  else state.value = state.value.filter(item => item !== announcement);
+  announcementEditor.markForDeletion(announcement);
 }
 
 function restoreAnnouncement(announcement: AnnouncementState) {
-  announcement.deleting = false;
+  announcementEditor.restore(announcement);
 }
 
 function targetLabel(announcement: AnnouncementState) {
@@ -128,7 +134,7 @@ function targetLabel(announcement: AnnouncementState) {
 
 async function save() {
   if (!dirty.value || saving.value) return;
-  const invalid = state.value.find(item => !item.deleting && !item.title.trim());
+  const invalid = announcementEditor.activeItems.value.find(item => !item.title.trim());
   if (invalid) {
     invalid.open = true;
     toast.add({ title: t('components.rbphAnnouncementManager.titleRequired'), icon: 'material-symbols:error-outline-rounded', color: 'error' });
@@ -139,11 +145,11 @@ async function save() {
   const openIds = expandedIds();
   try {
     for (const announcement of state.value) {
-      if (announcement.deleting && announcement.id > 0) {
+      if (announcementEditor.isPendingDeletion(announcement) && announcement.id > 0) {
         await api.del(`/admin/announcements/${announcement.id}`, { errorHints: { [-1]: t('components.rbphAnnouncementManager.announcementNotFound') } });
       }
     }
-    for (const announcement of state.value.filter(item => !item.deleting && isDirty(item))) {
+    for (const announcement of announcementEditor.activeItems.value.filter(isDirty)) {
       if (announcement.id > 0) {
         await api.patch(`/admin/announcements/${announcement.id}`, snapshot(announcement), {
           errorHints: { [-2]: t('components.rbphAnnouncementManager.invalidConfiguration'), [-1]: t('components.rbphAnnouncementManager.announcementNotFound') },
@@ -201,7 +207,7 @@ onBeforeUnmount(() => dirtyToast.clear());
           :key="announcement.id"
           class="relative transition-opacity"
           :class="[
-            announcement.deleting ? 'opacity-50' : '',
+            announcementEditor.isPendingDeletion(announcement) ? 'opacity-50' : '',
             isDirty(announcement) ? `before:content-[''] before:pointer-events-none before:absolute before:-start-4 before:top-0 before:bottom-0 before:w-0.5 before:rounded-full before:bg-warning` : '',
           ]"
         >
@@ -209,7 +215,7 @@ onBeforeUnmount(() => dirtyToast.clear());
             <rbph-collapsible-header class="rounded-lg bg-elevated/60 px-4 py-2 ring ring-default">
               <div class="flex min-w-0 flex-1 items-center gap-2">
                 <u-icon name="material-symbols:campaign-outline-rounded" class="shrink-0 text-primary" />
-                <u-textarea v-if="announcement.open" v-model="announcement.title" :rows="1" autoresize :ui="{ base: 'field-sizing-content resize-none' }" class="min-w-0 flex-1 -mx-2.5 -my-1.5 w-full font-medium" :placeholder="t('components.rbphAnnouncementManager.title')" variant="ghost" :maxlength="120" :disabled="saving || announcement.deleting" @click.stop @keydown.stop />
+                <u-textarea v-if="announcement.open" v-model="announcement.title" :rows="1" autoresize :ui="{ base: 'field-sizing-content resize-none' }" class="min-w-0 flex-1 -mx-2.5 -my-1.5 w-full font-medium" :placeholder="t('components.rbphAnnouncementManager.title')" variant="ghost" :maxlength="120" :disabled="saving || announcementEditor.isPendingDeletion(announcement)" @click.stop @keydown.stop />
                 <div v-else class="min-w-0 flex-1 whitespace-normal wrap-anywhere text-sm font-medium text-highlighted">{{ announcement.title || t('components.rbphAnnouncementManager.untitledAnnouncement') }}</div>
               </div>
               <template #badges>
@@ -221,7 +227,7 @@ onBeforeUnmount(() => dirtyToast.clear());
               </template>
               <template #actions>
                 <div class="flex items-center gap-1" @click.stop>
-                  <u-button v-if="announcement.deleting" icon="material-symbols:undo-rounded" color="neutral" variant="ghost" size="sm" :disabled="saving" @click="restoreAnnouncement(announcement)" />
+                  <u-button v-if="announcementEditor.isPendingDeletion(announcement)" icon="material-symbols:undo-rounded" color="neutral" variant="ghost" size="sm" :disabled="saving" @click="restoreAnnouncement(announcement)" />
                   <u-button v-else icon="material-symbols:delete-outline-rounded" color="error" variant="ghost" size="sm" :disabled="saving" @click="removeAnnouncement(announcement)" />
                 </div>
               </template>
@@ -238,17 +244,17 @@ onBeforeUnmount(() => dirtyToast.clear());
                         multiple
                         :placeholder="t('components.rbphAnnouncementManager.noRelatedPuzzle')"
                         :loading="loading"
-                        :disabled="saving || announcement.deleting"
+                        :disabled="saving || announcementEditor.isPendingDeletion(announcement)"
                       />
                     </rb-form-field>
                     <rb-form-field row narrow-label :label="t('components.rbphAnnouncementManager.publishedState')">
-                      <u-switch v-model="announcement.is_shown" class="mt-1.5" :label="t('components.rbphAnnouncementManager.publish')" :disabled="saving || announcement.deleting" />
+                      <u-switch v-model="announcement.is_shown" class="mt-1.5" :label="t('components.rbphAnnouncementManager.publish')" :disabled="saving || announcementEditor.isPendingDeletion(announcement)" />
                     </rb-form-field>
                     <rb-form-field row narrow-label :label="t('components.rbphAnnouncementManager.pinnedDisplay')">
-                      <u-switch v-model="announcement.is_pinned" class="mt-1.5" :label="t('components.rbphAnnouncementManager.pinAnnouncement')" :disabled="saving || announcement.deleting" />
+                      <u-switch v-model="announcement.is_pinned" class="mt-1.5" :label="t('components.rbphAnnouncementManager.pinAnnouncement')" :disabled="saving || announcementEditor.isPendingDeletion(announcement)" />
                     </rb-form-field>
                   </div>
-                  <rbph-content-editor v-model="announcement.content" framed :placeholder="t('components.rbphAnnouncementManager.content')" :disabled="saving || announcement.deleting" @save="save" />
+                  <rbph-content-editor v-model="announcement.content" framed :placeholder="t('components.rbphAnnouncementManager.content')" :disabled="saving || announcementEditor.isPendingDeletion(announcement)" @save="save" />
                 </div>
               </div>
             </template>

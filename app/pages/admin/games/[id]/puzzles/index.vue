@@ -119,7 +119,9 @@ const puzzles = ref<AdminPuzzle[]>([]);
 const releasePhases = ref<AdminReleasePhaseData[]>([]);
 const originalRounds = ref<AdminRound[]>([]);
 const originalPuzzles = ref<AdminPuzzle[]>([]);
-const deletingRoundIds = ref<Set<number>>(new Set());
+const roundEditor = useListEditor(rounds, { getId: round => round.id, pendingDeletion: true, reorderable: true });
+const deletingRoundIds = roundEditor.pendingDeletionIds;
+const activeRounds = roundEditor.activeItems;
 const draggingRoundId = ref<number | null>(null);
 const draggingPuzzle = ref<DraggingPuzzle | null>(null);
 const dragOverPuzzle = ref<PuzzleDropTarget | null>(null);
@@ -209,7 +211,7 @@ function reindexSort<T extends { sort: number }>(items: T[]) {
 }
 
 function isRoundDeleting(roundId: number) {
-  return deletingRoundIds.value.has(roundId);
+  return roundEditor.isPendingDeletion(roundId);
 }
 
 function isRoundPuzzle(puzzle: AdminPuzzle, roundId: number = puzzle.round_id) {
@@ -408,13 +410,12 @@ function replaceRoundPuzzles(updates: Map<number, AdminPuzzle[]>) {
 }
 
 const changedRoundSortPatches = computed<SortPatch[]>(() => {
-  const activeRounds = rounds.value.filter(round => !isRoundDeleting(round.id));
   const originalActiveRounds = originalRounds.value.filter(round => !deletingRoundIds.value.has(round.id));
 
-  if (idsEqual(roundOrder(activeRounds), roundOrder(originalActiveRounds))) return [];
-  return activeRounds.map((round, index) => ({
-    id: round.id,
-    sort: index,
+  if (deletingRoundIds.value.size === 0 && idsEqual(roundOrder(activeRounds.value), roundOrder(originalActiveRounds))) return [];
+  return roundEditor.activeSortEntries.value.map(({ item, sort }) => ({
+    id: item.id,
+    sort,
   }));
 });
 
@@ -563,7 +564,7 @@ function syncDirtyToast() {
 function resetChanges() {
   rounds.value = cloneRounds(originalRounds.value);
   puzzles.value = clonePuzzles(originalPuzzles.value);
-  deletingRoundIds.value = new Set();
+  roundEditor.resetPendingDeletion();
   dirtyToast.clear();
 }
 
@@ -660,11 +661,11 @@ function setDragOverEmptyRound(roundId: number | null) {
 }
 
 function cacheRoundDropEntries() {
-  const sections = document.querySelectorAll<HTMLElement>('[data-round-section="true"]');
+  const sections = document.querySelectorAll<HTMLElement>('[data-round-section="true"]:not([data-round-deleting="true"])');
   roundDropEntries = Array.from(sections)
     .map(section => {
       const id = Number(section.dataset.roundId);
-      const index = rounds.value.findIndex(round => round.id === id);
+      const index = activeRounds.value.findIndex(round => round.id === id);
       const rect = section.getBoundingClientRect();
       return {
         id,
@@ -711,6 +712,7 @@ function clearDragState() {
 }
 
 function onRoundDragStart(roundId: number, event: DragEvent) {
+  if (isRoundDeleting(roundId)) return;
   draggingRoundId.value = roundId;
   draggingPuzzle.value = null;
   dragOverRound.value = null;
@@ -733,16 +735,15 @@ function onRoundDrop(event: DragEvent) {
   clearDragState();
   if (!sourceRoundId || !currentDropTarget || sourceRoundId === currentDropTarget.id) return;
 
-  const fromIndex = rounds.value.findIndex(round => round.id === sourceRoundId);
-  const toIndex = rounds.value.findIndex(round => round.id === currentDropTarget.id);
+  const fromIndex = activeRounds.value.findIndex(round => round.id === sourceRoundId);
+  const toIndex = activeRounds.value.findIndex(round => round.id === currentDropTarget.id);
   if (fromIndex < 0 || toIndex < 0) return;
   const side = currentDropTarget.side;
   const rawInsertIndex = side === 'top' ? toIndex : toIndex + 1;
   const insertIndex = fromIndex < rawInsertIndex ? rawInsertIndex - 1 : rawInsertIndex;
   if (insertIndex === fromIndex) return;
 
-  rounds.value = reindexSort(reorderList(rounds.value, fromIndex, insertIndex));
-  syncDirtyToast();
+  if (roundEditor.moveActive(fromIndex, insertIndex)) syncDirtyToast();
 }
 
 function onRoundSectionDrop(_targetRoundId: number, event: DragEvent) {
@@ -820,7 +821,7 @@ function getRoundDropTarget(event: Pick<MouseEvent, 'clientY'>): RoundDropTarget
 
   if (roundDropEntries.length === 0) return null;
 
-  const fromIndex = rounds.value.findIndex(round => round.id === sourceRoundId);
+  const fromIndex = activeRounds.value.findIndex(round => round.id === sourceRoundId);
   if (fromIndex < 0) return null;
 
   const insertIndex = roundDropEntries.findIndex(entry => event.clientY < entry.centerY);
@@ -848,8 +849,8 @@ function getRoundDropTarget(event: Pick<MouseEvent, 'clientY'>): RoundDropTarget
 }
 
 function isOriginalRoundDropTarget(sourceRoundId: number, targetRoundId: number, side: RoundDropTarget['side']) {
-  const fromIndex = rounds.value.findIndex(round => round.id === sourceRoundId);
-  const targetIndex = rounds.value.findIndex(round => round.id === targetRoundId);
+  const fromIndex = activeRounds.value.findIndex(round => round.id === sourceRoundId);
+  const targetIndex = activeRounds.value.findIndex(round => round.id === targetRoundId);
   if (fromIndex < 0 || targetIndex < 0) return false;
 
   const rawInsertIndex = side === 'top' ? targetIndex : targetIndex + 1;
@@ -866,12 +867,12 @@ function isValidRoundDropSide(sourceRoundId: number, targetRoundId: number, side
 function canonicalRoundDropTarget(sourceRoundId: number, targetRoundId: number, side: RoundDropTarget['side']): RoundDropTarget | null {
   if (!isValidRoundDropSide(sourceRoundId, targetRoundId, side)) return null;
 
-  const targetIndex = rounds.value.findIndex(round => round.id === targetRoundId);
+  const targetIndex = activeRounds.value.findIndex(round => round.id === targetRoundId);
   if (targetIndex < 0) return null;
 
   const rawInsertIndex = side === 'top' ? targetIndex : targetIndex + 1;
-  if (rawInsertIndex >= rounds.value.length) {
-    const target = rounds.value.at(-1);
+  if (rawInsertIndex >= activeRounds.value.length) {
+    const target = activeRounds.value.at(-1);
     return target
       ? {
           id: target.id,
@@ -880,7 +881,7 @@ function canonicalRoundDropTarget(sourceRoundId: number, targetRoundId: number, 
       : null;
   }
 
-  const target = rounds.value[rawInsertIndex];
+  const target = activeRounds.value[rawInsertIndex];
   return target
     ? {
         id: target.id,
@@ -891,7 +892,7 @@ function canonicalRoundDropTarget(sourceRoundId: number, targetRoundId: number, 
 
 function roundDropHintClass(round: AdminRound) {
   const sourceRoundId = draggingRoundId.value;
-  if (!sourceRoundId || sourceRoundId === round.id) return '';
+  if (!sourceRoundId || sourceRoundId === round.id || isRoundDeleting(round.id)) return '';
 
   const topTarget = canonicalRoundDropTarget(sourceRoundId, round.id, 'top');
   const bottomTarget = canonicalRoundDropTarget(sourceRoundId, round.id, 'bottom');
@@ -1341,16 +1342,16 @@ async function deleteRound(roundId: number) {
   if (hasAnyPuzzle(roundId)) return;
   if (isRoundDeleting(roundId)) return;
 
-  deletingRoundIds.value = new Set([...deletingRoundIds.value, roundId]);
+  const round = rounds.value.find(item => item.id === roundId);
+  if (!round) return;
+  roundEditor.markForDeletion(round);
   syncDirtyToast();
 }
 
 function restoreRound(roundId: number) {
   if (!isRoundDeleting(roundId)) return;
 
-  const next = new Set(deletingRoundIds.value);
-  next.delete(roundId);
-  deletingRoundIds.value = next;
+  roundEditor.restore(roundId);
   syncDirtyToast();
 }
 
@@ -1524,7 +1525,7 @@ async function fetchData() {
     contentCdnAvailable.value = cdnResp?.data.available ?? false;
     originalRounds.value = cloneRounds(rounds.value);
     originalPuzzles.value = clonePuzzles(puzzles.value);
-    deletingRoundIds.value = new Set();
+    roundEditor.resetPendingDeletion();
     clearPuzzleSelection();
     dirtyToast.clear();
   } catch (error) {
@@ -1534,7 +1535,7 @@ async function fetchData() {
     contentCdnAvailable.value = false;
     originalRounds.value = [];
     originalPuzzles.value = [];
-    deletingRoundIds.value = new Set();
+    roundEditor.resetPendingDeletion();
     clearPuzzleSelection();
     dirtyToast.clear();
     handleError(error, t('admin.pages.puzzles.loadPuzzleListFailed'), true);

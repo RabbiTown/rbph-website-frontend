@@ -16,7 +16,6 @@ interface HintState {
   cost_amount: number;
   backend_function: string | null;
   triggers: string[];
-  deleting?: boolean;
   open?: boolean;
   advancedOpen?: boolean;
 }
@@ -73,6 +72,14 @@ const hintOriginPlaceholderVisible = ref(false);
 let nextDraftId = -1;
 let hintDropEntries: HintDropEntry[] = [];
 const maxCooldownSeconds = 2_147_483_647;
+const hintEditor = useListEditor(state, {
+  getId: hint => hint.id as number,
+  isPersisted: hint => Boolean(hint.id && hint.id > 0),
+  keepDraft: hint => Boolean(hint.title.trim() || hint.content.trim()),
+  pendingDeletion: true,
+  reorderable: true,
+});
+const activeHints = hintEditor.activeItems;
 
 const routeGameId = computed(() => Number(route.params.id));
 const routePuzzleId = computed(() => Number(route.params.puzzle));
@@ -110,13 +117,15 @@ const originalTicketCooldown = computed(() => puzzle.value?.ticket_cooldown ?? 0
 const ticketEnabledDirty = computed(() => Boolean(puzzle.value && ticketEnabled.value !== originalTicketEnabled.value));
 const ticketCooldownDirty = computed(() => Boolean(puzzle.value && ticketCooldownPatch.value !== originalTicketCooldown.value));
 const ticketSettingsDirty = computed(() => ticketEnabledDirty.value || ticketCooldownDirty.value);
-const hintDirty = computed(() => JSON.stringify(serializeState(state.value)) !== JSON.stringify(serializeHints(hints.value)));
+const hintDirty = computed(
+  () => state.value.some(hint => Boolean(hint.id && hint.id < 0 && hintEditor.isPendingDeletion(hint))) || JSON.stringify(serializeState(state.value)) !== JSON.stringify(serializeHints(hints.value)),
+);
 const dirty = computed(() => hintDirty.value || ticketSettingsDirty.value);
 const dirtyHintIds = computed(() => {
   const original = new Map(hints.value.map(hint => [hint.id, stateToDirtySnapshot(hintToState(hint))]));
   return new Set(
     state.value
-      .filter(hint => !hint.deleting)
+      .filter(hint => !hintEditor.isPendingDeletion(hint))
       .filter(hint => {
         const current = stateToDirtySnapshot(hint);
         const originalHint = hint.id && hint.id > 0 ? original.get(hint.id) : undefined;
@@ -126,9 +135,6 @@ const dirtyHintIds = computed(() => {
       .filter((id): id is number => id !== null),
   );
 });
-const activeHints = computed(() => state.value.filter(hint => !hint.deleting));
-const orderedHints = computed(() => [...state.value].sort((a, b) => a.sort - b.sort || (a.id ?? 0) - (b.id ?? 0)));
-const orderedActiveHints = computed(() => [...activeHints.value].sort((a, b) => a.sort - b.sort || (a.id ?? 0) - (b.id ?? 0)));
 
 function hintHasNonDefaultAdvancedSettings(hint: Pick<HintState, 'title_display_condition' | 'display_condition' | 'enable_cond' | 'cooldown_after_enable' | 'backend_function' | 'triggers'>) {
   return hint.title_display_condition !== AdminHintDisplayCondition.Cooldown || hint.display_condition !== AdminHintDisplayCondition.Enabled || hint.enable_cond !== null || hint.cooldown_after_enable || Boolean(hint.backend_function?.trim()) || hint.triggers.length > 0;
@@ -156,9 +162,9 @@ function hintToState(hint: AdminHintData, open = false): HintState {
   return result;
 }
 
-function stateToPatch(hint: HintState): HintPatch {
+function stateToPatch(hint: HintState, sort = hint.sort): HintPatch {
   return {
-    sort: Math.trunc(hint.sort || 0),
+    sort: Math.trunc(sort || 0),
     title: hint.title.trim(),
     content: hint.content,
     content_type: RbContentType.Markdown,
@@ -194,11 +200,11 @@ function stateToDirtySnapshot(hint: HintState) {
 }
 
 function serializeHints(value: AdminHintData[]) {
-  return value.map(hint => stateToPatch(hintToState(hint)));
+  return value.map((hint, index) => stateToPatch(hintToState(hint), index));
 }
 
 function serializeState(value: HintState[]) {
-  return value.filter(hint => !hint.deleting).map(stateToPatch);
+  return value.filter(hint => !hintEditor.isPendingDeletion(hint)).map((hint, index) => stateToPatch(hint, index));
 }
 
 function syncTicketCooldownFromPuzzle() {
@@ -228,15 +234,15 @@ function reset(openIds = expandedHintIds(), advancedOpenIds?: Set<number>) {
     if (advancedOpenIds?.has(hint.id)) result.advancedOpen = true;
     return result;
   });
+  hintEditor.resetPendingDeletion();
   syncTicketCooldownFromPuzzle();
   dirtyToast.clear();
 }
 
 function addHint() {
-  const nextSort = activeHints.value.reduce((max, hint) => Math.max(max, hint.sort), -1) + 1;
   state.value.push({
     id: nextDraftId--,
-    sort: nextSort,
+    sort: activeHints.value.length,
     title: '',
     content: '',
     content_type: RbContentType.Markdown,
@@ -253,27 +259,12 @@ function addHint() {
   });
 }
 
-function normalizeSort() {
-  [...activeHints.value]
-    .sort((a, b) => a.sort - b.sort || (a.id ?? 0) - (b.id ?? 0))
-    .forEach((hint, index) => {
-      hint.sort = index;
-    });
-}
-
 function removeHint(hint: HintState) {
-  if (hint.id && hint.id > 0) {
-    hint.deleting = true;
-    normalizeSort();
-  } else {
-    state.value = state.value.filter(item => item !== hint);
-    normalizeSort();
-  }
+  hintEditor.markForDeletion(hint);
 }
 
 function restoreHint(hint: HintState) {
-  hint.deleting = false;
-  normalizeSort();
+  hintEditor.restore(hint);
 }
 
 function currencyPrec(id: number | null): number {
@@ -309,7 +300,7 @@ function cacheHintDropEntries() {
   hintDropEntries = Array.from(cards)
     .map(card => {
       const id = Number(card.dataset.hintId);
-      const index = orderedActiveHints.value.findIndex(hint => hint.id === id);
+      const index = activeHints.value.findIndex(hint => hint.id === id);
       const rect = card.getBoundingClientRect();
       return {
         id,
@@ -327,7 +318,7 @@ function getHintDropTarget(event: Pick<MouseEvent, 'clientY'>): HintDropTarget |
   if (hintDropEntries.length === 0) cacheHintDropEntries();
   if (hintDropEntries.length === 0) return null;
 
-  const fromIndex = orderedActiveHints.value.findIndex(hint => hint.id === sourceId);
+  const fromIndex = activeHints.value.findIndex(hint => hint.id === sourceId);
   if (fromIndex < 0) return null;
 
   const insertIndex = hintDropEntries.findIndex(entry => event.clientY < entry.centerY);
@@ -355,7 +346,7 @@ function getHintDropTarget(event: Pick<MouseEvent, 'clientY'>): HintDropTarget |
 }
 
 function isOriginalHintDropTarget(sourceId: number, targetId: number, side: HintDropTarget['side']) {
-  const list = orderedActiveHints.value;
+  const list = activeHints.value;
   const fromIndex = list.findIndex(hint => hint.id === sourceId);
   const targetIndex = list.findIndex(hint => hint.id === targetId);
   if (fromIndex < 0 || targetIndex < 0) return false;
@@ -374,7 +365,7 @@ function isValidHintDropSide(sourceId: number, targetId: number, side: HintDropT
 function canonicalHintDropTarget(sourceId: number, targetId: number, side: HintDropTarget['side']): HintDropTarget | null {
   if (!isValidHintDropSide(sourceId, targetId, side)) return null;
 
-  const list = orderedActiveHints.value;
+  const list = activeHints.value;
   const targetIndex = list.findIndex(hint => hint.id === targetId);
   if (targetIndex < 0) return null;
 
@@ -390,7 +381,7 @@ function canonicalHintDropTarget(sourceId: number, targetId: number, side: HintD
 
 function hintDropHintClass(hint: HintState) {
   const sourceId = draggingHintId.value;
-  if (sourceId === null || sourceId === hint.id || hint.id === null || hint.deleting) return '';
+  if (sourceId === null || sourceId === hint.id || hint.id === null || hintEditor.isPendingDeletion(hint)) return '';
 
   const topTarget = canonicalHintDropTarget(sourceId, hint.id, 'top');
   const bottomTarget = canonicalHintDropTarget(sourceId, hint.id, 'bottom');
@@ -419,7 +410,7 @@ function hintDirtyLineClass(hint: HintState) {
 }
 
 function onHintDragStart(hint: HintState, event: DragEvent) {
-  if (hint.id === null || hint.deleting || saving.value) return;
+  if (hint.id === null || hintEditor.isPendingDeletion(hint) || saving.value) return;
   draggingHintId.value = hint.id;
   dragOverHint.value = null;
   hintOriginPlaceholderVisible.value = false;
@@ -470,7 +461,7 @@ function onHintDrop(event: DragEvent) {
   clearHintDragState();
   if (sourceId === null || !dropTarget) return;
 
-  const list = orderedActiveHints.value;
+  const list = activeHints.value;
   const fromIndex = list.findIndex(item => item.id === sourceId);
   const toIndex = list.findIndex(item => item.id === dropTarget.id);
   if (fromIndex < 0 || toIndex < 0) return;
@@ -479,12 +470,7 @@ function onHintDrop(event: DragEvent) {
   const insertIndex = fromIndex < rawInsertIndex ? rawInsertIndex - 1 : rawInsertIndex;
   if (insertIndex === fromIndex) return;
 
-  const next = [...list];
-  const [moved] = next.splice(fromIndex, 1);
-  if (moved) next.splice(insertIndex, 0, moved);
-  next.forEach((hint, index) => {
-    hint.sort = index;
-  });
+  hintEditor.moveActive(fromIndex, insertIndex);
 }
 
 function validate(): boolean {
@@ -568,15 +554,15 @@ async function apply() {
 
     if (hintDirty.value) {
       for (const hint of state.value) {
-        if (hint.deleting && hint.id && hint.id > 0) {
+        if (hintEditor.isPendingDeletion(hint) && hint.id && hint.id > 0) {
           await api.del(`/admin/hints/${hint.id}`, {
             errorHints: { [-1]: t('admin.pages.puzzle.hints.hintNotFound') },
           });
         }
       }
 
-      for (const hint of activeHints.value) {
-        const body = stateToPatch(hint);
+      for (const { item: hint, sort } of hintEditor.activeSortEntries.value) {
+        const body = stateToPatch(hint, sort);
         if (hint.id && hint.id > 0) {
           await api.patch(`/admin/hints/${hint.id}`, body, {
             errorHints: { [-2]: t('admin.pages.puzzle.hints.hintConfigurationInvalidDescription'), [-1]: t('admin.pages.puzzle.hints.hintNotFound') },
@@ -659,13 +645,13 @@ onBeforeUnmount(() => {
 
           <template v-else>
             <div
-              v-for="hint in orderedHints"
+              v-for="hint in state"
               :key="hint.id ?? 0"
               data-hint-card-drop="true"
               :data-hint-id="hint.id"
-              :data-hint-deleting="hint.deleting ? 'true' : undefined"
+              :data-hint-deleting="hintEditor.isPendingDeletion(hint) ? 'true' : undefined"
               class="relative transition-colors"
-              :class="[hint.deleting ? 'opacity-50' : '', hintDropHintClass(hint), hintDirtyLineClass(hint)]"
+              :class="[hintEditor.isPendingDeletion(hint) ? 'opacity-50' : '', hintDropHintClass(hint), hintDirtyLineClass(hint)]"
               @dragover="onHintDragOver"
               @dragleave="onHintDragLeave(hint.id, $event)"
               @drop="onHintDrop"
@@ -674,7 +660,7 @@ onBeforeUnmount(() => {
                 <rbph-collapsible-header class="rounded-lg bg-elevated/60 px-4 py-2 ring ring-default">
                   <div class="flex min-w-0 flex-1 items-center gap-2">
                     <u-icon name="material-symbols:lightbulb-outline-rounded" class="shrink-0 text-warning" />
-                    <u-textarea v-if="hint.open" v-model="hint.title" :rows="1" autoresize :ui="{ base: 'field-sizing-content resize-none' }" class="min-w-0 flex-1 w-full -mx-2.5 -my-1.5 font-medium" :placeholder="t('admin.pages.puzzle.hints.hintTitle')" variant="ghost" :disabled="saving || hint.deleting" @click.stop @keydown.stop />
+                    <u-textarea v-if="hint.open" v-model="hint.title" :rows="1" autoresize :ui="{ base: 'field-sizing-content resize-none' }" class="min-w-0 flex-1 w-full -mx-2.5 -my-1.5 font-medium" :placeholder="t('admin.pages.puzzle.hints.hintTitle')" variant="ghost" :disabled="saving || hintEditor.isPendingDeletion(hint)" @click.stop @keydown.stop />
                     <div v-else class="min-w-0 flex-1 whitespace-normal wrap-anywhere text-sm font-medium text-highlighted">
                       {{ hint.title || t('admin.pages.puzzle.hints.notMemberHint') }}
                     </div>
@@ -703,11 +689,11 @@ onBeforeUnmount(() => {
                         :aria-label="t('admin.common.dragToReorder')"
                         class="cursor-grab active:cursor-grabbing"
                         draggable="true"
-                        :disabled="saving || hint.deleting"
+                        :disabled="saving || hintEditor.isPendingDeletion(hint)"
                         @dragstart.stop="onHintDragStart(hint, $event)"
                         @dragend="clearHintDragState"
                       />
-                      <u-button v-if="hint.deleting" icon="material-symbols:undo-rounded" color="neutral" variant="ghost" size="sm" :disabled="saving" @click="restoreHint(hint)" />
+                      <u-button v-if="hintEditor.isPendingDeletion(hint)" icon="material-symbols:undo-rounded" color="neutral" variant="ghost" size="sm" :disabled="saving" @click="restoreHint(hint)" />
                       <u-button v-else icon="material-symbols:delete-outline-rounded" color="error" variant="ghost" size="sm" :disabled="saving" @click="removeHint(hint)" />
                     </div>
                   </template>
@@ -726,7 +712,7 @@ onBeforeUnmount(() => {
                                 :max-seconds="maxCooldownSeconds"
                                 icon="material-symbols:timer-outline-rounded"
                                 variant="subtle"
-                                :disabled="saving || hint.deleting"
+                                :disabled="saving || hintEditor.isPendingDeletion(hint)"
                                 :aria-label="t('admin.pages.puzzle.hints.cooldown')"
                               />
                             </div>
@@ -734,8 +720,8 @@ onBeforeUnmount(() => {
 
                           <rb-form-field row narrow-label class="min-w-0 flex-1" :label="t('admin.pages.puzzle.hints.unlockCost')">
                             <div class="flex flex-wrap items-center gap-2">
-                              <u-select v-model="hint.cost_id" :items="currencyItems" :leading-icon="selectedCurrencyIcon(hint.cost_id)" variant="subtle" class="w-40" :disabled="saving || hint.deleting" />
-                              <rb-input-number v-if="hint.cost_id !== null" v-model="hint.cost_amount" :prec="currencyPrec(hint.cost_id)" :min="0" :step="1" orientation="vertical" variant="subtle" class="w-36" :disabled="saving || hint.deleting" />
+                              <u-select v-model="hint.cost_id" :items="currencyItems" :leading-icon="selectedCurrencyIcon(hint.cost_id)" variant="subtle" class="w-40" :disabled="saving || hintEditor.isPendingDeletion(hint)" />
+                              <rb-input-number v-if="hint.cost_id !== null" v-model="hint.cost_amount" :prec="currencyPrec(hint.cost_id)" :min="0" :step="1" orientation="vertical" variant="subtle" class="w-36" :disabled="saving || hintEditor.isPendingDeletion(hint)" />
                             </div>
                           </rb-form-field>
                         </div>
@@ -758,7 +744,7 @@ onBeforeUnmount(() => {
                           <template #content>
                             <div class="mt-2 space-y-4">
                               <rb-form-field :label="t('admin.pages.puzzle.hints.enableCondition')" :tooltip="t('admin.pages.puzzle.hints.enableConditionDescription')">
-                                <rbph-content-block-visibility-editor v-model="hint.enable_cond" :game-id="currentGameId" :current-puzzle-id="currentPuzzleId" :disabled="saving || hint.deleting" />
+                                <rbph-content-block-visibility-editor v-model="hint.enable_cond" :game-id="currentGameId" :current-puzzle-id="currentPuzzleId" :disabled="saving || hintEditor.isPendingDeletion(hint)" />
                               </rb-form-field>
 
                               <div class="grid gap-4 sm:grid-cols-2">
@@ -770,7 +756,7 @@ onBeforeUnmount(() => {
                                       :variant="hint.display_condition === item.value ? 'solid' : 'outline'"
                                       :icon="item.icon"
                                       :label="item.label"
-                                      :disabled="saving || hint.deleting"
+                                      :disabled="saving || hintEditor.isPendingDeletion(hint)"
                                       @click="hint.display_condition = item.value"
                                     />
                                   </u-field-group>
@@ -784,7 +770,7 @@ onBeforeUnmount(() => {
                                       :variant="hint.title_display_condition === item.value ? 'solid' : 'outline'"
                                       :icon="item.icon"
                                       :label="item.label"
-                                      :disabled="saving || hint.deleting"
+                                      :disabled="saving || hintEditor.isPendingDeletion(hint)"
                                       @click="hint.title_display_condition = item.value"
                                     />
                                   </u-field-group>
@@ -798,14 +784,14 @@ onBeforeUnmount(() => {
                                       :variant="hint.cooldown_after_enable ? 'outline' : 'solid'"
                                       icon="material-symbols:lock-open-right-outline-rounded"
                                       :label="t('admin.pages.puzzle.hints.fromPuzzleUnlock')"
-                                      :disabled="saving || hint.deleting"
+                                      :disabled="saving || hintEditor.isPendingDeletion(hint)"
                                       @click="hint.cooldown_after_enable = false"
                                     />
                                     <u-button
                                       :variant="hint.cooldown_after_enable ? 'solid' : 'outline'"
                                       icon="material-symbols:rule-rounded"
                                       :label="t('admin.pages.puzzle.hints.fromHintEnabled')"
-                                      :disabled="saving || hint.deleting"
+                                      :disabled="saving || hintEditor.isPendingDeletion(hint)"
                                       @click="hint.cooldown_after_enable = true"
                                     />
                                   </u-field-group>
@@ -814,7 +800,7 @@ onBeforeUnmount(() => {
 
                               <div class="grid gap-4" :class="{ 'sm:grid-cols-2': showBackendFunction(hint) }">
                                 <rb-form-field row narrow-label :label="t('admin.common.trigger')" :tooltip="t('admin.pages.puzzle.hints.triggerDescription')">
-                                  <u-input-tags v-model="hint.triggers" class="w-full font-mono" :disabled="saving || hint.deleting" />
+                                  <u-input-tags v-model="hint.triggers" class="w-full font-mono" :disabled="saving || hintEditor.isPendingDeletion(hint)" />
                                 </rb-form-field>
 
                                 <rb-form-field v-if="showBackendFunction(hint)" row narrow-label :error="hintBackendWarning(hint) ? true : undefined">
@@ -831,7 +817,7 @@ onBeforeUnmount(() => {
                                       icon="material-symbols:function-rounded"
                                       class="w-full font-mono"
                                       :color="hintBackendWarning(hint) ? 'error' : 'neutral'"
-                                      :disabled="saving || hint.deleting"
+                                      :disabled="saving || hintEditor.isPendingDeletion(hint)"
                                     />
                                     <div v-if="hintBackendWarning(hint)" class="text-xs text-error">{{ t('admin.pages.puzzle.hints.backendDisabledWarning') }}</div>
                                   </div>
@@ -842,7 +828,7 @@ onBeforeUnmount(() => {
                         </u-collapsible>
                       </div>
 
-                      <rbph-content-editor v-model="hint.content" framed :placeholder="t('admin.pages.puzzle.hints.hintContent')" :disabled="saving || hint.deleting" @save="apply" />
+                      <rbph-content-editor v-model="hint.content" framed :placeholder="t('admin.pages.puzzle.hints.hintContent')" :disabled="saving || hintEditor.isPendingDeletion(hint)" @save="apply" />
                     </div>
                   </div>
                 </template>

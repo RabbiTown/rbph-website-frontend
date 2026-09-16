@@ -12,8 +12,6 @@ interface PhaseState {
   states: Partial<Record<RbGameFeature, RbGameFeatureState>>;
   puzzleCount: number;
   released: boolean;
-  deleting?: boolean;
-  removing?: boolean;
   open?: boolean;
   pendingFeature?: RbGameFeature;
   pendingState?: RbGameFeatureState;
@@ -24,6 +22,13 @@ const api = useApi();
 const toast = useToast();
 const phases = ref<AdminReleasePhaseData[]>([]);
 const state = ref<PhaseState[]>([]);
+const phaseEditor = useListEditor(state, {
+  getId: phase => phase.id,
+  isPersisted: phase => phase.id > 0,
+  keepDraft: phase => Boolean(phase.title.trim() || phase.description.trim()),
+  pendingDeletion: true,
+  reorderable: false,
+});
 const loading = ref(false);
 const saving = ref(false);
 let nextDraftId = -1;
@@ -179,7 +184,7 @@ function comparableBody(phase: PhaseState) {
 }
 
 function isPhaseDirty(phase: PhaseState) {
-  if (phase.id < 0 || phase.deleting) return true;
+  if (phase.id < 0 || phaseEditor.isPendingDeletion(phase)) return true;
   const original = phases.value.find(item => item.id === phase.id);
   if (original?.released) {
     return phase.title.trim() !== original.title || phase.description.trim() !== original.description;
@@ -195,6 +200,7 @@ function expandedPhaseIds() {
 
 function reset(openIds = expandedPhaseIds()) {
   state.value = phases.value.map(phase => phaseToState(phase, openIds.has(phase.id)));
+  phaseEditor.resetPendingDeletion();
 }
 
 function nextReleaseAt() {
@@ -217,20 +223,11 @@ function addPhase() {
 }
 
 function removePhase(phase: PhaseState) {
-  if (phase.id < 0) {
-    if (phase.removing) return;
-    phase.removing = true;
-    const id = phase.id;
-    window.setTimeout(() => {
-      state.value = state.value.filter(item => item.id !== id);
-    }, 0);
-  } else {
-    phase.deleting = true;
-  }
+  phaseEditor.markForDeletion(phase);
 }
 
 function restorePhase(phase: PhaseState) {
-  phase.deleting = false;
+  phaseEditor.restore(phase);
 }
 
 function phaseDirtyLineClass(phase: PhaseState) {
@@ -238,7 +235,7 @@ function phaseDirtyLineClass(phase: PhaseState) {
 }
 
 function validate() {
-  return state.value.filter(phase => !phase.deleting).every(phase => phase.title.trim().length > 0 && (phase.released || (Number.isFinite(phase.releaseAt.getTime()) && phase.releaseAt.getTime() > Date.now())));
+  return phaseEditor.activeItems.value.every(phase => phase.title.trim().length > 0 && (phase.released || (Number.isFinite(phase.releaseAt.getTime()) && phase.releaseAt.getTime() > Date.now())));
 }
 
 async function fetchPhases(openIds = expandedPhaseIds()) {
@@ -269,17 +266,17 @@ async function apply(): Promise<boolean> {
   const openIds = expandedPhaseIds();
   saving.value = true;
   try {
-    for (const phase of state.value.filter(item => item.deleting && item.id > 0)) {
+    for (const phase of state.value.filter(item => phaseEditor.isPendingDeletion(item) && item.id > 0)) {
       await api.del(`/admin/games/${props.gameId}/release-phases/${phase.id}`, {
         errorHints: { [-2]: t('components.rbphReleasePhaseManager.phaseInUse'), [-1]: t('components.rbphReleasePhaseManager.phaseNotFound') },
       });
     }
-    for (const phase of state.value.filter(item => !item.deleting && item.id > 0 && isPhaseDirty(item))) {
+    for (const phase of phaseEditor.activeItems.value.filter(item => item.id > 0 && isPhaseDirty(item))) {
       await api.patch(`/admin/games/${props.gameId}/release-phases/${phase.id}`, phase.released ? occurredRequestBody(phase) : requestBody(phase), {
         errorHints: { [-3]: t('components.rbphReleasePhaseManager.timeConflict'), [-2]: t('components.rbphReleasePhaseManager.updateRejected'), [-1]: t('components.rbphReleasePhaseManager.phaseNotFound') },
       });
     }
-    for (const phase of state.value.filter(item => !item.deleting && item.id < 0)) {
+    for (const phase of phaseEditor.activeItems.value.filter(item => item.id < 0)) {
       const { data } = await api.post<{ phase: AdminReleasePhaseData }>(`/admin/games/${props.gameId}/release-phases`, requestBody(phase), {
         errorHints: { [-3]: t('components.rbphReleasePhaseManager.timeConflict'), [-2]: t('components.rbphReleasePhaseManager.invalidPhaseDescription'), [-1]: t('admin.common.gameNotFound') },
       });
@@ -321,12 +318,12 @@ defineExpose({ apply, reset });
     </u-empty>
 
     <template v-else>
-      <div v-for="phase in state" :key="phase.id" class="relative transition-colors" :class="[phase.deleting ? 'opacity-50' : '', phase.removing ? 'pointer-events-none opacity-50' : '', phaseDirtyLineClass(phase)]">
+      <div v-for="phase in state" :key="phase.id" class="relative transition-colors" :class="[phaseEditor.isPendingDeletion(phase) ? 'opacity-50' : '', phaseDirtyLineClass(phase)]">
         <u-collapsible v-model:open="phase.open" :unmount-on-hide="false">
           <rbph-collapsible-header class="rounded-lg bg-elevated/60 px-4 py-2 ring ring-default">
             <div class="flex min-w-0 flex-1 items-center gap-2">
               <u-icon name="material-symbols:event-outline-rounded" class="shrink-0 text-primary" />
-              <u-textarea v-if="phase.open" v-model="phase.title" :rows="1" autoresize :ui="{ base: 'field-sizing-content resize-none' }" class="min-w-0 flex-1 -mx-2.5 -my-1.5 w-full font-medium" :placeholder="t('components.rbphReleasePhaseManager.name')" variant="ghost" :disabled="saving || phase.deleting" @click.stop @keydown.stop />
+              <u-textarea v-if="phase.open" v-model="phase.title" :rows="1" autoresize :ui="{ base: 'field-sizing-content resize-none' }" class="min-w-0 flex-1 -mx-2.5 -my-1.5 w-full font-medium" :placeholder="t('components.rbphReleasePhaseManager.name')" variant="ghost" :disabled="saving || phaseEditor.isPendingDeletion(phase)" @click.stop @keydown.stop />
               <div v-else class="min-w-0 flex-1 whitespace-normal wrap-anywhere text-sm font-medium text-highlighted">{{ phase.title || t('components.rbphReleasePhaseManager.untitledPhase') }}</div>
             </div>
 
@@ -339,9 +336,9 @@ defineExpose({ apply, reset });
             </template>
             <template #actions>
 
-              <div v-if="phase.deleting || phase.puzzleCount === 0" class="flex items-center" @pointerdown.stop @click.stop>
-                <u-button v-if="phase.deleting" type="button" icon="material-symbols:undo-rounded" color="neutral" variant="ghost" size="sm" :disabled="saving" @click.stop="restorePhase(phase)" />
-                <u-button v-else type="button" icon="material-symbols:delete-outline-rounded" color="error" variant="ghost" size="sm" :disabled="saving || phase.removing" @click.stop="removePhase(phase)" />
+              <div v-if="phaseEditor.isPendingDeletion(phase) || phase.puzzleCount === 0" class="flex items-center" @pointerdown.stop @click.stop>
+                <u-button v-if="phaseEditor.isPendingDeletion(phase)" type="button" icon="material-symbols:undo-rounded" color="neutral" variant="ghost" size="sm" :disabled="saving" @click.stop="restorePhase(phase)" />
+                <u-button v-else type="button" icon="material-symbols:delete-outline-rounded" color="error" variant="ghost" size="sm" :disabled="saving" @click.stop="removePhase(phase)" />
               </div>
             </template>
           </rbph-collapsible-header>
@@ -351,14 +348,14 @@ defineExpose({ apply, reset });
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
                   <rb-form-field row narrow-label class="flex-1" :label="t('components.rbphReleasePhaseManager.releaseTime')">
-                    <rb-input-date-time v-model="phase.releaseAt" class="w-full" :disabled="saving || phase.deleting || phase.released" />
+                    <rb-input-date-time v-model="phase.releaseAt" class="w-full" :disabled="saving || phaseEditor.isPendingDeletion(phase) || phase.released" />
                   </rb-form-field>
                   <rb-form-field row narrow-label class="flex-1" :label="t('components.rbphReleasePhaseManager.publicEarly')">
-                    <u-switch v-model="phase.isPublic" class="mt-1.5" :label="t('components.rbphReleasePhaseManager.publicEarlyDescription')" :disabled="saving || phase.deleting || phase.released" />
+                    <u-switch v-model="phase.isPublic" class="mt-1.5" :label="t('components.rbphReleasePhaseManager.publicEarlyDescription')" :disabled="saving || phaseEditor.isPendingDeletion(phase) || phase.released" />
                   </rb-form-field>
                 </div>
 
-                <rbph-content-editor v-model="phase.description" framed content-class="min-h-28" :placeholder="t('components.rbphReleasePhaseManager.descriptionPlaceholder')" :disabled="saving || phase.deleting" @save="apply" />
+                <rbph-content-editor v-model="phase.description" framed content-class="min-h-28" :placeholder="t('components.rbphReleasePhaseManager.descriptionPlaceholder')" :disabled="saving || phaseEditor.isPendingDeletion(phase)" @save="apply" />
 
                 <rb-form-field row narrow-label :label="t('components.rbphReleasePhaseManager.changeFeature')">
                   <div class="flex w-full min-w-0 flex-wrap gap-2">
@@ -371,7 +368,7 @@ defineExpose({ apply, reset });
                         :icon="featureOption(change.feature)?.icon"
                         trailing-icon="material-symbols:close-rounded"
                         :label="featureChangeLabel(change)"
-                        :disabled="saving || phase.deleting || phase.released"
+                        :disabled="saving || phaseEditor.isPendingDeletion(phase) || phase.released"
                       />
                       <template #content="{ close }">
                         <div class="w-64 p-3 text-sm">
@@ -397,7 +394,7 @@ defineExpose({ apply, reset });
                         variant="soft"
                         icon="material-symbols:add-rounded"
                         :label="t('components.rbphReleasePhaseManager.changeFeature')"
-                        :disabled="saving || phase.deleting || phase.released || availableFeatureItems(phase).length === 0"
+                        :disabled="saving || phaseEditor.isPendingDeletion(phase) || phase.released || availableFeatureItems(phase).length === 0"
                       />
                       <template #content>
                         <div class="w-72 space-y-3 p-3">

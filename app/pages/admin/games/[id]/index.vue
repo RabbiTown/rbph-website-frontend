@@ -11,7 +11,6 @@ const submitLoading = ref(false);
 const currencyLoading = ref(false);
 const currencySubmitting = ref(false);
 const currencies = ref<CurrencyItem[]>([]);
-const currencyDeletePending = reactive<Record<number, boolean>>({});
 
 type CurrencyDraft = Pick<AdminCurrencyData, 'name' | 'slug' | 'growth' | 'init_amount' | 'init_hidden' | 'prec' | 'max_amount'>;
 type CurrencyItem = AdminCurrencyData & { local?: boolean };
@@ -36,6 +35,16 @@ type GameSettingsPatchBody = Partial<Pick<RbGameModel, 'title' | 'is_listed' | '
 };
 
 const currencyDrafts = reactive<Record<number, CurrencyDraft>>({});
+const currencyEditor = useListEditor(currencies, {
+  getId: currency => currency.id,
+  isPersisted: currency => !currency.local,
+  keepDraft: currency => {
+    const draft = currencyDrafts[currency.id];
+    return Boolean(draft?.name.trim() || draft?.slug.trim());
+  },
+  pendingDeletion: true,
+  reorderable: false,
+});
 const currencyAmountMax = Number.MAX_SAFE_INTEGER;
 let nextCurrencyLocalId = -1;
 
@@ -146,7 +155,7 @@ const currencyDirty = computed(() => {
     const draft = currencyDrafts[currency.id];
     result[currency.id] = Boolean(
       currency.local ||
-      currencyDeletePending[currency.id] ||
+      currencyEditor.isPendingDeletion(currency) ||
       (draft &&
         (draft.name !== currency.name ||
           draft.slug !== currency.slug ||
@@ -168,7 +177,7 @@ const currencyEditItems = computed<CurrencyEditItem[]>(() =>
         currency,
         draft,
         dirty: Boolean(currencyDirty.value[currency.id]),
-        deletePending: Boolean(currencyDeletePending[currency.id]),
+        deletePending: currencyEditor.isPendingDeletion(currency),
       },
     ];
   }),
@@ -204,10 +213,10 @@ function toCurrencyDraft(currency: AdminCurrencyData): CurrencyDraft {
 
 function resetCurrencyDraft(currency: AdminCurrencyData) {
   currencyDrafts[currency.id] = toCurrencyDraft(currency);
-  unsetRecordKey(currencyDeletePending, currency.id);
 }
 
 function syncCurrencyDrafts(next: CurrencyItem[]) {
+  currencyEditor.resetPendingDeletion();
   for (const currency of next) {
     resetCurrencyDraft(currency);
   }
@@ -215,7 +224,6 @@ function syncCurrencyDrafts(next: CurrencyItem[]) {
   for (const key of Object.keys(currencyDrafts)) {
     if (!next.some(currency => currency.id === Number(key))) {
       unsetRecordKey(currencyDrafts, Number(key));
-      unsetRecordKey(currencyDeletePending, Number(key));
     }
   }
 }
@@ -283,26 +291,16 @@ function addCurrencyDraft() {
 }
 
 function markCurrencyDeleting(currency: CurrencyItem) {
-  if (currency.local) {
-    removeLocalCurrency(currency);
-    return;
-  }
-  currencyDeletePending[currency.id] = true;
+  if (!currencyEditor.markForDeletion(currency)) unsetRecordKey(currencyDrafts, currency.id);
 }
 
 function restoreCurrency(currency: CurrencyItem) {
-  unsetRecordKey(currencyDeletePending, currency.id);
+  currencyEditor.restore(currency);
 }
 
 function resetCurrencyChange(currency: CurrencyItem) {
   if (currency.local) return;
   resetCurrencyDraft(currency);
-}
-
-function removeLocalCurrency(currency: CurrencyItem) {
-  currencies.value = currencies.value.filter(item => item.id !== currency.id);
-  unsetRecordKey(currencyDrafts, currency.id);
-  unsetRecordKey(currencyDeletePending, currency.id);
 }
 
 function resetCurrencyChanges() {
@@ -388,7 +386,7 @@ async function submitChanges() {
   for (const currency of currencies.value) {
     const draft = currencyDrafts[currency.id];
     if (!draft) continue;
-    if (!currencyDeletePending[currency.id] && !isCurrencyDraftValid(draft)) {
+    if (!currencyEditor.isPendingDeletion(currency) && !isCurrencyDraftValid(draft)) {
       toast.add({
         title: t('admin.pages.game.settings.currencyInfoInvalidLabel'),
         description: t('admin.pages.game.settings.currencyValidationHint'),
@@ -415,13 +413,13 @@ async function submitChanges() {
       syncState();
     }
 
-    for (const currency of currencies.value.filter(item => !item.local && currencyDeletePending[item.id])) {
+    for (const currency of currencies.value.filter(item => !item.local && currencyEditor.isPendingDeletion(item))) {
       await api.del(`/admin/games/${current.id}/currencies/${currency.id}`, {
         errorHints: currencyErrorHints(),
       });
     }
 
-    for (const currency of currencies.value.filter(item => !item.local && currencyDirty.value[item.id] && !currencyDeletePending[item.id])) {
+    for (const currency of currencies.value.filter(item => !item.local && currencyDirty.value[item.id] && !currencyEditor.isPendingDeletion(item))) {
       const draft = currencyDrafts[currency.id];
       if (!draft) continue;
       await api.patch(
@@ -435,7 +433,7 @@ async function submitChanges() {
       );
     }
 
-    for (const currency of currencies.value.filter(item => item.local)) {
+    for (const currency of currencyEditor.activeItems.value.filter(item => item.local)) {
       const draft = currencyDrafts[currency.id];
       if (!draft) continue;
       await api.post(
