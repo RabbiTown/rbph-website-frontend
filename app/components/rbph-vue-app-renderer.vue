@@ -51,6 +51,11 @@ type RbphBackendEvent<T = unknown> = {
 
 type BackendEventListener = (message: RbphBackendEvent) => void;
 
+type RenderContextSnapshot = {
+  gameId?: number;
+  puzzleId?: number;
+};
+
 type RbphVueAppModule = {
   mount?: (el: Element, context: RbphVueAppContext) => unknown;
   unmount?: () => void;
@@ -84,10 +89,10 @@ const team = useTeam(false).ref;
 const puzzleState = usePuzzle().ref;
 const backendEventListeners = new Map<string, Set<BackendEventListener>>();
 const toastAssetIcons = new Map<string, Component>();
+let activePuzzleId: number | undefined;
 
 useSync().listen(SyncMessageType.PuzzleBackendEvent, ({ data }) => {
-  const puzzleId = puzzleState.value?.data.id ?? currentNumericRouteParam('puzzle');
-  if (data.puzzle_id !== puzzleId) return;
+  if (data.puzzle_id !== activePuzzleId) return;
 
   const message: RbphBackendEvent = {
     data: data.payload,
@@ -166,6 +171,7 @@ async function loadManifest(src: string) {
 function cleanup() {
   mountedCleanup?.();
   mountedCleanup = undefined;
+  activePuzzleId = undefined;
   backendEventListeners.clear();
   if (shadow) shadow.replaceChildren();
 }
@@ -217,10 +223,10 @@ function backendPath(puzzleId: number | undefined, name: string) {
   return `/puzzles/${puzzleId}/backend/${encodeURIComponent(name)}`;
 }
 
-function createContext(manifestUrl: string): RbphVueAppContext {
+function createContext(manifestUrl: string, snapshot: RenderContextSnapshot): RbphVueAppContext {
   const baseUrl = manifestBaseUrl(manifestUrl);
   const parsedProps = parseJsonProps(props.props);
-  const puzzleId = puzzleState.value?.data.id ?? currentNumericRouteParam('puzzle');
+  const { gameId, puzzleId } = snapshot;
 
   return {
     version: 1,
@@ -237,18 +243,17 @@ function createContext(manifestUrl: string): RbphVueAppContext {
       on: subscribeBackendEvent,
     },
     route: {
-      gameId: game.value?.id ?? currentNumericRouteParam('id'),
+      gameId,
       puzzleId,
     },
     state: {
-      getGame: () => game.value,
+      getGame: () => game.value?.id === gameId ? game.value : undefined,
       getTeam: () => team.value,
-      getPuzzle: () => puzzleState.value,
+      getPuzzle: () => puzzleState.value?.data.id === puzzleId ? puzzleState.value : undefined,
     },
     actions: {
       async refreshPuzzle() {
-        const puzzleId = puzzleState.value?.data.id;
-        if (puzzleId) await usePuzzle().updateState(String(puzzleId));
+        if (puzzleId && puzzleState.value?.data.id === puzzleId) await usePuzzle().updateState(String(puzzleId));
       },
       async refreshTeam() {
         await useTeam().updateData();
@@ -277,13 +282,20 @@ async function render() {
   const container = host.value;
   if (!container || !import.meta.client) return;
 
+  const seq = ++renderSeq;
   const src = props.src.trim();
+  const snapshot: RenderContextSnapshot = {
+    gameId: puzzleState.value?.data.game_id ?? game.value?.id ?? currentNumericRouteParam('id'),
+    puzzleId: puzzleState.value?.data.id ?? currentNumericRouteParam('puzzle'),
+  };
   cleanup();
   error.value = '';
 
-  if (!src) return;
+  if (!src) {
+    loading.value = false;
+    return;
+  }
 
-  const seq = ++renderSeq;
   loading.value = true;
 
   try {
@@ -306,9 +318,11 @@ async function render() {
     const mod = (await import(/* @vite-ignore */ entryUrl)) as RbphVueAppModule;
     if (seq !== renderSeq) return;
 
-    const mountResult = mountModule(mod, mountEl, createContext(manifestUrl));
+    activePuzzleId = snapshot.puzzleId;
+    const mountResult = mountModule(mod, mountEl, createContext(manifestUrl, snapshot));
     mountedCleanup = normalizeUnmount(mountResult, mod);
   } catch (err) {
+    if (seq !== renderSeq) return;
     error.value = err instanceof Error ? err.message : t('components.rbphVueAppRenderer.loadFailed');
     cleanup();
   } finally {
@@ -318,7 +332,10 @@ async function render() {
 
 watch(() => [props.src, props.props] as const, render, { immediate: true });
 onMounted(render);
-onBeforeUnmount(cleanup);
+onBeforeUnmount(() => {
+  renderSeq++;
+  cleanup();
+});
 </script>
 
 <template>

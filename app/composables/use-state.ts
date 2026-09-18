@@ -207,6 +207,12 @@ export async function resetTeamState() {
 
 export function usePuzzle() {
   const puzzle = useState<RbPuzzleShowData | undefined>('puzzle');
+  const stateRequestId = useState('puzzle-state-request-id', () => 0);
+
+  function clear() {
+    stateRequestId.value++;
+    puzzle.value = undefined;
+  }
 
   async function updateContents() {
     const id = puzzle.value?.data.id;
@@ -223,6 +229,7 @@ export function usePuzzle() {
   }
 
   async function updateState(new_id: string | undefined = undefined) {
+    const requestId = ++stateRequestId.value;
     const id = new_id ? parseInt(new_id) : puzzle.value?.data.id || NaN;
     if (isNaN(id)) throw 'Invalid puzzle id';
 
@@ -230,16 +237,18 @@ export function usePuzzle() {
       const { data } = await useApi().get<RbPuzzleShowData>(`/puzzles/${id}`);
       const contents = await useApi().get<{ contents: RbContentBlock[] }>(`/puzzles/${id}/contents`);
       data.data.contents = contents.data.contents;
+      if (requestId !== stateRequestId.value) return;
       puzzle.value = data;
       if (data.data.game_id) {
         updateGameState(data.data.game_id.toString());
       }
     } catch (error) {
-      showError(error instanceof Error ? error : String(error));
+      if (requestId === stateRequestId.value) showError(error instanceof Error ? error : String(error));
     }
   }
 
   async function updateStateByGameRef(game_id: string, puzzle_ref: string) {
+    const requestId = ++stateRequestId.value;
     const gameId = parseInt(game_id);
     if (isNaN(gameId)) throw 'Invalid game id';
     if (!puzzle_ref) throw 'Invalid puzzle id';
@@ -248,16 +257,17 @@ export function usePuzzle() {
       const { data } = await useApi().get<RbPuzzleShowData>(`/games/${gameId}/puzzles/${encodeURIComponent(puzzle_ref)}`);
       const contents = await useApi().get<{ contents: RbContentBlock[] }>(`/puzzles/${data.data.id}/contents`);
       data.data.contents = contents.data.contents;
+      if (requestId !== stateRequestId.value) return;
       puzzle.value = data;
       if (data.data.game_id) {
         updateGameState(data.data.game_id.toString());
       }
     } catch (error) {
-      showError(error instanceof Error ? error : String(error));
+      if (requestId === stateRequestId.value) showError(error instanceof Error ? error : String(error));
     }
   }
 
-  return { ref: puzzle, updateContents, updateState, updateStateByGameRef };
+  return { ref: puzzle, clear, updateContents, updateState, updateStateByGameRef };
 }
 
 export async function resetStates() {

@@ -258,6 +258,7 @@ async function mount() {
     if (id !== renderId) return;
     cleanupModule = normalizeCleanup(mountModule(mod, root, createContext(manifestUrl, overlayRoot, manifest)), mod);
   } catch (error) {
+    if (id !== renderId) return;
     cleanup();
     emit('failed', error instanceof Error ? error : new Error(String(error)));
   }

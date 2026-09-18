@@ -26,6 +26,7 @@ async function updateState() {
 watch(
   [source, preview],
   async () => {
+    usePuzzle().clear();
     updateState().catch(e => showError({ status: 400, statusText: String(e) }));
   },
   { immediate: true },
