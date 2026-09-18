@@ -6,34 +6,10 @@ definePageMeta({
 useUser().required();
 
 const route = useRoute();
-
-const puzzle = usePuzzle().ref;
-providePuzzleContext(puzzle);
-
 const gameId = computed(() => route.params.id as string);
 const puzzleRef = computed(() => route.params.puzzle as string);
-const preview = computed(() => route.query.preview);
-
-watch(
-  [gameId, puzzleRef, preview],
-  async ([newGameId, newPuzzleRef]) => {
-    usePuzzle()
-      .updateStateByGameRef(newGameId, newPuzzleRef)
-      .catch(e => showError({ status: 400, statusText: e }));
-  },
-  { immediate: true },
-);
-
-useSync().listen(SyncMessageType.GameNewAnnouncement, ({ data }) => {
-  const currentGameId = Number(gameId.value);
-  if (data.game_id === null || data.game_id === currentGameId) {
-    usePuzzle().updateStateByGameRef(gameId.value, puzzleRef.value);
-  }
-});
 </script>
 
 <template>
-  <div>
-    <rbph-puzzle-page />
-  </div>
+  <rbph-puzzle-route-page :game-id="gameId" :puzzle-ref="puzzleRef" />
 </template>

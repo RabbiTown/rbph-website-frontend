@@ -9,9 +9,9 @@ const unmetSubmitRequirements = computed(() => (puzzle.value?.data.submit_requir
 const submitRequirementHint = computed(() => {
   if (!unmetSubmitRequirements.value.length) return undefined;
   const requirements = unmetSubmitRequirements.value.map(requirement => {
-      const current = currencies.value[requirement.currency_id]?.current ?? 0;
-      return `${requirement.currency_name} ${intPrecString(current, requirement.currency_prec)} / ${intPrecString(requirement.minimum, requirement.currency_prec)}`;
-    });
+    const current = currencies.value[requirement.currency_id]?.current ?? 0;
+    return `${requirement.currency_name} ${intPrecString(current, requirement.currency_prec)} / ${intPrecString(requirement.minimum, requirement.currency_prec)}`;
+  });
   return t('puzzleSubmit.requirements', { requirements });
 });
 
@@ -68,9 +68,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
 <template>
   <div v-if="puzzle">
     <rbph-annoucements v-if="puzzle.data.announcements.length > 0" class="mb-4" :data="puzzle.data.announcements" :current-puzzle-id="puzzle.data.id" />
-    <u-card variant="soft" :ui="{ body: 'py-4' }">
-      <rbph-content-blocks :blocks="puzzle.data.contents" />
-    </u-card>
+    <rbph-content-blocks :blocks="puzzle.data.contents" />
 
     <template v-if="puzzle.data.submission_enabled">
       <u-separator class="mt-6" :ui="{ container: 'w-full', border: 'md:w-3/12 w-0' }">
