@@ -584,6 +584,12 @@ export default defineI18nLocale(() => ({
       unlockedAt: 'アンロック：{time}',
       recentSuccessfulSubmissions: '最近の正解',
       viewAllSubmissions: 'すべての送信履歴を表示',
+      sidebar: {
+        collapse: '問題サイドバーを閉じる',
+        expand: '問題サイドバーを開く',
+        loadFailed: 'エリアの問題を読み込めませんでした',
+        retry: '再試行',
+      },
     },
     staffInbox: {
       messageIdentifier: 'メッセージ#{id}',

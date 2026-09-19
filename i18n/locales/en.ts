@@ -574,6 +574,12 @@ export default defineI18nLocale(() => ({
       unlockedAt: 'Unlocked at {time}',
       recentSuccessfulSubmissions: 'Recent successful submissions',
       viewAllSubmissions: 'View all submissions',
+      sidebar: {
+        collapse: 'Collapse puzzle sidebar',
+        expand: 'Expand puzzle sidebar',
+        loadFailed: 'Unable to load round puzzles',
+        retry: 'Retry',
+      },
     },
     staffInbox: {
       messageIdentifier: 'Message #{id}',

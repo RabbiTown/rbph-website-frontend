@@ -3,6 +3,7 @@ const { t } = useI18n();
 
 const props = defineProps<{
   page?: string;
+  routeLoading?: boolean;
 }>();
 
 const { puzzle } = usePuzzleContext();
@@ -25,15 +26,17 @@ const { renderer } = useFrontendRenderer({ published: () => puzzle.value?.render
 
 const UEmpty = resolveComponent('u-empty');
 const USkeleton = resolveComponent('u-skeleton');
+const pageCache = new Map<string, Component>();
 
-const page = computed(() => {
-  if (!puzzle.value) return null;
+function resolvePuzzlePage(type: number, pageName: string | undefined) {
+  const key = `${type}:${pageName ?? ''}`;
+  const cached = pageCache.get(key);
+  if (cached) return cached;
 
-  const type = puzzle.value.data.ptype;
-  return defineAsyncComponent({
+  const component = defineAsyncComponent({
     loader: async () => {
-      if (props.page) {
-        return await import(`~/components/rbph-puzzle-page/${type}/${props.page}.vue`);
+      if (pageName) {
+        return await import(`~/components/rbph-puzzle-page/${type}/${pageName}.vue`);
       } else {
         return await import(`~/components/rbph-puzzle-page/${type}.vue`);
       }
@@ -45,6 +48,13 @@ const page = computed(() => {
       description: t('components.puzzlePage.missingDescription'),
     }),
   });
+  pageCache.set(key, component);
+  return component;
+}
+
+const page = computed(() => {
+  if (!puzzle.value) return null;
+  return resolvePuzzlePage(puzzle.value.data.ptype, props.page);
 });
 
 async function submitAnswer(answer: string, options: { feedback?: 'host-toast' | 'none' } = {}) {
@@ -147,6 +157,12 @@ watch(() => useCustomRenderer.value && renderer.value?.layout === 'game-full', f
 </script>
 
 <template>
-  <rbph-page-renderer v-if="useCustomRenderer && puzzle && renderer" :renderer="renderer" :page-key="`puzzle:${puzzle.data.id}`" :page="puzzle" :actions="rendererActions" :routes="rendererRoutes" :content-blocks="puzzle.data.contents" :currencies="rendererCurrencies" @failed="rendererFailed = true" />
-  <component :is="page" v-else />
+  <div v-if="props.routeLoading && !page" class="space-y-5 py-6" aria-busy="true">
+    <u-skeleton class="h-7 w-48 max-w-2/3" />
+    <u-skeleton class="h-10 w-72 max-w-full" />
+    <u-skeleton class="h-8 w-full" />
+    <u-skeleton class="h-40 w-full" />
+  </div>
+  <rbph-page-renderer v-else-if="!props.routeLoading && useCustomRenderer && puzzle && renderer" :renderer="renderer" :page-key="`puzzle:${puzzle.data.id}`" :page="puzzle" :actions="rendererActions" :routes="rendererRoutes" :content-blocks="puzzle.data.contents" :currencies="rendererCurrencies" @failed="rendererFailed = true" />
+  <component :is="page" v-else :route-loading="props.routeLoading" />
 </template>

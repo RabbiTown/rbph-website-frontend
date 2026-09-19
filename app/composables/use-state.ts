@@ -209,11 +209,6 @@ export function usePuzzle() {
   const puzzle = useState<RbPuzzleShowData | undefined>('puzzle');
   const stateRequestId = useState('puzzle-state-request-id', () => 0);
 
-  function clear() {
-    stateRequestId.value++;
-    puzzle.value = undefined;
-  }
-
   async function updateContents() {
     const id = puzzle.value?.data.id;
     if (!id) throw 'Invalid puzzle id';
@@ -267,13 +262,14 @@ export function usePuzzle() {
     }
   }
 
-  return { ref: puzzle, clear, updateContents, updateState, updateStateByGameRef };
+  return { ref: puzzle, updateContents, updateState, updateStateByGameRef };
 }
 
 export async function resetStates() {
   useState('user').value = undefined;
   userChecked.value = false;
   userUsed.value = false;
+  clearPuzzleSidebarRounds();
   resetTeamState();
   useGameReleaseSync().reset();
 }

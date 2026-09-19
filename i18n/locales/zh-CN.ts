@@ -581,6 +581,12 @@ export default defineI18nLocale(() => ({
       unlockedAt: '解锁于 {time}',
       recentSuccessfulSubmissions: '最近成功提交',
       viewAllSubmissions: '查看所有提交',
+      sidebar: {
+        collapse: '收起谜题侧边栏',
+        expand: '展开谜题侧边栏',
+        loadFailed: '无法加载区域谜题',
+        retry: '重试',
+      },
     },
     staffInbox: {
       messageIdentifier: '站内信 #{id}',

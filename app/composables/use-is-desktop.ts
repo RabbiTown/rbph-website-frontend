@@ -1,4 +1,8 @@
-export function useIsDesktop() {
-  // Keep the desktop layout boundary aligned with Tailwind's sm breakpoint.
-  return useMediaQuery('(min-width: 640px)');
+const desktopMinWidths = {
+  sm: 640,
+  lg: 1024,
+} as const;
+
+export function useIsDesktop(breakpoint: keyof typeof desktopMinWidths = 'sm') {
+  return useMediaQuery(`(min-width: ${desktopMinWidths[breakpoint]}px)`);
 }
