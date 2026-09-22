@@ -1172,6 +1172,7 @@ export default defineI18nLocale(() => ({
           unlockCost: '解放コスト',
           advancedSettings: '詳細設定',
           enableCondition: '有効化条件',
+          conditional: '追加条件',
           enableConditionDescription: 'ヒントの購入を許可する追加条件',
           cooldownOrigin: 'クールダウンの起点',
           fromPuzzleUnlock: '問題の解放',

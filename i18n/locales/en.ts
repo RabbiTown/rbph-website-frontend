@@ -1162,6 +1162,7 @@ export default defineI18nLocale(() => ({
           unlockCost: 'Unlock cost',
           advancedSettings: 'Advanced settings',
           enableCondition: 'Enable condition',
+          conditional: 'Conditional',
           enableConditionDescription: 'Additional condition required to purchase the hint.',
           cooldownOrigin: 'Cooldown starts from',
           fromPuzzleUnlock: 'Puzzle unlock',

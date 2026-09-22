@@ -1168,6 +1168,7 @@ export default defineI18nLocale(() => ({
           unlockCost: '解鎖消耗',
           advancedSettings: '進階設定',
           enableCondition: '啟用條件',
+          conditional: '額外條件',
           enableConditionDescription: '允許購買提示的額外條件',
           cooldownOrigin: '冷卻起點',
           fromPuzzleUnlock: '謎題解鎖',

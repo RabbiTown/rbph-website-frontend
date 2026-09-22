@@ -28,9 +28,8 @@ const processedData = computed(() => {
   });
 });
 
-interface SyncHintCooldownsResponse {
+interface SyncHintCooldownsResponse extends RbPuzzleHintTeamData {
   server_time: string;
-  next_cooldown_at?: string | null;
 }
 
 interface HintPurchaseResponse extends RbHintTeamState {
@@ -75,8 +74,12 @@ async function syncHintCooldowns() {
   try {
     const { data } = await api.post<SyncHintCooldownsResponse>(`/puzzles/${props.puzzleId}/hints/sync`, {});
     useSyncTime().syncWith(new Date(data.server_time));
+    rawData.value = {
+      data: data.data,
+      state: data.state,
+      next_cooldown_at: data.next_cooldown_at,
+    };
     scheduleHintCooldownSync(data.next_cooldown_at);
-    await updateData();
   } catch (error) {
     console.warn('Failed to sync hint cooldowns', error);
     hintCooldownTimer = setTimeout(() => {

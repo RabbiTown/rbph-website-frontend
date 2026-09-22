@@ -714,9 +714,9 @@ onBeforeUnmount(() => {
                     </div>
                   </div>
                   <template #badges>
-                    <u-badge v-if="Boolean(hint.enable_cond)" variant="soft" color="info">
+                    <u-badge v-if="hint.display_condition !== null || hint.enable_cond !== null" variant="soft" color="info">
                       <u-icon name="material-symbols:rule-rounded" class="me-1 size-3.5" />
-                      {{ t('admin.pages.puzzle.hints.enableCondition') }}
+                      {{ t('admin.pages.puzzle.hints.conditional') }}
                     </u-badge>
                     <u-badge v-if="hint.cooldown > 0" variant="soft" color="warning">
                       <u-icon name="material-symbols:schedule-outline-rounded" class="me-1 size-3.5" />
