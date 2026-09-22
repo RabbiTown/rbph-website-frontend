@@ -649,7 +649,7 @@ defineExpose({ focus });
       >
         <template #default="{ editor }">
           <span v-if="trackEditor(editor)" />
-          <u-editor-toolbar v-if="mode === 'editor'" layout="bubble" :editor="editor" :items="toolbarItems">
+          <u-editor-toolbar v-if="mode === 'editor'" layout="bubble" :editor="editor" :items="toolbarItems" :ui="{ root: 'z-30' }">
             <template #blockType="{ item, isActive, isDisabled, onClick }">
               <u-dropdown-menu :items="[item.items.map(child => ({ ...child, active: isActive(child), disabled: isDisabled(child), onSelect: event => onClick(event, child) }))]" :modal="false" size="sm">
                 <u-button color="neutral" variant="ghost" size="sm" :icon="currentBlockType(editor).icon" :aria-label="currentBlockType(editor).label" :disabled="isDisabled(item)" @click="onClick($event, item)" />
