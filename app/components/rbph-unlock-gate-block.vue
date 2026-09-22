@@ -13,13 +13,23 @@ const props = defineProps<{
   disabled?: boolean;
   loading?: boolean;
   depth?: number;
+  hintStates?: boolean;
+  allowDefault?: boolean;
 }>();
 
 const emit = defineEmits<{ change: [] }>();
 
 const gateTypeItems = computed<SelectItem[][]>(() => [
+  ...(props.hintStates
+    ? [
+        [
+          { label: t('components.rbphUnlockGateBlock.gateType.hintEnabled'), value: 'hint-enabled', icon: 'material-symbols:rule-rounded' },
+          { label: t('components.rbphUnlockGateBlock.gateType.hintCooledDown'), value: 'hint-cooled-down', icon: 'material-symbols:timer-outline-rounded' },
+        ],
+      ]
+    : []),
   [
-    ...((props.depth ?? 0) === 0 ? [{ label: t('components.rbphUnlockGateBlock.gateType.default'), value: 'default', icon: 'material-symbols:lock-open-right-outline-rounded' }] : []),
+    ...((props.depth ?? 0) === 0 && props.allowDefault !== false ? [{ label: t('components.rbphUnlockGateBlock.gateType.default'), value: 'default', icon: 'material-symbols:lock-open-right-outline-rounded' }] : []),
     { label: t('components.rbphUnlockGateBlock.gateType.gameStarted'), value: 'game-started', icon: 'material-symbols:flag-outline-rounded' },
     { label: t('components.rbphUnlockGateBlock.gateType.puzzleSolved'), value: 'solved', icon: 'material-symbols:extension-outline-rounded' },
     { label: t('admin.common.trigger'), value: 'triggered', icon: 'material-symbols:bolt-outline-rounded' },
@@ -145,6 +155,8 @@ function removeChild(index: number) {
           :disabled="disabled"
           :loading="loading"
           :depth="(depth ?? 0) + 1"
+          :hint-states="hintStates"
+          :allow-default="allowDefault"
           @change="emit('change')"
         />
         <u-button v-if="node.children.length > 1" icon="material-symbols:delete-outline-rounded" color="error" variant="ghost" size="sm" :disabled="disabled" @click="removeChild(index)" />
@@ -155,7 +167,19 @@ function removeChild(index: number) {
     </div>
 
     <div v-else-if="node.type === 'not'" class="mt-3">
-      <rbph-unlock-gate-block v-model="node.child" :puzzles="puzzles" :rounds="rounds" :puzzle-items="puzzleItems" :round-items="roundItems" :disabled="disabled" :loading="loading" :depth="(depth ?? 0) + 1" @change="emit('change')" />
+      <rbph-unlock-gate-block
+        v-model="node.child"
+        :puzzles="puzzles"
+        :rounds="rounds"
+        :puzzle-items="puzzleItems"
+        :round-items="roundItems"
+        :disabled="disabled"
+        :loading="loading"
+        :depth="(depth ?? 0) + 1"
+        :hint-states="hintStates"
+        :allow-default="allowDefault"
+        @change="emit('change')"
+      />
     </div>
   </div>
 </template>

@@ -8,10 +8,10 @@ interface HintState {
   content: string;
   content_type: RbContentType;
   cooldown: number;
-  title_display_condition: AdminHintDisplayCondition;
-  display_condition: AdminHintDisplayCondition;
+  title_display_condition: string | null;
+  display_condition: string | null;
   enable_cond: string | null;
-  cooldown_after_enable: boolean;
+  cooldown_origin: HintCooldownOrigin;
   cost_id: number | null;
   cost_amount: number;
   backend_function: string | null;
@@ -26,10 +26,10 @@ interface HintPatch {
   content: string;
   content_type: RbContentType;
   cooldown: number;
-  title_display_condition: AdminHintDisplayCondition;
-  display_condition: AdminHintDisplayCondition;
+  title_display_condition: string | null;
+  display_condition: string | null;
   enable_cond: string | null;
-  cooldown_after_enable: boolean;
+  cooldown_origin: HintCooldownOrigin;
   cost_id: number | null;
   cost_amount: number;
   backend_function: string | null;
@@ -46,6 +46,13 @@ interface HintDropEntry {
   id: number;
   index: number;
   centerY: number;
+}
+
+enum HintCooldownOrigin {
+  PuzzleUnlock = 0,
+  HintEnabled = 1,
+  HintDisplayed = 2,
+  HintTitleDisplayed = 3,
 }
 
 const api = useApi();
@@ -72,6 +79,9 @@ const hintOriginPlaceholderVisible = ref(false);
 let nextDraftId = -1;
 let hintDropEntries: HintDropEntry[] = [];
 const maxCooldownSeconds = 2_147_483_647;
+const initialHintEnableCondition = '(true)';
+const initialHintDisplayCondition = '(true)';
+const initialHintTitleDisplayCondition = '(hint-cooled-down)';
 const hintEditor = useListEditor(state, {
   getId: hint => hint.id as number,
   isPersisted: hint => Boolean(hint.id && hint.id > 0),
@@ -95,11 +105,11 @@ const currencyItems = computed(() => [
   })),
 ]);
 
-const displayConditionItems = computed(() => [
-  { label: t('admin.pages.puzzle.hints.displayConditions.always'), value: AdminHintDisplayCondition.Always, icon: 'material-symbols:visibility-outline-rounded' },
-  { label: t('admin.pages.puzzle.hints.displayConditions.enabled'), value: AdminHintDisplayCondition.Enabled, icon: 'material-symbols:rule-rounded' },
-  { label: t('admin.pages.puzzle.hints.displayConditions.cooldown'), value: AdminHintDisplayCondition.Cooldown, icon: 'material-symbols:timer-outline-rounded' },
-  { label: t('admin.pages.puzzle.hints.displayConditions.purchasable'), value: AdminHintDisplayCondition.Purchasable, icon: 'material-symbols:shopping-cart-checkout-rounded' },
+const cooldownOriginItems = computed(() => [
+  { label: t('admin.pages.puzzle.hints.fromPuzzleUnlock'), value: HintCooldownOrigin.PuzzleUnlock, icon: 'material-symbols:lock-open-right-outline-rounded' },
+  { label: t('admin.pages.puzzle.hints.fromHintEnabled'), value: HintCooldownOrigin.HintEnabled, icon: 'material-symbols:rule-rounded' },
+  { label: t('admin.pages.puzzle.hints.fromHintDisplayed'), value: HintCooldownOrigin.HintDisplayed, icon: 'material-symbols:visibility-outline-rounded' },
+  { label: t('admin.pages.puzzle.hints.fromHintTitleDisplayed'), value: HintCooldownOrigin.HintTitleDisplayed, icon: 'material-symbols:title-rounded' },
 ]);
 
 function selectedCurrencyIcon(id: number | null) {
@@ -110,6 +120,18 @@ function selectedCurrencyLabel(id: number | null) {
   return currencyItems.value.find(item => item.value === id)?.label;
 }
 
+function cooldownOriginLabel(origin: HintCooldownOrigin) {
+  return cooldownOriginItems.value.find(item => item.value === origin)?.label;
+}
+
+function cooldownOriginDisabled(hint: HintState, origin: HintCooldownOrigin) {
+  return (
+    (origin === HintCooldownOrigin.HintEnabled && hint.enable_cond === null) ||
+    (origin === HintCooldownOrigin.HintDisplayed && (hint.display_condition === null || unlockConditionUsesHintCooldown(hint.display_condition))) ||
+    (origin === HintCooldownOrigin.HintTitleDisplayed && (hint.title_display_condition === null || unlockConditionUsesHintCooldown(hint.title_display_condition)))
+  );
+}
+
 const ticketCooldownPatch = computed(() => Math.max(0, Math.trunc(ticketCooldown.value || 0)));
 const backendEnabled = computed(() => backend.value?.enabled ?? false);
 const originalTicketEnabled = computed(() => puzzle.value?.ticket_enabled ?? true);
@@ -117,9 +139,7 @@ const originalTicketCooldown = computed(() => puzzle.value?.ticket_cooldown ?? 0
 const ticketEnabledDirty = computed(() => Boolean(puzzle.value && ticketEnabled.value !== originalTicketEnabled.value));
 const ticketCooldownDirty = computed(() => Boolean(puzzle.value && ticketCooldownPatch.value !== originalTicketCooldown.value));
 const ticketSettingsDirty = computed(() => ticketEnabledDirty.value || ticketCooldownDirty.value);
-const hintDirty = computed(
-  () => state.value.some(hint => Boolean(hint.id && hint.id < 0 && hintEditor.isPendingDeletion(hint))) || JSON.stringify(serializeState(state.value)) !== JSON.stringify(serializeHints(hints.value)),
-);
+const hintDirty = computed(() => state.value.some(hint => Boolean(hint.id && hint.id < 0 && hintEditor.isPendingDeletion(hint))) || JSON.stringify(serializeState(state.value)) !== JSON.stringify(serializeHints(hints.value)));
 const dirty = computed(() => hintDirty.value || ticketSettingsDirty.value);
 const dirtyHintIds = computed(() => {
   const original = new Map(hints.value.map(hint => [hint.id, stateToDirtySnapshot(hintToState(hint))]));
@@ -136,8 +156,8 @@ const dirtyHintIds = computed(() => {
   );
 });
 
-function hintHasNonDefaultAdvancedSettings(hint: Pick<HintState, 'title_display_condition' | 'display_condition' | 'enable_cond' | 'cooldown_after_enable' | 'backend_function' | 'triggers'>) {
-  return hint.title_display_condition !== AdminHintDisplayCondition.Cooldown || hint.display_condition !== AdminHintDisplayCondition.Enabled || hint.enable_cond !== null || hint.cooldown_after_enable || Boolean(hint.backend_function?.trim()) || hint.triggers.length > 0;
+function hintHasNonDefaultAdvancedSettings(hint: Pick<HintState, 'title_display_condition' | 'display_condition' | 'enable_cond' | 'cooldown_origin' | 'backend_function' | 'triggers'>) {
+  return hint.title_display_condition !== null || hint.display_condition !== null || hint.enable_cond !== null || hint.cooldown_origin !== HintCooldownOrigin.PuzzleUnlock || Boolean(hint.backend_function?.trim()) || hint.triggers.length > 0;
 }
 
 function hintToState(hint: AdminHintData, open = false): HintState {
@@ -151,7 +171,7 @@ function hintToState(hint: AdminHintData, open = false): HintState {
     title_display_condition: hint.title_display_condition,
     display_condition: hint.display_condition,
     enable_cond: hint.enable_cond ?? null,
-    cooldown_after_enable: hint.cooldown_after_enable ?? false,
+    cooldown_origin: hint.cooldown_origin ?? HintCooldownOrigin.PuzzleUnlock,
     cost_id: hint.cost_id ?? null,
     cost_amount: hint.cost_amount,
     backend_function: hint.backend_function ?? null,
@@ -172,7 +192,7 @@ function stateToPatch(hint: HintState, sort = hint.sort): HintPatch {
     title_display_condition: hint.title_display_condition,
     display_condition: hint.display_condition,
     enable_cond: hint.enable_cond,
-    cooldown_after_enable: hint.enable_cond !== null && hint.cooldown_after_enable,
+    cooldown_origin: hint.cooldown_origin,
     cost_id: hint.cost_id,
     cost_amount: hint.cost_id === null ? 0 : Math.max(0, Math.trunc(hint.cost_amount || 0)),
     backend_function: hint.backend_function?.trim() || null,
@@ -191,7 +211,7 @@ function stateToDirtySnapshot(hint: HintState) {
     title_display_condition: patch.title_display_condition,
     display_condition: patch.display_condition,
     enable_cond: patch.enable_cond,
-    cooldown_after_enable: patch.cooldown_after_enable,
+    cooldown_origin: patch.cooldown_origin,
     cost_id: patch.cost_id,
     cost_amount: patch.cost_amount,
     backend_function: patch.backend_function,
@@ -247,10 +267,10 @@ function addHint() {
     content: '',
     content_type: RbContentType.Markdown,
     cooldown: 0,
-    title_display_condition: AdminHintDisplayCondition.Cooldown,
-    display_condition: AdminHintDisplayCondition.Enabled,
+    title_display_condition: null,
+    display_condition: null,
     enable_cond: null,
-    cooldown_after_enable: false,
+    cooldown_origin: HintCooldownOrigin.PuzzleUnlock,
     cost_id: null,
     cost_amount: 0,
     backend_function: null,
@@ -481,15 +501,31 @@ function validate(): boolean {
       const costValid = patch.cost_id === null || currencies.value.some(currency => currency.id === patch.cost_id);
       const backendFunctionValid = patch.backend_function === null || /^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(patch.backend_function);
       const enableConditionValid = patch.enable_cond === null || patch.enable_cond.length > 0;
-      const displayConditionsValid = displayConditionItems.value.some(item => item.value === patch.title_display_condition) && displayConditionItems.value.some(item => item.value === patch.display_condition);
+      const displayConditionsValid = (patch.title_display_condition === null || patch.title_display_condition.trim().length > 0) && (patch.display_condition === null || patch.display_condition.trim().length > 0);
+      const cooldownOriginValid = !cooldownOriginDisabled(hint, patch.cooldown_origin);
       const triggersValid = patch.triggers.every(value => /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(value));
-      return patch.title.length > 0 && patch.cooldown >= 0 && patch.cost_amount >= 0 && costValid && backendFunctionValid && enableConditionValid && displayConditionsValid && triggersValid;
+      return patch.title.length > 0 && patch.cooldown >= 0 && patch.cost_amount >= 0 && costValid && backendFunctionValid && enableConditionValid && displayConditionsValid && cooldownOriginValid && triggersValid;
     })
   );
 }
 
 function showBackendFunction(hint: HintState) {
   return backendEnabled.value || Boolean(hint.backend_function?.trim());
+}
+
+function setHintConditionEnabled(hint: HintState, field: 'enable_cond' | 'display_condition' | 'title_display_condition', enabled: boolean) {
+  if (!enabled) {
+    hint[field] = null;
+    if (
+      (field === 'enable_cond' && hint.cooldown_origin === HintCooldownOrigin.HintEnabled) ||
+      (field === 'display_condition' && hint.cooldown_origin === HintCooldownOrigin.HintDisplayed) ||
+      (field === 'title_display_condition' && hint.cooldown_origin === HintCooldownOrigin.HintTitleDisplayed)
+    ) {
+      hint.cooldown_origin = HintCooldownOrigin.PuzzleUnlock;
+    }
+    return;
+  }
+  hint[field] = field === 'enable_cond' ? initialHintEnableCondition : field === 'display_condition' ? initialHintDisplayCondition : initialHintTitleDisplayCondition;
 }
 
 function hintBackendWarning(hint: HintState) {
@@ -660,7 +696,19 @@ onBeforeUnmount(() => {
                 <rbph-collapsible-header class="rounded-lg bg-elevated/60 px-4 py-2 ring ring-default">
                   <div class="flex min-w-0 flex-1 items-center gap-2">
                     <u-icon name="material-symbols:lightbulb-outline-rounded" class="shrink-0 text-warning" />
-                    <u-textarea v-if="hint.open" v-model="hint.title" :rows="1" autoresize :ui="{ base: 'field-sizing-content resize-none' }" class="min-w-0 flex-1 w-full -mx-2.5 -my-1.5 font-medium" :placeholder="t('admin.pages.puzzle.hints.hintTitle')" variant="ghost" :disabled="saving || hintEditor.isPendingDeletion(hint)" @click.stop @keydown.stop />
+                    <u-textarea
+                      v-if="hint.open"
+                      v-model="hint.title"
+                      :rows="1"
+                      autoresize
+                      :ui="{ base: 'field-sizing-content resize-none' }"
+                      class="min-w-0 flex-1 w-full -mx-2.5 -my-1.5 font-medium"
+                      :placeholder="t('admin.pages.puzzle.hints.hintTitle')"
+                      variant="ghost"
+                      :disabled="saving || hintEditor.isPendingDeletion(hint)"
+                      @click.stop
+                      @keydown.stop
+                    />
                     <div v-else class="min-w-0 flex-1 whitespace-normal wrap-anywhere text-sm font-medium text-highlighted">
                       {{ hint.title || t('admin.pages.puzzle.hints.notMemberHint') }}
                     </div>
@@ -706,7 +754,7 @@ onBeforeUnmount(() => {
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
                           <rb-form-field row narrow-label class="min-w-0 flex-1" :label="t('admin.pages.puzzle.hints.cooldown')">
                             <div class="flex flex-wrap items-center gap-2">
-                              <span class="text-sm text-muted">{{ t('admin.pages.puzzle.hints.puzzleUnlock') }}</span>
+                              <span class="text-sm text-muted">{{ cooldownOriginLabel(hint.cooldown_origin) }}</span>
                               <rb-input-duration
                                 v-model="hint.cooldown"
                                 :max-seconds="maxCooldownSeconds"
@@ -721,7 +769,17 @@ onBeforeUnmount(() => {
                           <rb-form-field row narrow-label class="min-w-0 flex-1" :label="t('admin.pages.puzzle.hints.unlockCost')">
                             <div class="flex flex-wrap items-center gap-2">
                               <u-select v-model="hint.cost_id" :items="currencyItems" :leading-icon="selectedCurrencyIcon(hint.cost_id)" variant="subtle" class="w-40" :disabled="saving || hintEditor.isPendingDeletion(hint)" />
-                              <rb-input-number v-if="hint.cost_id !== null" v-model="hint.cost_amount" :prec="currencyPrec(hint.cost_id)" :min="0" :step="1" orientation="vertical" variant="subtle" class="w-36" :disabled="saving || hintEditor.isPendingDeletion(hint)" />
+                              <rb-input-number
+                                v-if="hint.cost_id !== null"
+                                v-model="hint.cost_amount"
+                                :prec="currencyPrec(hint.cost_id)"
+                                :min="0"
+                                :step="1"
+                                orientation="vertical"
+                                variant="subtle"
+                                class="w-36"
+                                :disabled="saving || hintEditor.isPendingDeletion(hint)"
+                              />
                             </div>
                           </rb-form-field>
                         </div>
@@ -743,56 +801,77 @@ onBeforeUnmount(() => {
                         <u-collapsible v-model:open="hint.advancedOpen">
                           <template #content>
                             <div class="mt-2 space-y-4">
-                              <rb-form-field :label="t('admin.pages.puzzle.hints.enableCondition')" :tooltip="t('admin.pages.puzzle.hints.enableConditionDescription')">
-                                <rbph-content-block-visibility-editor v-model="hint.enable_cond" :game-id="currentGameId" :current-puzzle-id="currentPuzzleId" :disabled="saving || hintEditor.isPendingDeletion(hint)" />
+                              <rb-form-field :label="t('admin.pages.puzzle.hints.displayCondition')" :tooltip="t('admin.pages.puzzle.hints.displayConditionDescription')">
+                                <template #label-action>
+                                  <span class="whitespace-nowrap text-xs font-normal text-muted">{{ t('admin.pages.puzzle.hints.defaultDisplayCondition') }}</span>
+                                  <u-switch
+                                    :model-value="hint.display_condition !== null"
+                                    :label="t('admin.pages.puzzle.hints.customCondition')"
+                                    size="sm"
+                                    :disabled="saving || hintEditor.isPendingDeletion(hint)"
+                                    @update:model-value="value => setHintConditionEnabled(hint, 'display_condition', value)"
+                                  />
+                                </template>
+                                <rbph-hint-display-condition-editor
+                                  v-if="hint.display_condition !== null"
+                                  v-model="hint.display_condition"
+                                  :game-id="currentGameId"
+                                  :current-puzzle-id="currentPuzzleId"
+                                  :disabled="saving || hintEditor.isPendingDeletion(hint)"
+                                />
                               </rb-form-field>
 
-                              <div class="grid gap-4 sm:grid-cols-2">
-                                <rb-form-field row narrow-label :label="t('admin.pages.puzzle.hints.displayCondition')" :tooltip="t('admin.pages.puzzle.hints.displayConditionDescription')">
+                              <rb-form-field :label="t('admin.pages.puzzle.hints.enableCondition')" :tooltip="t('admin.pages.puzzle.hints.enableConditionDescription')">
+                                <template #label-action>
+                                  <span class="whitespace-nowrap text-xs font-normal text-muted">{{ t('admin.pages.puzzle.hints.defaultEnableCondition') }}</span>
+                                  <u-switch
+                                    :model-value="hint.enable_cond !== null"
+                                    :label="t('admin.pages.puzzle.hints.customCondition')"
+                                    size="sm"
+                                    :disabled="saving || hintEditor.isPendingDeletion(hint)"
+                                    @update:model-value="value => setHintConditionEnabled(hint, 'enable_cond', value)"
+                                  />
+                                </template>
+                                <rbph-content-block-visibility-editor
+                                  v-if="hint.enable_cond !== null"
+                                  v-model="hint.enable_cond"
+                                  :game-id="currentGameId"
+                                  :current-puzzle-id="currentPuzzleId"
+                                  :disabled="saving || hintEditor.isPendingDeletion(hint)"
+                                />
+                              </rb-form-field>
+
+                              <rb-form-field :label="t('admin.pages.puzzle.hints.titleDisplayCondition')" :tooltip="t('admin.pages.puzzle.hints.titleDisplayConditionDescription')">
+                                <template #label-action>
+                                  <span class="whitespace-nowrap text-xs font-normal text-muted">{{ t('admin.pages.puzzle.hints.defaultTitleDisplayCondition') }}</span>
+                                  <u-switch
+                                    :model-value="hint.title_display_condition !== null"
+                                    :label="t('admin.pages.puzzle.hints.customCondition')"
+                                    size="sm"
+                                    :disabled="saving || hintEditor.isPendingDeletion(hint)"
+                                    @update:model-value="value => setHintConditionEnabled(hint, 'title_display_condition', value)"
+                                  />
+                                </template>
+                                <rbph-hint-display-condition-editor
+                                  v-if="hint.title_display_condition !== null"
+                                  v-model="hint.title_display_condition"
+                                  :game-id="currentGameId"
+                                  :current-puzzle-id="currentPuzzleId"
+                                  :disabled="saving || hintEditor.isPendingDeletion(hint)"
+                                />
+                              </rb-form-field>
+
+                              <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
+                                <rb-form-field row narrow-label class="min-w-0 flex-1" :label="t('admin.pages.puzzle.hints.cooldownOrigin')">
                                   <u-field-group class="flex-wrap">
                                     <u-button
-                                      v-for="item in displayConditionItems"
+                                      v-for="item in cooldownOriginItems"
                                       :key="item.value"
-                                      :variant="hint.display_condition === item.value ? 'solid' : 'outline'"
+                                      :variant="hint.cooldown_origin === item.value ? 'solid' : 'outline'"
                                       :icon="item.icon"
                                       :label="item.label"
-                                      :disabled="saving || hintEditor.isPendingDeletion(hint)"
-                                      @click="hint.display_condition = item.value"
-                                    />
-                                  </u-field-group>
-                                </rb-form-field>
-
-                                <rb-form-field row narrow-label :label="t('admin.pages.puzzle.hints.titleDisplayCondition')" :tooltip="t('admin.pages.puzzle.hints.titleDisplayConditionDescription')">
-                                  <u-field-group class="flex-wrap">
-                                    <u-button
-                                      v-for="item in displayConditionItems"
-                                      :key="item.value"
-                                      :variant="hint.title_display_condition === item.value ? 'solid' : 'outline'"
-                                      :icon="item.icon"
-                                      :label="item.label"
-                                      :disabled="saving || hintEditor.isPendingDeletion(hint)"
-                                      @click="hint.title_display_condition = item.value"
-                                    />
-                                  </u-field-group>
-                                </rb-form-field>
-                              </div>
-
-                              <div v-if="Boolean(hint.enable_cond)" class="flex flex-col gap-4 sm:flex-row sm:items-start">
-                                <rb-form-field row narrow-label class="min-w-0 flex-1" :label="t('admin.pages.puzzle.hints.cooldownOrigin')" :tooltip="t('admin.pages.puzzle.hints.cooldownOriginDescription')">
-                                  <u-field-group>
-                                    <u-button
-                                      :variant="hint.cooldown_after_enable ? 'outline' : 'solid'"
-                                      icon="material-symbols:lock-open-right-outline-rounded"
-                                      :label="t('admin.pages.puzzle.hints.fromPuzzleUnlock')"
-                                      :disabled="saving || hintEditor.isPendingDeletion(hint)"
-                                      @click="hint.cooldown_after_enable = false"
-                                    />
-                                    <u-button
-                                      :variant="hint.cooldown_after_enable ? 'solid' : 'outline'"
-                                      icon="material-symbols:rule-rounded"
-                                      :label="t('admin.pages.puzzle.hints.fromHintEnabled')"
-                                      :disabled="saving || hintEditor.isPendingDeletion(hint)"
-                                      @click="hint.cooldown_after_enable = true"
+                                      :disabled="saving || hintEditor.isPendingDeletion(hint) || cooldownOriginDisabled(hint, item.value)"
+                                      @click="hint.cooldown_origin = item.value"
                                     />
                                   </u-field-group>
                                 </rb-form-field>
@@ -859,14 +938,7 @@ onBeforeUnmount(() => {
             <rb-form-field v-if="ticketEnabled" row narrow-label :label="t('admin.pages.puzzle.hints.cooldown')" :dirty="ticketCooldownDirty" :reset="resetTicketCooldown">
               <div class="flex flex-wrap items-center gap-2">
                 <span class="text-sm text-muted">{{ t('admin.pages.puzzle.hints.puzzleUnlock') }}</span>
-                <rb-input-duration
-                  v-model="ticketCooldown"
-                  :max-seconds="maxCooldownSeconds"
-                  icon="material-symbols:timer-outline-rounded"
-                  variant="subtle"
-                  :disabled="saving"
-                  :aria-label="t('admin.pages.puzzle.hints.cooldown')"
-                />
+                <rb-input-duration v-model="ticketCooldown" :max-seconds="maxCooldownSeconds" icon="material-symbols:timer-outline-rounded" variant="subtle" :disabled="saving" :aria-label="t('admin.pages.puzzle.hints.cooldown')" />
               </div>
             </rb-form-field>
           </div>

@@ -8,6 +8,8 @@ const props = defineProps<{
   rounds: UnlockRoundOptionData[];
   disabled?: boolean;
   loading?: boolean;
+  hintStates?: boolean;
+  allowDefault?: boolean;
 }>();
 
 const emit = defineEmits<{ change: [] }>();
@@ -36,6 +38,8 @@ const roundItems = computed<SelectItem[]>(() =>
     :round-items="roundItems"
     :disabled="disabled"
     :loading="loading"
+    :hint-states="hintStates"
+    :allow-default="allowDefault"
     @change="emit('change')"
   />
 </template>

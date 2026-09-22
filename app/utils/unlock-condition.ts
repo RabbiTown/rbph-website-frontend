@@ -3,7 +3,7 @@ import { isSimpleAtom, parseUnlockCondition, serializeSexpr, type Sexpr } from '
 export type UnlockCompareOp = 'gt' | 'ge' | 'lt' | 'le' | 'eq' | 'ne';
 export type UnlockSetType = 'puzzles' | 'puzzle-range' | 'round';
 export type UnlockValueType = 'number' | 'solved-count';
-export type UnlockGateType = 'default' | 'true' | 'false' | 'source' | 'and' | 'or' | 'not' | 'solved' | 'triggered' | 'all-solved' | 'any-solved' | 'game-started' | 'cmp';
+export type UnlockGateType = 'default' | 'true' | 'false' | 'source' | 'and' | 'or' | 'not' | 'solved' | 'triggered' | 'all-solved' | 'any-solved' | 'game-started' | 'hint-enabled' | 'hint-cooled-down' | 'cmp';
 
 export interface UnlockPuzzleOptionData {
   id: number;
@@ -22,14 +22,9 @@ export interface UnlockRoundOptionData {
   sort?: number;
 }
 
-export type UnlockSetNode =
-  | { type: 'puzzles'; refs: string[] }
-  | { type: 'puzzle-range'; start: number; end: number }
-  | { type: 'round'; ref: string };
+export type UnlockSetNode = { type: 'puzzles'; refs: string[] } | { type: 'puzzle-range'; start: number; end: number } | { type: 'round'; ref: string };
 
-export type UnlockValueNode =
-  | { type: 'number'; value: number }
-  | { type: 'solved-count'; set: UnlockSetNode };
+export type UnlockValueNode = { type: 'number'; value: number } | { type: 'solved-count'; set: UnlockSetNode };
 
 export type UnlockGateNode =
   | { type: 'default' }
@@ -41,6 +36,7 @@ export type UnlockGateNode =
   | { type: 'triggered'; ref: string; key: string }
   | { type: 'all-solved' | 'any-solved'; set: UnlockSetNode }
   | { type: 'game-started' }
+  | { type: 'hint-enabled' | 'hint-cooled-down' }
   | { type: 'cmp'; op: UnlockCompareOp; lhs: UnlockValueNode; rhs: UnlockValueNode };
 
 export function unlockPuzzleRef(item: Pick<UnlockPuzzleOptionData, 'id' | 'slug'>) {
@@ -96,6 +92,9 @@ export function defaultUnlockGate(type: UnlockGateType = 'game-started', puzzles
         lhs: { type: 'solved-count', set },
         rhs: defaultUnlockValue(),
       };
+    case 'hint-enabled':
+    case 'hint-cooled-down':
+      return { type };
     case 'game-started':
     default:
       return { type: 'game-started' };
@@ -134,6 +133,7 @@ function serializeUnlockGateNode(node: UnlockGateNode, nested = false): string {
   if (node.type === 'true' || node.type === 'false') return `(${node.type})`;
   if (node.type === 'source') return node.source.trim();
   if (node.type === 'game-started') return '(game-started)';
+  if (node.type === 'hint-enabled' || node.type === 'hint-cooled-down') return `(${node.type})`;
   if (node.type === 'solved') {
     const ref = atom(node.ref);
     return ref ? serializeSexpr(['solved', ref]) : '';
@@ -211,6 +211,7 @@ export function parseUnlockGate(value: string | null | undefined): UnlockGateNod
   const [op, ...args] = list;
   if ((op === 'true' || op === 'false') && args.length === 0) return { type: op };
   if (op === 'game-started' && args.length === 0) return { type: 'game-started' };
+  if ((op === 'hint-enabled' || op === 'hint-cooled-down') && args.length === 0) return { type: op };
   if (op === 'solved' && args.length === 1) return { type: 'solved', ref: stringArg(args[0]) };
   if (op === 'triggered' && args.length === 2) return { type: 'triggered', ref: stringArg(args[0]), key: stringArg(args[1]) };
   if ((op === 'all-solved' || op === 'any-solved') && args.length === 1) {
@@ -230,4 +231,15 @@ export function parseUnlockGate(value: string | null | undefined): UnlockGateNod
   }
 
   return { type: 'source', source: value };
+}
+
+export function unlockConditionUsesHintCooldown(value: string | null | undefined): boolean {
+  if (!value) return false;
+  const containsHintCooldown = (expr: Sexpr): boolean => {
+    if (!Array.isArray(expr)) return false;
+    if (expr[0] === 'hint-cooled-down') return true;
+    return expr.some(item => containsHintCooldown(item));
+  };
+  const expr = parseUnlockCondition(value);
+  return expr ? containsHintCooldown(expr) : false;
 }

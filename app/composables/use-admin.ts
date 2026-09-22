@@ -69,13 +69,6 @@ export interface AdminPuzzleBackendData {
   utime_at: string;
 }
 
-export enum AdminHintDisplayCondition {
-  Always = 0,
-  Enabled = 1,
-  Cooldown = 2,
-  Purchasable = 3,
-}
-
 export interface AdminHintData {
   id: number;
   sort: number;
@@ -83,10 +76,10 @@ export interface AdminHintData {
   content: string;
   content_type: number;
   cooldown: number;
-  title_display_condition: AdminHintDisplayCondition;
-  display_condition: AdminHintDisplayCondition;
+  title_display_condition: string | null;
+  display_condition: string | null;
   enable_cond?: string | null;
-  cooldown_after_enable: boolean;
+  cooldown_origin: number;
   cost_id?: number | null;
   cost_amount: number;
   backend_function?: string | null;

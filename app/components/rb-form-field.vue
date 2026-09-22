@@ -1,5 +1,5 @@
-<script setup lang="ts">import type { FormFieldProps } from '@nuxt/ui';
-
+<script setup lang="ts">
+import type { FormFieldProps } from '@nuxt/ui';
 
 const { t } = useI18n();
 
@@ -59,8 +59,11 @@ function onReset() {
       </span>
     </template>
 
-    <template v-if="$slots.hint" #hint="{ hint }">
-      <slot name="hint" :hint="hint" />
+    <template v-if="$slots['label-action'] || $slots.hint" #hint="{ hint }">
+      <span class="inline-flex shrink-0 items-center gap-3 text-default">
+        <slot v-if="$slots.hint" name="hint" :hint="hint" />
+        <slot name="label-action" />
+      </span>
     </template>
 
     <template v-if="$slots.description" #description="{ description }">
