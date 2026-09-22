@@ -13,7 +13,7 @@ const to = computed(() => gamePuzzleSimpleRoute(props.gameId ?? game.value?.id, 
   <u-button variant="subtle" :color="solved ? 'success' : 'neutral'" class="w-full rounded-sm py-3" :to="to">
     <div class="flex h-6 items-center">
       <rbph-puzzle-progress-icon :solved="solved" :stats="puzzle.solve_stats" class="ml-1 mr-2" />
-      <div class="flex h-full items-center text-lg leading-none">
+      <div class="text-lg leading-6">
         {{ puzzle.title }}
       </div>
     </div>

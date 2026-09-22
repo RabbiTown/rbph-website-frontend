@@ -24,7 +24,7 @@ async function open() {
   <u-button v-if="to" :to="to" variant="subtle" :color="solved ? 'success' : 'neutral'" class="w-full rounded-sm py-3" :disabled="disabled" @click="emit('open', puzzle)">
     <div class="flex h-6 items-center">
       <rbph-puzzle-progress-icon :solved="solved" :stats="puzzle.solve_stats" class="ml-1 mr-2" />
-      <div class="flex h-full items-center text-lg leading-none">{{ puzzle.title }}</div>
+      <div class="text-lg leading-6">{{ puzzle.title }}</div>
     </div>
     <template v-if="showAnswer && puzzle.answer" #trailing>
       <div class="flex-1 flex justify-end text-[1.2em]">{{ puzzle.answer }}</div>
@@ -33,7 +33,7 @@ async function open() {
   <u-button v-else variant="subtle" :color="solved ? 'success' : 'neutral'" class="w-full rounded-sm py-3" :disabled="disabled" @click="open">
     <div class="flex h-6 items-center">
       <rbph-puzzle-progress-icon :solved="solved" :stats="puzzle.solve_stats" class="ml-1 mr-2" />
-      <div class="flex h-full items-center text-lg leading-none">{{ puzzle.title }}</div>
+      <div class="text-lg leading-6">{{ puzzle.title }}</div>
     </div>
     <template v-if="showAnswer && puzzle.answer" #trailing>
       <div class="flex-1 flex justify-end text-[1.2em]">{{ puzzle.answer }}</div>

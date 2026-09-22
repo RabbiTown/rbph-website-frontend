@@ -39,7 +39,7 @@ const tooltip = computed(() =>
 
 <template>
   <u-icon v-if="!stats" :name="solved ? 'material-symbols:check-circle-outline' : 'material-symbols:circle-outline'" class="shrink-0" :style="iconStyle" />
-  <rb-tooltip v-else :delay-duration="100">
+  <rb-tooltip v-else class="inline-flex align-middle leading-none" :delay-duration="100">
     <span class="relative inline-grid shrink-0 cursor-help place-items-center" :style="iconStyle" role="img" :aria-label="tooltip" @click.stop.prevent>
       <svg class="absolute inset-0 size-full -rotate-90" viewBox="0 0 24 24" aria-hidden="true">
         <circle cx="12" cy="12" r="10" pathLength="100" fill="none" stroke="white" stroke-width="3" />

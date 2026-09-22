@@ -10,7 +10,7 @@ const open = defineModel<boolean>('open', { default: false });
 <template>
   <u-tooltip ref="base" v-bind="attrs" v-model:open="open" :text="text" :disable-closing-trigger="true">
     <template #default>
-      <span class="inline-flex" @click.capture="open = true">
+      <span @click.capture="open = true">
         <slot name="default" />
       </span>
     </template>
