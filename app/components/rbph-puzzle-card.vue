@@ -10,10 +10,10 @@ const to = computed(() => gamePuzzleSimpleRoute(props.gameId ?? game.value?.id, 
 </script>
 
 <template>
-  <u-button variant="subtle" :color="solved ? 'success' : 'neutral'" class="py-2.5 rounded-sm w-full" :to="to">
-    <div class="flex items-center">
-      <u-icon :name="solved ? 'material-symbols:check-circle-outline' : 'material-symbols:circle-outline'" class="size-5 mx-2 mt-0.5" />
-      <div class="text-lg">
+  <u-button variant="subtle" :color="solved ? 'success' : 'neutral'" class="w-full rounded-sm py-3" :to="to">
+    <div class="flex h-6 items-center">
+      <rbph-puzzle-progress-icon :solved="solved" :stats="puzzle.solve_stats" class="ml-1 mr-2" />
+      <div class="flex h-full items-center text-lg leading-none">
         {{ puzzle.title }}
       </div>
     </div>

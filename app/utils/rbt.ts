@@ -28,6 +28,7 @@ export interface RbtPuzzleSummary {
   title: string;
   state: RbtPuzzleState;
   answer?: string;
+  solve_stats?: RbPuzzleSolveStats;
 }
 
 export interface RbtCurrency {

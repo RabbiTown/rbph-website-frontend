@@ -258,6 +258,12 @@ export default defineI18nLocale(() => ({
   puzzle: {
     puzzles: '謎題',
     recentSuccessfulSubmissions: '最近成功提交',
+    solveStats: {
+      solved: '通過',
+      tried: '嘗試',
+      unlocked: '解鎖',
+      display: '{solvedLabel}/{triedLabel}/{unlockedLabel}：{solved}/{tried}/{unlocked}',
+    },
   },
   submissions: {
     submitter: '提交者',

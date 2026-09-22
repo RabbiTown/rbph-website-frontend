@@ -259,6 +259,12 @@ export default defineI18nLocale(() => ({
   puzzle: {
     puzzles: '問題',
     recentSuccessfulSubmissions: '最近の正解',
+    solveStats: {
+      solved: 'クリア',
+      tried: '挑戦',
+      unlocked: 'アンロック',
+      display: '{solvedLabel}/{triedLabel}/{unlockedLabel}：{solved}/{tried}/{unlocked}',
+    },
   },
   submissions: {
     submitter: '送信者',

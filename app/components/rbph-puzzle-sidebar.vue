@@ -25,7 +25,7 @@ const routedPuzzleRef = computed(() => {
   return Array.isArray(value) ? value[0] : value;
 });
 const puzzles = computed(() => round.value?.state.puzzles ?? []);
-const collapsedTooltipContent = computed(() => ({ side: wideScreen.value ? 'right' as const : 'bottom' as const }));
+const collapsedTooltipContent = computed(() => ({ side: wideScreen.value ? ('right' as const) : ('bottom' as const) }));
 const roundBreadcrumb = computed(() => [
   {
     label: puzzle.value?.data.round.title,
@@ -126,13 +126,7 @@ watch(collapsed, value => {
           leave-from-class="translate-y-0 opacity-100"
           leave-to-class="translate-y-1 opacity-0"
         >
-          <u-breadcrumb
-            v-if="!collapsed"
-            key="round"
-            class="min-w-0 px-1"
-            :items="roundBreadcrumb"
-            :ui="{ list: 'h-8 items-center', item: 'h-8 items-center', link: 'h-8 items-center', linkLeadingIcon: 'size-5', linkLabel: 'leading-5' }"
-          />
+          <u-breadcrumb v-if="!collapsed" key="round" class="min-w-0 px-1" :items="roundBreadcrumb" :ui="{ list: 'h-8 items-center', item: 'h-8 items-center', link: 'h-8 items-center', linkLeadingIcon: 'size-5', linkLabel: 'leading-5' }" />
           <div v-else key="puzzles" class="flex min-w-0 gap-1 overflow-x-auto pb-1">
             <u-tooltip v-for="item in puzzles" :key="item.id" :text="item.title" :content="collapsedTooltipContent" :delay-duration="100">
               <u-button
@@ -165,12 +159,7 @@ watch(collapsed, value => {
     </div>
 
     <div class="mb-1 hidden h-10 items-center gap-2 lg:flex" :class="collapsed ? 'w-14 justify-center' : 'w-72'">
-      <u-breadcrumb
-        v-if="!collapsed"
-        class="min-w-0 flex-1 px-1"
-        :items="roundBreadcrumb"
-        :ui="{ list: 'h-8 items-center', item: 'h-8 items-center', link: 'h-8 items-center', linkLeadingIcon: 'size-5', linkLabel: 'leading-5' }"
-      />
+      <u-breadcrumb v-if="!collapsed" class="min-w-0 flex-1 px-1" :items="roundBreadcrumb" :ui="{ list: 'h-8 items-center', item: 'h-8 items-center', link: 'h-8 items-center', linkLeadingIcon: 'size-5', linkLabel: 'leading-5' }" />
       <u-tooltip :text="t(collapsed ? 'pages.puzzlePage.sidebar.expand' : 'pages.puzzlePage.sidebar.collapse')" :content="collapsedTooltipContent">
         <u-button
           :key="collapsed ? 'expand' : 'collapse'"
@@ -186,10 +175,7 @@ watch(collapsed, value => {
       </u-tooltip>
     </div>
 
-    <div
-      class="rbph-puzzle-sidebar-panel grid transition-[grid-template-rows,opacity] duration-200 ease-out lg:block"
-      :class="collapsed ? 'pointer-events-none grid-rows-[0fr] opacity-0 lg:hidden' : 'grid-rows-[1fr] opacity-100'"
-    >
+    <div class="rbph-puzzle-sidebar-panel grid transition-[grid-template-rows,opacity] duration-200 ease-out lg:block" :class="collapsed ? 'pointer-events-none grid-rows-[0fr] opacity-0 lg:hidden' : 'grid-rows-[1fr] opacity-100'">
       <div class="overflow-hidden lg:h-full lg:min-h-0">
         <div class="space-y-1 lg:h-full lg:w-72 lg:overflow-y-auto">
           <template v-if="loading && !round">
@@ -210,11 +196,7 @@ watch(collapsed, value => {
             :class="isCurrent(item) ? 'bg-primary/10 ring-1 ring-inset ring-primary/30' : ''"
             :aria-current="isCurrent(item) ? 'page' : undefined"
           >
-            <u-icon
-              :name="isSolved(item) ? 'material-symbols:check-circle-outline-rounded' : 'material-symbols:circle-outline'"
-              class="size-5 shrink-0"
-              :class="isSolved(item) ? 'text-success' : 'text-muted'"
-            />
+            <rbph-puzzle-progress-icon :solved="isSolved(item)" :stats="item.solve_stats" :size="20" />
             <div class="min-w-0 flex-1 truncate text-sm font-medium" :title="item.title">{{ item.title }}</div>
             <u-icon v-if="isCurrent(item)" name="material-symbols:location-on-outline-rounded" class="size-4 shrink-0 text-primary" />
           </nuxt-link>

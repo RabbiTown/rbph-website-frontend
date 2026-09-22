@@ -210,6 +210,13 @@ export interface RbRoundInnerPuzzleData {
   title: string;
   state: RbTeamPuzzleState;
   answer?: string;
+  solve_stats: RbPuzzleSolveStats;
+}
+
+export interface RbPuzzleSolveStats {
+  solved: number;
+  tried: number;
+  unlocked: number;
 }
 
 export interface RbRoundTeamData {
