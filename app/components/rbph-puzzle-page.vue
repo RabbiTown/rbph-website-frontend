@@ -10,6 +10,7 @@ const { puzzle } = usePuzzleContext();
 const api = useApi();
 const route = useRoute();
 const sidStore = useSid();
+const sidebarRounds = usePuzzleSidebarRounds();
 const toast = useToast();
 const judgeActions = useJudgeActionConsts();
 const rendererFailed = ref(false);
@@ -76,6 +77,8 @@ async function submitAnswer(answer: string, options: { feedback?: 'host-toast' |
     }
     const { data } = await api.post<RbJudgeResponse>(`/puzzles/${puzzleId}/submit`, { answer, sid }, { errorHints: { [-1]: t('puzzleSubmit.invalidAnswer'), [-2]: t('puzzleSubmit.duplicatedAnswer'), [-3]: t('puzzleSubmit.notAllowed') } });
     if (puzzle.value) puzzle.value.state = applyPuzzleSubmitState(puzzle.value.state, { action: data.result.action, cooldown_till: data.cooldown_till, solved: data.solved, state: data.state });
+    const roundId = puzzle.value?.data.round.id;
+    if (roundId) void sidebarRounds.load(roundId, true).catch(() => {});
     if (data.currency?.length) useCurrency().setData(data.currency);
     if (data.result.action === RbJudgeAction.Correct || data.result.action === RbJudgeAction.FinishGame) useGame().updateRoundState();
     if (data.result.action === RbJudgeAction.FinishGame) useTeam().updateData();

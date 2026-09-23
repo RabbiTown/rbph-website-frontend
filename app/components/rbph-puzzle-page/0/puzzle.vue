@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const { t } = useI18n();
 const { puzzle, puzzleRoute } = usePuzzleContext();
+const sidebarRounds = usePuzzleSidebarRounds();
 
 const okSubmissionsComp = useTemplateRef('ok-submissions');
 const submitResultComp = useTemplateRef('submit-result');
@@ -31,6 +32,9 @@ function onSubmitSuccess(action: RbJudgeAction) {
 function onSelfSubmitSuccess(resp: RbJudgeResponse, answer: string) {
   onSubmitSuccess(resp.result.action);
   submitResultComp.value?.updateSuccess(resp.result, answer, resp.currency_penalty);
+
+  const roundId = puzzle.value?.data.round.id;
+  if (roundId) void sidebarRounds.load(roundId, true).catch(() => {});
 
   if (puzzle.value) {
     puzzle.value.state = applyPuzzleSubmitState(puzzle.value.state, {

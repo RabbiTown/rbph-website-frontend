@@ -9,6 +9,12 @@ export function usePuzzleSidebarRounds() {
     if (cached && !refresh) return cached;
 
     let request = pendingRequests.get(id);
+    if (refresh && request) {
+      // A request started before the submission may contain outdated solve stats.
+      await request.catch(() => {});
+      if (pendingRequests.get(id) === request) pendingRequests.delete(id);
+      request = pendingRequests.get(id);
+    }
     if (!request) {
       request = useApi()
         .get<RbRoundUserData>(`/rounds/${id}`)

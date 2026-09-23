@@ -94,7 +94,7 @@ useSync().listen(SyncMessageType.PuzzleSubmitted, ({ data }) => {
   const solved = data.solved || data.action === RbJudgeAction.Correct || data.action === RbJudgeAction.FinishGame;
   const state = data.state?.state ?? (solved ? RbTeamPuzzleState.Solved : undefined);
   updatePuzzleState(data.puzzle.id, state);
-  refreshForUnlocks(data.unlocks);
+  if (!useSid().consume(data.sid)) updateData(true);
 });
 
 useSync().listen(SyncMessageType.PuzzleHintUnlocked, ({ data }) => {

@@ -159,7 +159,15 @@ const dirtyHintIds = computed(() => {
 });
 
 function hintHasNonDefaultAdvancedSettings(hint: Pick<HintState, 'hidden_title' | 'title_display_condition' | 'display_condition' | 'enable_cond' | 'cooldown_origin' | 'backend_function' | 'triggers'>) {
-  return Boolean(hint.hidden_title.trim()) || hint.title_display_condition !== null || hint.display_condition !== null || hint.enable_cond !== null || hint.cooldown_origin !== HintCooldownOrigin.PuzzleUnlock || Boolean(hint.backend_function?.trim()) || hint.triggers.length > 0;
+  return (
+    Boolean(hint.hidden_title.trim()) ||
+    hint.title_display_condition !== null ||
+    hint.display_condition !== null ||
+    hint.enable_cond !== null ||
+    hint.cooldown_origin !== HintCooldownOrigin.PuzzleUnlock ||
+    Boolean(hint.backend_function?.trim()) ||
+    hint.triggers.length > 0
+  );
 }
 
 function hintToState(hint: AdminHintData, open = false): HintState {
@@ -510,7 +518,18 @@ function validate(): boolean {
       const displayConditionsValid = (patch.title_display_condition === null || patch.title_display_condition.trim().length > 0) && (patch.display_condition === null || patch.display_condition.trim().length > 0);
       const cooldownOriginValid = !cooldownOriginDisabled(hint, patch.cooldown_origin);
       const triggersValid = patch.triggers.every(value => /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(value));
-      return patch.title.length > 0 && (patch.hidden_title === null || [...patch.hidden_title].length <= 120) && patch.cooldown >= 0 && patch.cost_amount >= 0 && costValid && backendFunctionValid && enableConditionValid && displayConditionsValid && cooldownOriginValid && triggersValid;
+      return (
+        patch.title.length > 0 &&
+        (patch.hidden_title === null || [...patch.hidden_title].length <= 120) &&
+        patch.cooldown >= 0 &&
+        patch.cost_amount >= 0 &&
+        costValid &&
+        backendFunctionValid &&
+        enableConditionValid &&
+        displayConditionsValid &&
+        cooldownOriginValid &&
+        triggersValid
+      );
     })
   );
 }
@@ -867,16 +886,6 @@ onBeforeUnmount(() => {
                                 />
                               </rb-form-field>
 
-                              <rb-form-field :label="t('admin.pages.puzzle.hints.hiddenTitle')" :tooltip="t('admin.pages.puzzle.hints.hiddenTitleDescription')">
-                                <u-input
-                                  v-model="hint.hidden_title"
-                                  class="w-full"
-                                  :maxlength="120"
-                                  :placeholder="t('hints.hiddenTitle')"
-                                  :disabled="saving || hintEditor.isPendingDeletion(hint)"
-                                />
-                              </rb-form-field>
-
                               <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
                                 <rb-form-field row narrow-label class="min-w-0 flex-1" :label="t('admin.pages.puzzle.hints.cooldownOrigin')">
                                   <u-field-group class="flex-wrap">
@@ -892,6 +901,10 @@ onBeforeUnmount(() => {
                                   </u-field-group>
                                 </rb-form-field>
                               </div>
+
+                              <rb-form-field row narrow-label :label="t('admin.pages.puzzle.hints.hiddenTitle')" :tooltip="t('admin.pages.puzzle.hints.hiddenTitleDescription')">
+                                <u-input v-model="hint.hidden_title" class="w-full" :maxlength="120" :placeholder="t('hints.hiddenTitle')" :disabled="saving || hintEditor.isPendingDeletion(hint)" />
+                              </rb-form-field>
 
                               <div class="grid gap-4" :class="{ 'sm:grid-cols-2': showBackendFunction(hint) }">
                                 <rb-form-field row narrow-label :label="t('admin.common.trigger')" :tooltip="t('admin.pages.puzzle.hints.triggerDescription')">
