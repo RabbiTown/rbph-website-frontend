@@ -73,6 +73,7 @@ export interface AdminHintData {
   id: number;
   sort: number;
   title: string;
+  hidden_title?: string | null;
   content: string;
   content_type: number;
   cooldown: number;

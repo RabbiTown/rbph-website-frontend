@@ -1159,6 +1159,8 @@ export default defineI18nLocale(() => ({
           puzzleUnlock: '謎題解鎖後',
           titleDisplayCondition: '標題顯示條件',
           titleDisplayConditionDescription: '顯示提示標題的條件',
+          hiddenTitle: '隱藏標題',
+          hiddenTitleDescription: '標題隱藏時顯示的標題',
           displayCondition: '顯示條件',
           displayConditionDescription: '顯示提示本體的條件',
           customCondition: '自訂',

@@ -1153,6 +1153,8 @@ export default defineI18nLocale(() => ({
           puzzleUnlock: 'After puzzle unlock',
           titleDisplayCondition: 'Title display condition',
           titleDisplayConditionDescription: 'Condition for displaying the hint title.',
+          hiddenTitle: 'Hidden title',
+          hiddenTitleDescription: 'Title shown while the hint title is hidden.',
           displayCondition: 'Display condition',
           displayConditionDescription: 'Condition for displaying the hint body.',
           customCondition: 'Custom',

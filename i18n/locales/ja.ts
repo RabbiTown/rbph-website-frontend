@@ -1163,6 +1163,8 @@ export default defineI18nLocale(() => ({
           puzzleUnlock: '問題の解放後',
           titleDisplayCondition: 'タイトル表示条件',
           titleDisplayConditionDescription: 'ヒントのタイトルを表示する条件',
+          hiddenTitle: '非表示時のタイトル',
+          hiddenTitleDescription: 'タイトルが非表示の間に表示するタイトル',
           displayCondition: '表示条件',
           displayConditionDescription: 'ヒント本体を表示する条件',
           customCondition: 'カスタム',

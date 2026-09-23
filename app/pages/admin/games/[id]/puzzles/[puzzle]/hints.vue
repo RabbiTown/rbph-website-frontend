@@ -5,6 +5,7 @@ interface HintState {
   id: number | null;
   sort: number;
   title: string;
+  hidden_title: string;
   content: string;
   content_type: RbContentType;
   cooldown: number;
@@ -23,6 +24,7 @@ interface HintState {
 interface HintPatch {
   sort: number;
   title: string;
+  hidden_title: string | null;
   content: string;
   content_type: RbContentType;
   cooldown: number;
@@ -156,8 +158,8 @@ const dirtyHintIds = computed(() => {
   );
 });
 
-function hintHasNonDefaultAdvancedSettings(hint: Pick<HintState, 'title_display_condition' | 'display_condition' | 'enable_cond' | 'cooldown_origin' | 'backend_function' | 'triggers'>) {
-  return hint.title_display_condition !== null || hint.display_condition !== null || hint.enable_cond !== null || hint.cooldown_origin !== HintCooldownOrigin.PuzzleUnlock || Boolean(hint.backend_function?.trim()) || hint.triggers.length > 0;
+function hintHasNonDefaultAdvancedSettings(hint: Pick<HintState, 'hidden_title' | 'title_display_condition' | 'display_condition' | 'enable_cond' | 'cooldown_origin' | 'backend_function' | 'triggers'>) {
+  return Boolean(hint.hidden_title.trim()) || hint.title_display_condition !== null || hint.display_condition !== null || hint.enable_cond !== null || hint.cooldown_origin !== HintCooldownOrigin.PuzzleUnlock || Boolean(hint.backend_function?.trim()) || hint.triggers.length > 0;
 }
 
 function hintToState(hint: AdminHintData, open = false): HintState {
@@ -165,6 +167,7 @@ function hintToState(hint: AdminHintData, open = false): HintState {
     id: hint.id,
     sort: hint.sort,
     title: hint.title,
+    hidden_title: hint.hidden_title ?? '',
     content: hint.content,
     content_type: hint.content_type,
     cooldown: hint.cooldown,
@@ -186,6 +189,7 @@ function stateToPatch(hint: HintState, sort = hint.sort): HintPatch {
   return {
     sort: Math.trunc(sort || 0),
     title: hint.title.trim(),
+    hidden_title: hint.hidden_title.trim() || null,
     content: hint.content,
     content_type: RbContentType.Markdown,
     cooldown: Math.max(0, Math.trunc(hint.cooldown || 0)),
@@ -205,6 +209,7 @@ function stateToDirtySnapshot(hint: HintState) {
   const patch = stateToPatch(hint);
   return {
     title: patch.title,
+    hidden_title: patch.hidden_title,
     content: patch.content,
     content_type: patch.content_type,
     cooldown: patch.cooldown,
@@ -264,6 +269,7 @@ function addHint() {
     id: nextDraftId--,
     sort: activeHints.value.length,
     title: '',
+    hidden_title: '',
     content: '',
     content_type: RbContentType.Markdown,
     cooldown: 0,
@@ -504,7 +510,7 @@ function validate(): boolean {
       const displayConditionsValid = (patch.title_display_condition === null || patch.title_display_condition.trim().length > 0) && (patch.display_condition === null || patch.display_condition.trim().length > 0);
       const cooldownOriginValid = !cooldownOriginDisabled(hint, patch.cooldown_origin);
       const triggersValid = patch.triggers.every(value => /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(value));
-      return patch.title.length > 0 && patch.cooldown >= 0 && patch.cost_amount >= 0 && costValid && backendFunctionValid && enableConditionValid && displayConditionsValid && cooldownOriginValid && triggersValid;
+      return patch.title.length > 0 && (patch.hidden_title === null || [...patch.hidden_title].length <= 120) && patch.cooldown >= 0 && patch.cost_amount >= 0 && costValid && backendFunctionValid && enableConditionValid && displayConditionsValid && cooldownOriginValid && triggersValid;
     })
   );
 }
@@ -857,6 +863,16 @@ onBeforeUnmount(() => {
                                   v-model="hint.title_display_condition"
                                   :game-id="currentGameId"
                                   :current-puzzle-id="currentPuzzleId"
+                                  :disabled="saving || hintEditor.isPendingDeletion(hint)"
+                                />
+                              </rb-form-field>
+
+                              <rb-form-field :label="t('admin.pages.puzzle.hints.hiddenTitle')" :tooltip="t('admin.pages.puzzle.hints.hiddenTitleDescription')">
+                                <u-input
+                                  v-model="hint.hidden_title"
+                                  class="w-full"
+                                  :maxlength="120"
+                                  :placeholder="t('hints.hiddenTitle')"
                                   :disabled="saving || hintEditor.isPendingDeletion(hint)"
                                 />
                               </rb-form-field>
