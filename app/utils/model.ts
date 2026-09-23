@@ -9,6 +9,7 @@ export interface RbGameSettings {
     staff_nickname: string | null;
     staff_avatar_email: string | null;
     staff_avatar_provider: AvatarProvider;
+    delay_solve_stats: boolean;
   };
   ticket: Record<string, unknown>;
 }

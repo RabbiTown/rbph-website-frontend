@@ -260,6 +260,7 @@ export default defineI18nLocale(() => ({
     puzzles: '問題',
     recentSuccessfulSubmissions: '最近の正解',
     solveStats: {
+      unavailable: '統計情報はまだありません',
       solved: 'クリア',
       tried: '挑戦',
       unlocked: 'アンロック',
@@ -1095,6 +1096,8 @@ export default defineI18nLocale(() => ({
           allowDuplicateTeamNamesDescription: '無効にすると同名のチームは禁止されます（大文字と小文字は区別しません）。既存のチームには影響しません。',
           unlimited: '上限なし',
           displaySettings: '表示設定',
+          delaySolveStats: '統計情報の表示を遅らせる',
+          delaySolveStatsDescription: '各パズルの正解チーム数が50チーム、または参加チーム数の20%（切り捨て）に達すると統計情報を表示します。',
           staffNickname: 'スタッフの表示名',
           staffNicknameDescription: 'プレイヤーに共通表示するスタッフ名です。空欄の場合はスタッフごとの表示名を使用します。',
           staffNicknamePlaceholder: 'スタッフごとの表示名を使用',

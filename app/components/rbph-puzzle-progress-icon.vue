@@ -28,21 +28,22 @@ const iconSize = computed(() => Math.max(1, props.size));
 const iconStyle = computed(() => ({ width: `${iconSize.value}px`, height: `${iconSize.value}px` }));
 const checkStyle = computed(() => ({ width: `${(iconSize.value * 2) / 3}px`, height: `${(iconSize.value * 2) / 3}px` }));
 const tooltip = computed(() =>
-  t('puzzle.solveStats.display', {
-    ...normalizedStats.value,
-    solvedLabel: t('puzzle.solveStats.solved'),
-    triedLabel: t('puzzle.solveStats.tried'),
-    unlockedLabel: t('puzzle.solveStats.unlocked'),
-  }),
+  props.stats
+    ? t('puzzle.solveStats.display', {
+        ...normalizedStats.value,
+        solvedLabel: t('puzzle.solveStats.solved'),
+        triedLabel: t('puzzle.solveStats.tried'),
+        unlockedLabel: t('puzzle.solveStats.unlocked'),
+      })
+    : t('puzzle.solveStats.unavailable'),
 );
 </script>
 
 <template>
-  <u-icon v-if="!stats" :name="solved ? 'material-symbols:check-circle-outline' : 'material-symbols:circle-outline'" class="shrink-0" :style="iconStyle" />
-  <rb-tooltip v-else class="inline-flex align-middle leading-none" :delay-duration="100">
+  <rb-tooltip class="inline-flex align-middle leading-none" :delay-duration="100">
     <span class="relative inline-grid shrink-0 cursor-help place-items-center" :style="iconStyle" role="img" :aria-label="tooltip" @click.stop.prevent>
       <svg class="absolute inset-0 size-full -rotate-90" viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="10" pathLength="100" fill="none" stroke="white" stroke-width="3" />
+        <circle cx="12" cy="12" r="10" pathLength="100" fill="none" stroke="currentColor" stroke-width="3" :class="stats ? 'text-white' : 'text-secondary'" />
         <circle
           v-if="submittedPercent > 0"
           cx="12"
@@ -62,7 +63,8 @@ const tooltip = computed(() =>
       </svg>
     </span>
     <template #content>
-      <i18n-t keypath="puzzle.solveStats.display" tag="span" class="text-secondary">
+      <span v-if="!stats" :class="stats ? 'text-secondary' : undefined">{{ tooltip }}</span>
+      <i18n-t v-else keypath="puzzle.solveStats.display" tag="span" class="text-secondary">
         <template #solvedLabel>
           <span class="text-success">{{ t('puzzle.solveStats.solved') }}</span>
         </template>

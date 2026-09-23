@@ -250,6 +250,7 @@ export default defineI18nLocale(() => ({
     puzzles: 'Puzzles',
     recentSuccessfulSubmissions: 'Recent successful submissions',
     solveStats: {
+      unavailable: 'Statistics are not available yet',
       solved: 'Solved',
       tried: 'Tried',
       unlocked: 'Unlocked',
@@ -1085,6 +1086,8 @@ export default defineI18nLocale(() => ({
           allowDuplicateTeamNamesDescription: 'When disabled, duplicate team names are prohibited (case-insensitive); existing teams are unaffected.',
           unlimited: 'No limit',
           displaySettings: 'Display settings',
+          delaySolveStats: 'Delay solve statistics',
+          delaySolveStatsDescription: 'Show each puzzle’s statistics after 50 teams solve it or its solves reach 20% of participating teams, rounded down.',
           staffNickname: 'Staff display name',
           staffNicknameDescription: 'Shared staff name shown to players. Leave blank to show individual staff names.',
           staffNicknamePlaceholder: 'Show individual staff names',

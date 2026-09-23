@@ -260,6 +260,7 @@ export default defineI18nLocale(() => ({
     puzzles: '谜题',
     recentSuccessfulSubmissions: '最近成功提交',
     solveStats: {
+      unavailable: '暂无统计信息',
       solved: '通过',
       tried: '尝试',
       unlocked: '解锁',
@@ -1092,6 +1093,8 @@ export default defineI18nLocale(() => ({
           allowDuplicateTeamNamesDescription: '关闭后禁止队伍同名（忽略大小写），旧队伍不受影响。',
           unlimited: '无上限',
           displaySettings: '显示设置',
+          delaySolveStats: '延后统计信息',
+          delaySolveStatsDescription: '每道谜题的通过队伍达到 50 支，或达到参赛队伍数的 20%（向下取整）后，才显示统计信息。',
           staffNickname: '工作人员：昵称',
           staffNicknameDescription: '玩家看到的统一工作人员昵称；留空则分别显示工作人员昵称。',
           staffNicknamePlaceholder: '分别显示工作人员昵称',

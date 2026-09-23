@@ -210,7 +210,7 @@ export interface RbRoundInnerPuzzleData {
   title: string;
   state: RbTeamPuzzleState;
   answer?: string;
-  solve_stats: RbPuzzleSolveStats;
+  solve_stats?: RbPuzzleSolveStats;
 }
 
 export interface RbPuzzleSolveStats {

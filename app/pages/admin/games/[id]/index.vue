@@ -1,5 +1,5 @@
-<script setup lang="ts">const { t } = useI18n();
-
+<script setup lang="ts">
+const { t } = useI18n();
 
 const gameMgr = useAdmin().useGame();
 const game = gameMgr.ref;
@@ -30,6 +30,7 @@ type GameSettingsPatchBody = Partial<Pick<RbGameModel, 'title' | 'is_listed' | '
       staff_nickname?: string | null;
       staff_avatar_email?: string | null;
       staff_avatar_provider?: AvatarProvider;
+      delay_solve_stats?: boolean;
     };
   };
 };
@@ -58,6 +59,7 @@ const state = reactive({
   is_active: false,
   max_members: null as number | null,
   allow_duplicate_names: false,
+  delay_solve_stats: false,
   staff_nickname: '',
   staff_avatar_email: '',
   staff_avatar_provider: AvatarProvider.Cravatar,
@@ -69,6 +71,7 @@ function syncState() {
   state.is_active = game.value?.is_active ?? false;
   state.max_members = game.value?.settings?.team.max_members ?? null;
   state.allow_duplicate_names = game.value?.settings?.team.allow_duplicate_names ?? false;
+  state.delay_solve_stats = game.value?.settings?.display?.delay_solve_stats ?? false;
   state.staff_nickname = game.value?.settings?.display?.staff_nickname ?? '';
   state.staff_avatar_email = game.value?.settings?.display?.staff_avatar_email ?? '';
   state.staff_avatar_provider = game.value?.settings?.display?.staff_avatar_provider ?? AvatarProvider.Cravatar;
@@ -92,6 +95,7 @@ function makePatchBody() {
   const staffAvatarEmail = state.staff_avatar_email.trim() || null;
   const currentStaffAvatarEmail = current.settings?.display?.staff_avatar_email ?? null;
   const currentStaffAvatarProvider = current.settings?.display?.staff_avatar_provider ?? AvatarProvider.Cravatar;
+  const currentDelaySolveStats = current.settings?.display?.delay_solve_stats ?? false;
 
   if (state.title !== current.title) body.title = state.title;
   if (state.is_listed !== current.is_listed) body.is_listed = state.is_listed;
@@ -122,6 +126,12 @@ function makePatchBody() {
       },
     };
   }
+  if (state.delay_solve_stats !== currentDelaySolveStats) {
+    body.settings = {
+      ...body.settings,
+      display: { ...body.settings?.display, delay_solve_stats: state.delay_solve_stats },
+    };
+  }
 
   return body;
 }
@@ -139,6 +149,7 @@ const dirtyFields = computed(() => {
     staffNickname: Boolean(patch.settings?.display && 'staff_nickname' in patch.settings.display),
     staffAvatarEmail: Boolean(patch.settings?.display && 'staff_avatar_email' in patch.settings.display),
     staffAvatarProvider: Boolean(patch.settings?.display && 'staff_avatar_provider' in patch.settings.display),
+    delaySolveStats: Boolean(patch.settings?.display && 'delay_solve_stats' in patch.settings.display),
   };
 });
 
@@ -334,6 +345,8 @@ function resetField(field: keyof typeof dirtyFields.value) {
     state.staff_avatar_email = current.settings?.display?.staff_avatar_email ?? '';
   } else if (field === 'staffAvatarProvider') {
     state.staff_avatar_provider = current.settings?.display?.staff_avatar_provider ?? AvatarProvider.Cravatar;
+  } else if (field === 'delaySolveStats') {
+    state.delay_solve_stats = current.settings?.display?.delay_solve_stats ?? false;
   }
 }
 
@@ -496,7 +509,16 @@ watch(
             <u-button v-if="game" :to="`/games/${game.id}`" color="neutral" variant="outline" icon="material-symbols:arrow-forward-rounded" :label="t('admin.pages.game.settings.enterGame')" />
           </div>
           <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
-            <rb-form-field name="title" row :label="t('admin.common.gameName')" required :description="t('admin.pages.game.settings.platformShowName')" :dirty="dirtyFields.title" :reset="() => resetField('title')" :ui="{ container: 'w-full sm:w-96' }">
+            <rb-form-field
+              name="title"
+              row
+              :label="t('admin.common.gameName')"
+              required
+              :description="t('admin.pages.game.settings.platformShowName')"
+              :dirty="dirtyFields.title"
+              :reset="() => resetField('title')"
+              :ui="{ container: 'w-full sm:w-96' }"
+            >
               <u-input v-model="state.title" :placeholder="t('admin.common.enterGameName')" class="w-full" />
             </rb-form-field>
             <u-separator />
@@ -508,13 +530,27 @@ watch(
               <u-switch v-model="state.is_active" />
             </rb-form-field>
             <u-separator />
-            <rb-form-field name="max_members" row :label="t('admin.pages.game.settings.teamMemberLimit')" :description="t('admin.pages.game.settings.perTeamTeamJoinMemberCount')" :dirty="dirtyFields.maxMembers" :reset="() => resetField('maxMembers')">
+            <rb-form-field
+              name="max_members"
+              row
+              :label="t('admin.pages.game.settings.teamMemberLimit')"
+              :description="t('admin.pages.game.settings.perTeamTeamJoinMemberCount')"
+              :dirty="dirtyFields.maxMembers"
+              :reset="() => resetField('maxMembers')"
+            >
               <div class="flex flex-wrap items-center gap-3">
                 <u-input-number v-model="state.max_members" :min="1" :step="1" orientation="vertical" :placeholder="t('admin.pages.game.settings.unlimited')" class="w-32" />
               </div>
             </rb-form-field>
             <u-separator />
-            <rb-form-field name="allow_duplicate_names" row :label="t('admin.pages.game.settings.allowDuplicateTeamNames')" :description="t('admin.pages.game.settings.allowDuplicateTeamNamesDescription')" :dirty="dirtyFields.allowDuplicateNames" :reset="() => resetField('allowDuplicateNames')">
+            <rb-form-field
+              name="allow_duplicate_names"
+              row
+              :label="t('admin.pages.game.settings.allowDuplicateTeamNames')"
+              :description="t('admin.pages.game.settings.allowDuplicateTeamNamesDescription')"
+              :dirty="dirtyFields.allowDuplicateNames"
+              :reset="() => resetField('allowDuplicateNames')"
+            >
               <u-switch v-model="state.allow_duplicate_names" />
             </rb-form-field>
           </div>
@@ -527,18 +563,52 @@ watch(
             <h2 class="text-xl font-semibold text-highlighted">{{ t('admin.pages.game.settings.displaySettings') }}</h2>
           </div>
           <div class="space-y-3 rounded-lg bg-elevated/60 p-4 ring ring-default">
-            <rb-form-field name="staff_nickname" row :label="t('admin.pages.game.settings.staffNickname')" :description="t('admin.pages.game.settings.staffNicknameDescription')" :dirty="dirtyFields.staffNickname" :reset="() => resetField('staffNickname')" :ui="{ container: 'w-full sm:w-96' }">
+            <rb-form-field
+              name="delay_solve_stats"
+              row
+              :label="t('admin.pages.game.settings.delaySolveStats')"
+              :description="t('admin.pages.game.settings.delaySolveStatsDescription')"
+              :dirty="dirtyFields.delaySolveStats"
+              :reset="() => resetField('delaySolveStats')"
+            >
+              <u-switch v-model="state.delay_solve_stats" />
+            </rb-form-field>
+            <u-separator />
+            <rb-form-field
+              name="staff_nickname"
+              row
+              :label="t('admin.pages.game.settings.staffNickname')"
+              :description="t('admin.pages.game.settings.staffNicknameDescription')"
+              :dirty="dirtyFields.staffNickname"
+              :reset="() => resetField('staffNickname')"
+              :ui="{ container: 'w-full sm:w-96' }"
+            >
               <u-input v-model="state.staff_nickname" :maxlength="60" :placeholder="t('admin.pages.game.settings.staffNicknamePlaceholder')" class="w-full" />
             </rb-form-field>
             <u-separator />
-            <rb-form-field name="staff_avatar_provider" row :label="t('admin.pages.game.settings.staffAvatar')" :description="t('admin.pages.game.settings.staffAvatarDescription')" :dirty="dirtyFields.staffAvatarProvider" :reset="() => resetField('staffAvatarProvider')">
+            <rb-form-field
+              name="staff_avatar_provider"
+              row
+              :label="t('admin.pages.game.settings.staffAvatar')"
+              :description="t('admin.pages.game.settings.staffAvatarDescription')"
+              :dirty="dirtyFields.staffAvatarProvider"
+              :reset="() => resetField('staffAvatarProvider')"
+            >
               <div class="flex flex-wrap items-center gap-3">
                 <u-avatar :src="staffAvatarPreview" :text="state.staff_nickname" icon="material-symbols:person-2-rounded" size="xl" />
                 <u-select v-model="state.staff_avatar_provider" :items="avatarProviderItems" class="w-44" />
               </div>
             </rb-form-field>
             <u-separator />
-            <rb-form-field name="staff_avatar_email" row :label="t('admin.pages.game.settings.staffAvatarEmail')" :description="t('admin.pages.game.settings.staffAvatarEmailDescription')" :dirty="dirtyFields.staffAvatarEmail" :reset="() => resetField('staffAvatarEmail')" :ui="{ container: 'w-full sm:w-96' }">
+            <rb-form-field
+              name="staff_avatar_email"
+              row
+              :label="t('admin.pages.game.settings.staffAvatarEmail')"
+              :description="t('admin.pages.game.settings.staffAvatarEmailDescription')"
+              :dirty="dirtyFields.staffAvatarEmail"
+              :reset="() => resetField('staffAvatarEmail')"
+              :ui="{ container: 'w-full sm:w-96' }"
+            >
               <u-input v-model="state.staff_avatar_email" type="email" :maxlength="255" :placeholder="t('admin.pages.game.settings.staffAvatarEmailPlaceholder')" class="w-full" />
             </rb-form-field>
           </div>
@@ -576,7 +646,8 @@ watch(
                     <u-button v-else-if="item.dirty" size="xs" variant="soft" color="warning" class="group relative h-5 w-12 overflow-hidden px-0 text-[11px]" :disabled="currencySubmitting" @click="resetCurrencyChange(item.currency)">
                       <span class="absolute inset-0 inline-flex items-center justify-center transition-all duration-150 group-hover:-translate-y-1 group-hover:opacity-0">{{ t('admin.pages.game.settings.currencyStatus.updated') }}</span>
                       <span class="absolute inset-0 inline-flex translate-y-1 items-center justify-center gap-0.5 opacity-0 transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100">
-                        <u-icon name="material-symbols:restart-alt-rounded" class="size-3" /> {{ t('admin.common.reset') }} </span>
+                        <u-icon name="material-symbols:restart-alt-rounded" class="size-3" /> {{ t('admin.common.reset') }}
+                      </span>
                     </u-button>
                     <u-button v-if="item.deletePending" icon="material-symbols:undo-rounded" color="neutral" variant="ghost" size="sm" :disabled="currencySubmitting" @click="restoreCurrency(item.currency)" />
                     <u-popover v-else arrow :content="{ side: 'top', align: 'end', sideOffset: 8 }">
