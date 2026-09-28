@@ -62,7 +62,7 @@ function readBracedBlock(src: string, start: number) {
       continue;
     }
 
-    if (char === '"' || char === '\'') {
+    if (char === '"' || char === "'") {
       quote = char;
       continue;
     }
@@ -255,7 +255,7 @@ export function restorePlainMdcComponentMarkdownEscapes(markdown: string) {
   return markdown.replaceAll(plainMdcComponentColonEscape, '\\:');
 }
 
-function createMdcComponentNodeView(editor: Editor, attrs: Record<string, unknown>, inline: boolean) {
+function createMdcComponentNodeView(editor: Editor, attrs: Record<string, unknown>, inline: boolean, appContext: AppContext | null) {
   const dom = document.createElement(inline ? 'span' : 'section');
   dom.className = inline ? 'rbph-mdc-component-node rbph-mdc-component-node-inline rounded-md transition' : 'rbph-mdc-component-node rbph-mdc-component-node-block my-4 rounded-md transition';
   dom.dataset.rbMdcComponent = '';
@@ -272,7 +272,8 @@ function createMdcComponentNodeView(editor: Editor, attrs: Record<string, unknow
   }
 
   const vnode = h(RbphMdcComponentPreview, state);
-  vnode.appContext = (editor as EditorWithAppContext).appContext ?? null;
+  // EditorContent attaches the editor's context after the initial node views mount.
+  vnode.appContext = (editor as EditorWithAppContext).appContext ?? appContext;
   renderVue(vnode, dom);
   renderAttrs(attrs);
 
@@ -299,6 +300,10 @@ function createMdcComponentNodeView(editor: Editor, attrs: Record<string, unknow
 export const RbphMdcComponentBlock = TiptapNode.create({
   name: 'mdcComponent',
 
+  addOptions() {
+    return { appContext: null as AppContext | null };
+  },
+
   group: 'block',
 
   atom: true,
@@ -323,7 +328,7 @@ export const RbphMdcComponentBlock = TiptapNode.create({
   },
 
   addNodeView() {
-    return ({ editor, node }) => createMdcComponentNodeView(editor, node.attrs, false);
+    return ({ editor, node }) => createMdcComponentNodeView(editor, node.attrs, false, this.options.appContext);
   },
 
   parseMarkdown(token: MarkdownToken, helpers: MarkdownParseHelpers) {
@@ -359,6 +364,10 @@ export const RbphMdcComponentBlock = TiptapNode.create({
 export const RbphMdcComponentInline = TiptapNode.create({
   name: 'mdcComponentInline',
 
+  addOptions() {
+    return { appContext: null as AppContext | null };
+  },
+
   group: 'inline',
 
   inline: true,
@@ -385,7 +394,7 @@ export const RbphMdcComponentInline = TiptapNode.create({
   },
 
   addNodeView() {
-    return ({ editor, node }) => createMdcComponentNodeView(editor, node.attrs, true);
+    return ({ editor, node }) => createMdcComponentNodeView(editor, node.attrs, true, this.options.appContext);
   },
 
   addProseMirrorPlugins() {

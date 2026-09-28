@@ -40,9 +40,9 @@ watch(
   async raw => {
     const cur = ++seq;
     const newAst = await mdParser(transformMarkdownMath(raw));
+    newAst.body = await transformTableBlocks(newAst.body, markdown => mdParser(transformMarkdownMath(markdown)));
     newAst.body = transformAlignBlocks(newAst.body);
     newAst.body = transformImageBlocks(newAst.body);
-    newAst.body = transformTableBlocks(newAst.body);
     newAst.body = transformRawHtmlBlocks(newAst.body);
     newAst.body = transformVueAppBlocks(newAst.body);
     newAst.body = transformMathNodes(newAst.body);

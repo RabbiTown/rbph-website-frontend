@@ -80,6 +80,7 @@ export default defineNuxtConfig({
         '@tiptap/extension-text-style',
         '@tiptap/extension-underline',
         '@zip.js/zip.js',
+        'fflate',
         'hash-wasm',
         'katex',
         'tailwind-merge',

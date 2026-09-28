@@ -24,7 +24,38 @@ const emit = defineEmits<{
 let dynTimer: ReturnType<typeof setTimeout> | undefined = undefined;
 let dynSeq = 0;
 
-const mdWhitelists = ['div', 'span', 'figure', 'figcaption', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'hr', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a', 'img', 'em', 'strong', 'u', 'rbph-katex-renderer'];
+const mdWhitelists = [
+  'div',
+  'span',
+  'figure',
+  'figcaption',
+  'p',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'ul',
+  'ol',
+  'li',
+  'blockquote',
+  'hr',
+  'pre',
+  'code',
+  'table',
+  'thead',
+  'tbody',
+  'tr',
+  'th',
+  'td',
+  'a',
+  'img',
+  'em',
+  'strong',
+  'u',
+  'rbph-katex-renderer',
+];
 
 function isSanitizedMdNode(node: MDCNode | MDCRoot | null): node is MDCNode | MDCRoot {
   return Boolean(node);
@@ -64,12 +95,7 @@ function sanitizedMdNode<T extends MDCNode | MDCRoot>(node: T): T | null {
       const style = node.props?.style;
       return {
         ...node,
-        props:
-          typeof className === 'string' && /^text-(red|orange|yellow|green|blue|purple)-500$/.test(className)
-            ? { class: className }
-            : typeof style === 'string' && /^color:\s*#[0-9a-f]{6}$/i.test(style)
-              ? { style }
-              : {},
+        props: typeof className === 'string' && /^text-(red|orange|yellow|green|blue|purple)-500$/.test(className) ? { class: className } : typeof style === 'string' && /^color:\s*#[0-9a-f]{6}$/i.test(style) ? { style } : {},
         children: node.children.map(sanitizedMdNode).filter(isSanitizedMdNode),
       };
     }
@@ -131,9 +157,9 @@ watch(
       const updater = async () => {
         if (dynCur !== dynSeq) return;
         const newAst = await mdParser(transformMarkdownMath(content as string));
+        newAst.body = await transformTableBlocks(newAst.body, markdown => mdParser(transformMarkdownMath(markdown)));
         newAst.body = transformAlignBlocks(newAst.body);
         newAst.body = transformImageBlocks(newAst.body);
-        newAst.body = transformTableBlocks(newAst.body);
         newAst.body = transformRawHtmlBlocks(newAst.body);
         newAst.body = transformVueAppBlocks(newAst.body);
         newAst.body = transformMathNodes(newAst.body);

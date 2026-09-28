@@ -9,6 +9,7 @@ import { dropPoint } from '@tiptap/pm/transform';
 import { twMerge } from 'tailwind-merge';
 
 const { t } = useI18n();
+const editorAppContext = getCurrentInstance()?.appContext ?? null;
 
 const model = defineModel<string>({ default: '' });
 const attrs = useAttrs();
@@ -59,8 +60,8 @@ const editorExtensions = [
   RbphImageBlock,
   RbphRawHtmlBlock,
   RbphVueAppBlock,
-  RbphMdcComponentBlock,
-  RbphMdcComponentInline,
+  RbphMdcComponentBlock.configure({ appContext: editorAppContext }),
+  RbphMdcComponentInline.configure({ appContext: editorAppContext }),
   RbphMathInline,
   RbphMathBlock,
   RbphTable,

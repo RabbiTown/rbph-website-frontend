@@ -3,78 +3,16 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import { TableRow } from '@tiptap/extension-table-row';
 import type { Editor, JSONContent, MarkdownParseHelpers, MarkdownRendererHelpers, MarkdownToken } from '@tiptap/core';
-import type { MDCElement, MDCNode, MDCRoot } from '@nuxtjs/mdc';
+import type { MDCElement, MDCNode, MDCParserResult, MDCRoot } from '@nuxtjs/mdc';
+import { decodeRbTableData, encodeRbTableData, isTableAlign, normalizeTableData } from './content-table-codec';
+import type { RbTableCellData, RbTableData } from './content-table-codec';
 
-type RbTableCellData = {
-  text: string;
-  align?: 'left' | 'center' | 'right';
-};
-
-type RbTableData = {
-  header?: boolean;
-  rows?: RbTableCellData[][];
-};
-
-function isTableAlign(value: unknown): value is RbTableCellData['align'] {
-  return value === 'left' || value === 'center' || value === 'right';
-}
-
-function normalizeTableCellText(value: unknown) {
-  return typeof value === 'string' ? value : '';
-}
-
-function normalizeTableData(value: unknown): RbTableData {
-  if (!value || typeof value !== 'object') return { header: false, rows: [] };
-
-  const raw = value as { header?: unknown; rows?: unknown };
-  const rows = Array.isArray(raw.rows)
-    ? raw.rows.map(row =>
-        Array.isArray(row)
-          ? row.map(cell => {
-              if (cell && typeof cell === 'object') {
-                const rawCell = cell as { text?: unknown; align?: unknown };
-                return {
-                  text: normalizeTableCellText(rawCell.text),
-                  ...(isTableAlign(rawCell.align) ? { align: rawCell.align } : {}),
-                };
-              }
-
-              return { text: normalizeTableCellText(cell) };
-            })
-          : [],
-      )
-    : [];
-
-  return {
-    header: raw.header === true,
-    rows,
-  };
-}
-
-function parseRbTableAttributes(attrString = '') {
-  const header = attrString
-    .match(/(?:^|\s)header=(?:"([^"]+)"|'([^']+)'|([^\s}]+))/)
-    ?.slice(1)
-    .find(Boolean);
+function parseRbTableDataAttribute(attrString = '') {
   const data = attrString
     .match(/(?:^|\s)data=(?:"([^"]*)"|'([^']*)'|([^\s}]+))/)
     ?.slice(1)
     .find(value => value !== undefined);
-  return { header: header === 'true', data };
-}
-
-function encodeRbTableData(data: RbTableData) {
-  return encodeURIComponent(JSON.stringify(data));
-}
-
-function decodeRbTableData(value: unknown) {
-  if (typeof value !== 'string' || !value) return undefined;
-
-  try {
-    return parseRbTableJson(decodeURIComponent(value));
-  } catch {
-    return parseRbTableJson(value);
-  }
+  return data;
 }
 
 function renderRbTableAttributes(data: RbTableData) {
@@ -82,16 +20,7 @@ function renderRbTableAttributes(data: RbTableData) {
 }
 
 function renderCellText(cell: JSONContent, helpers: MarkdownRendererHelpers) {
-  if (!cell.content?.length) return '';
-
-  return cell.content
-    .map(child => {
-      if ((child.type === 'paragraph' || child.type === 'heading') && !child.content?.length) return '';
-      return helpers.renderChildren(child);
-    })
-    .filter(Boolean)
-    .join('\n')
-    .trim();
+  return helpers.renderChildren(cell.content ?? [], '\n\n');
 }
 
 function tableNodeToData(node: JSONContent, helpers: MarkdownRendererHelpers): RbTableData {
@@ -111,8 +40,8 @@ function tableNodeToData(node: JSONContent, helpers: MarkdownRendererHelpers): R
   };
 }
 
-function cellDataToNode(cell: RbTableCellData, type = 'tableCell'): JSONContent {
-  const text = normalizeTableCellText(cell.text);
+function cellDataToNode(cell: RbTableCellData, tokens: MarkdownToken[], helpers: MarkdownParseHelpers, type = 'tableCell'): JSONContent {
+  const content = (helpers.parseBlockChildren ?? helpers.parseChildren)(tokens);
   return {
     type,
     attrs: {
@@ -121,35 +50,18 @@ function cellDataToNode(cell: RbTableCellData, type = 'tableCell'): JSONContent 
       colwidth: null,
       ...(isTableAlign(cell.align) ? { align: cell.align } : {}),
     },
-    content: [
-      {
-        type: 'paragraph',
-        ...(text ? { content: [{ type: 'text', text }] } : {}),
-      },
-    ],
+    content: content.length ? content : [{ type: 'paragraph' }],
   };
 }
 
-function tableDataToNode(data: RbTableData) {
+function tableDataToNode(data: RbTableData, cellTokens: MarkdownToken[][][], helpers: MarkdownParseHelpers) {
   return {
     type: 'table',
     content: (data.rows ?? []).map((row, rowIndex) => ({
       type: 'tableRow',
-      content: row.map(cell => cellDataToNode(cell, data.header && rowIndex === 0 ? 'tableHeader' : 'tableCell')),
+      content: row.map((cell, cellIndex) => cellDataToNode(cell, cellTokens[rowIndex]?.[cellIndex] ?? [], helpers, data.header && rowIndex === 0 ? 'tableHeader' : 'tableCell')),
     })),
   };
-}
-
-function parseRbTableJson(rawContent: string) {
-  try {
-    return normalizeTableData(JSON.parse(rawContent.trim() || '{}'));
-  } catch {
-    return { header: false, rows: [] };
-  }
-}
-
-function parseRbTableContent(rawContent: string, encodedData?: string) {
-  return decodeRbTableData(encodedData) ?? parseRbTableJson(rawContent);
 }
 
 export const RbphTable = Table.configure({
@@ -162,7 +74,11 @@ export const RbphTable = Table.configure({
   markdownTokenName: 'rbTable',
 
   parseMarkdown(token: MarkdownToken, helpers: MarkdownParseHelpers) {
-    return helpers.createNode('table', undefined, tableDataToNode(normalizeTableData((token as MarkdownToken & { data?: unknown }).data)).content);
+    if (token.invalidData) {
+      return helpers.createNode('mdcComponent', { name: 'rb-table', raw: token.raw });
+    }
+    const data = normalizeTableData((token as MarkdownToken & { data?: unknown }).data);
+    return helpers.createNode('table', undefined, tableDataToNode(data, token.cellTokens ?? [], helpers).content);
   },
 
   renderMarkdown(node: JSONContent, helpers: MarkdownRendererHelpers) {
@@ -176,7 +92,7 @@ export const RbphTable = Table.configure({
     start(src: string) {
       return src.match(/^::rb-table/m)?.index ?? -1;
     },
-    tokenize(src: string) {
+    tokenize(src: string, _tokens: MarkdownToken[], lexer: { blockTokens: (src: string) => MarkdownToken[] }) {
       const openingMatch = src.match(/^::rb-table(?:\{([^}]*)\})?[ \t]*\n/);
       if (!openingMatch) return undefined;
 
@@ -185,18 +101,19 @@ export const RbphTable = Table.configure({
       const closingMatch = remaining.match(/^::[ \t]*$/m);
       if (!closingMatch || closingMatch.index === undefined) return undefined;
 
-      const rawContent = remaining.slice(0, closingMatch.index);
       const raw = src.slice(0, openingTag.length + closingMatch.index + closingMatch[0].length);
-      const attrs = parseRbTableAttributes(attrString);
-      const data = parseRbTableContent(rawContent, attrs.data);
+      let data: RbTableData;
+      try {
+        data = decodeRbTableData(parseRbTableDataAttribute(attrString));
+      } catch {
+        return { type: 'rbTable', raw, invalidData: true };
+      }
 
       return {
         type: 'rbTable',
         raw,
-        data: {
-          ...data,
-          header: attrs.header || data.header === true,
-        },
+        data,
+        cellTokens: (data.rows ?? []).map(row => row.map(cell => lexer.blockTokens(cell.text))),
       };
     },
   },
@@ -230,22 +147,36 @@ export function deleteRbTable(editor: Editor) {
   return editor.chain().focus().deleteTable().run();
 }
 
-export function transformTableBlocks<T extends MDCNode | MDCRoot>(node: T): T {
+export async function transformTableBlocks<T extends MDCNode | MDCRoot>(node: T, parseMarkdown: (markdown: string) => Promise<MDCParserResult>): Promise<T> {
   if (node.type === 'root') {
     return {
       ...node,
-      children: node.children.map(transformTableBlocks),
+      children: await Promise.all(node.children.map(child => transformTableBlocks(child, parseMarkdown))),
     };
   }
 
   if (node.type !== 'element') return node;
 
-  const children = node.children.map(transformTableBlocks);
+  const children = await Promise.all(node.children.map(child => transformTableBlocks(child, parseMarkdown)));
 
   if (node.tag === 'rb-table') {
     const rawJson = collectMdcText(node).trim();
-    const data = decodeRbTableData(node.props?.data) ?? (rawJson ? parseRbTableJson(rawJson) : normalizeTableData(node.props));
-    const header = node.props?.header === 'true' || data.header === true;
+    let data: RbTableData;
+    try {
+      data = decodeRbTableData(node.props?.data);
+    } catch {
+      // Preserve the encoded source instead of turning an unreadable table into an empty one.
+      const attrs = Object.entries(node.props ?? {})
+        .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+        .join(' ');
+      return {
+        type: 'element',
+        tag: 'pre',
+        props: {},
+        children: [{ type: 'text', value: `::rb-table{${attrs}}\n${rawJson ? `${rawJson}\n` : ''}::` }],
+      } as MDCElement as T;
+    }
+    const header = data.header === true;
     const rows = data.rows ?? [];
 
     return {
@@ -259,7 +190,7 @@ export function transformTableBlocks<T extends MDCNode | MDCRoot>(node: T): T {
                 type: 'element' as const,
                 tag: 'thead',
                 props: {},
-                children: [tableRowToMdc(rows[0], true)],
+                children: [await tableRowToMdc(rows[0], true, parseMarkdown)],
               },
             ]
           : []),
@@ -267,7 +198,7 @@ export function transformTableBlocks<T extends MDCNode | MDCRoot>(node: T): T {
           type: 'element',
           tag: 'tbody',
           props: {},
-          children: rows.slice(header ? 1 : 0).map(row => tableRowToMdc(row, false)),
+          children: await Promise.all(rows.slice(header ? 1 : 0).map(row => tableRowToMdc(row, false, parseMarkdown))),
         },
       ],
     } as MDCElement as T;
@@ -287,19 +218,21 @@ function collectMdcText(node: MDCNode | MDCRoot): string {
   return '';
 }
 
-function tableRowToMdc(row: RbTableCellData[], header: boolean): MDCElement {
+async function tableRowToMdc(row: RbTableCellData[], header: boolean, parseMarkdown: (markdown: string) => Promise<MDCParserResult>): Promise<MDCElement> {
   return {
     type: 'element',
     tag: 'tr',
     props: {},
-    children: row.map(cell => ({
-      type: 'element' as const,
-      tag: header ? 'th' : 'td',
-      props: {
-        class: `${header ? 'bg-elevated font-semibold' : 'bg-default'} border border-default px-2.5 py-2 align-top`,
-        ...(isTableAlign(cell.align) ? { style: `text-align: ${cell.align}` } : {}),
-      },
-      children: cell.text ? [{ type: 'text' as const, value: cell.text }] : [],
-    })),
+    children: await Promise.all(
+      row.map(async cell => ({
+        type: 'element' as const,
+        tag: header ? 'th' : 'td',
+        props: {
+          class: `${header ? 'bg-elevated font-semibold' : 'bg-default'} border border-default px-2.5 py-2 align-top`,
+          ...(isTableAlign(cell.align) ? { style: `text-align: ${cell.align}` } : {}),
+        },
+        children: cell.text ? (await transformTableBlocks((await parseMarkdown(cell.text)).body, parseMarkdown)).children : [],
+      })),
+    ),
   };
 }
