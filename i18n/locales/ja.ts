@@ -565,7 +565,7 @@ export default defineI18nLocale(() => ({
       lockedDesc: '{time}時点のランキングです。以降の解答も有効ですが、順位には反映されません。',
       lockedDescShort: '以降の解答も有効ですが、順位には反映されません。',
       updatedAt: '更新：{time}',
-      refreshInterval: '更新頻度 {time}',
+      refreshInterval: '更新頻度：{time}',
       loadMoreFailed: 'ランキングの続きを取得できませんでした',
       loadFailed: 'ランキングを取得できませんでした',
     },

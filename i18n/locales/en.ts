@@ -555,7 +555,7 @@ export default defineI18nLocale(() => ({
       lockedDesc: 'This is a snapshot from {time}. Later submissions remain valid but will not change this ranking.',
       lockedDescShort: 'Later submissions remain valid, but will not change this ranking.',
       updatedAt: 'Updated at {time}',
-      refreshInterval: 'Refresh interval {time}',
+      refreshInterval: 'Refresh interval: {time}',
       loadMoreFailed: 'Failed to load more leaderboard teams',
       loadFailed: 'Failed to load leaderboard data',
     },
