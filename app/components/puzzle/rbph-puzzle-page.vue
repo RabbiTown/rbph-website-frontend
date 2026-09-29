@@ -37,9 +37,9 @@ function resolvePuzzlePage(type: number, pageName: string | undefined) {
   const component = defineAsyncComponent({
     loader: async () => {
       if (pageName) {
-        return await import(`~/components/rbph-puzzle-page/${type}/${pageName}.vue`);
+        return await import(`~/components/puzzle/rbph-puzzle-page/${type}/${pageName}.vue`);
       } else {
-        return await import(`~/components/rbph-puzzle-page/${type}.vue`);
+        return await import(`~/components/puzzle/rbph-puzzle-page/${type}.vue`);
       }
     },
     loadingComponent: h(USkeleton, { class: 'w-full min-h-24' }),

@@ -3,7 +3,7 @@ import type { Editor, JSONContent, MarkdownParseHelpers, MarkdownRendererHelpers
 import { Plugin } from '@tiptap/pm/state';
 import { h, reactive, render as renderVue } from 'vue';
 import type { AppContext } from 'vue';
-import RbphMdcComponentPreview from '~/components/rbph-mdc-component-preview.vue';
+import RbphMdcComponentPreview from '~/components/content/editor/rbph-mdc-component-preview.vue';
 
 const handledMdcBlockNames = new Set(['align', 'rb-image', 'rb-raw-html', 'rb-vue-app', 'rb-table', 'rbph-math']);
 const plainMdcComponentColonEscape = '\uE000';
